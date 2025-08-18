@@ -1,44 +1,38 @@
-#!/usr/bin/env python3
 """
 Tests for GitLab to GitHub Migration Tool
 """
 
-import pytest
-from unittest.mock import Mock, patch, MagicMock, PropertyMock
+import os
 import tempfile
-import shutil
-from pathlib import Path
+from unittest.mock import Mock, PropertyMock, patch
 
+import pytest
 from github import GithubException
-from gitlab_to_github_migrator import (
-    GitLabToGitHubMigrator, 
-    LabelTranslator, 
-    MigrationError,
-    NumberVerificationError
-)
+
+from gitlab_to_github_migrator import GitLabToGitHubMigrator, LabelTranslator, MigrationError
 
 
 class TestLabelTranslator:
     """Test label translation functionality."""
     
-    def test_simple_translation(self):
+    def test_simple_translation(self) -> None:
         translator = LabelTranslator(["p_high:priority: high", "bug:defect"])
         assert translator.translate("p_high") == "priority: high"
         assert translator.translate("bug") == "defect"
         assert translator.translate("unknown") == "unknown"
     
-    def test_wildcard_translation(self):
+    def test_wildcard_translation(self) -> None:
         translator = LabelTranslator(["p_*:priority: *", "status_*:status: *"])
         assert translator.translate("p_high") == "priority: high"
         assert translator.translate("p_low") == "priority: low"
         assert translator.translate("status_open") == "status: open"
         assert translator.translate("unmatched") == "unmatched"
     
-    def test_invalid_pattern(self):
+    def test_invalid_pattern(self) -> None:
         with pytest.raises(ValueError, match="Invalid pattern format"):
             LabelTranslator(["invalid_pattern"])
     
-    def test_multiple_patterns(self):
+    def test_multiple_patterns(self) -> None:
         translator = LabelTranslator([
             "p_*:priority: *", 
             "comp_*:component: *",
@@ -52,7 +46,7 @@ class TestLabelTranslator:
 class TestGitLabToGitHubMigrator:
     """Test main migration functionality."""
     
-    def setup_method(self):
+    def setup_method(self) -> None:
         """Setup test fixtures."""
         self.gitlab_project_path = "test-org/test-project"
         self.github_repo_path = "github-org/test-repo"
@@ -71,7 +65,7 @@ class TestGitLabToGitHubMigrator:
     
     @patch('gitlab_to_github_migrator.gitlab.Gitlab')
     @patch('gitlab_to_github_migrator.Github')
-    def test_init(self, mock_github_class, mock_gitlab_class):
+    def test_init(self, mock_github_class, mock_gitlab_class) -> None:
         """Test migrator initialization."""
         mock_gitlab_client = Mock()
         mock_github_client = Mock()
@@ -94,7 +88,7 @@ class TestGitLabToGitHubMigrator:
     
     @patch('gitlab_to_github_migrator.gitlab.Gitlab')
     @patch('gitlab_to_github_migrator.Github')
-    def test_validate_api_access_success(self, mock_github_class, mock_gitlab_class):
+    def test_validate_api_access_success(self, mock_github_class, mock_gitlab_class) -> None:
         """Test successful API validation."""
         mock_gitlab_client = Mock()
         mock_github_client = Mock()
@@ -114,7 +108,7 @@ class TestGitLabToGitHubMigrator:
     
     @patch('gitlab_to_github_migrator.gitlab.Gitlab')
     @patch('gitlab_to_github_migrator.Github')
-    def test_validate_api_access_gitlab_failure(self, mock_github_class, mock_gitlab_class):
+    def test_validate_api_access_gitlab_failure(self, mock_github_class, mock_gitlab_class) -> None:
         """Test GitLab API validation failure."""
         mock_gitlab_client = Mock()
         mock_github_client = Mock()
@@ -141,7 +135,7 @@ class TestGitLabToGitHubMigrator:
     
     @patch('gitlab_to_github_migrator.gitlab.Gitlab')
     @patch('gitlab_to_github_migrator.Github')
-    def test_create_github_repository_success(self, mock_github_class, mock_gitlab_class):
+    def test_create_github_repository_success(self, mock_github_class, mock_gitlab_class) -> None:
         """Test successful GitHub repository creation."""
         mock_gitlab_client = Mock()
         mock_github_client = Mock()
@@ -168,7 +162,7 @@ class TestGitLabToGitHubMigrator:
     
     @patch('gitlab_to_github_migrator.gitlab.Gitlab')
     @patch('gitlab_to_github_migrator.Github')
-    def test_handle_labels(self, mock_github_class, mock_gitlab_class):
+    def test_handle_labels(self, mock_github_class, mock_gitlab_class) -> None:
         """Test label handling and translation."""
         mock_gitlab_client = Mock()
         mock_github_client = Mock()
@@ -222,7 +216,7 @@ class TestGitLabToGitHubMigrator:
     
     @patch('gitlab_to_github_migrator.gitlab.Gitlab')
     @patch('gitlab_to_github_migrator.Github')
-    def test_migrate_milestones_with_gaps(self, mock_github_class, mock_gitlab_class):
+    def test_migrate_milestones_with_gaps(self, mock_github_class, mock_gitlab_class) -> None:
         """Test milestone migration with gaps in numbering."""
         mock_gitlab_client = Mock()
         mock_github_client = Mock()
@@ -295,7 +289,7 @@ class TestGitLabToGitHubMigrator:
     @patch('gitlab_to_github_migrator.requests.get')
     @patch('gitlab_to_github_migrator.gitlab.Gitlab')
     @patch('gitlab_to_github_migrator.Github')
-    def test_download_gitlab_attachments(self, mock_github_class, mock_gitlab_class, mock_requests_get):
+    def test_download_gitlab_attachments(self, mock_github_class, mock_gitlab_class, mock_requests_get) -> None:
         """Test GitLab attachment download."""
         # Mock successful response
         mock_response = Mock()
@@ -314,7 +308,8 @@ class TestGitLabToGitHubMigrator:
             self.gitlab_project_path,
             self.github_repo_path
         )
-        migrator.gitlab_client.private_token = "test-token"
+        # Use environment variable for test token
+        migrator.gitlab_client.private_token = os.environ.get('GITLAB_TOKEN', 'test-token')
         
         content = "Here is an attachment: /uploads/abcdef0123456789abcdef0123456789/file.pdf"
         updated_content, files = migrator.download_gitlab_attachments(content, Mock())
@@ -326,7 +321,7 @@ class TestGitLabToGitHubMigrator:
     
     @patch('gitlab_to_github_migrator.gitlab.Gitlab')
     @patch('gitlab_to_github_migrator.Github')
-    def test_validation_report_success(self, mock_github_class, mock_gitlab_class):
+    def test_validation_report_success(self, mock_github_class, mock_gitlab_class) -> None:
         """Test successful validation report generation."""
         mock_gitlab_client = Mock()
         mock_github_client = Mock()
@@ -345,6 +340,7 @@ class TestGitLabToGitHubMigrator:
         # Mock GitLab items
         self.mock_gitlab_project.issues.list.return_value = [Mock(), Mock()]  # 2 issues
         self.mock_gitlab_project.milestones.list.return_value = [Mock()]  # 1 milestone
+        self.mock_gitlab_project.labels.list.return_value = [Mock(), Mock()]  # 2 labels
         
         # Mock GitHub items (no placeholders)
         github_issues = [Mock(), Mock()]
@@ -357,19 +353,22 @@ class TestGitLabToGitHubMigrator:
             milestone.title = "Real Milestone"
         self.mock_github_repo.get_milestones.return_value = github_milestones
         
+        # Mock GitHub labels
+        self.mock_github_repo.get_labels.return_value = []
+        
         report = migrator.validate_migration()
         
         assert report['success'] is True
         assert len(report['errors']) == 0
-        assert report['statistics']['gitlab_issues'] == 2
-        assert report['statistics']['github_issues'] == 2
-        assert report['statistics']['gitlab_milestones'] == 1
-        assert report['statistics']['github_milestones'] == 1
-        assert report['statistics']['labels_migrated'] == 2
+        assert report['statistics']['gitlab_issues_total'] == 2
+        assert report['statistics']['github_issues_total'] == 2
+        assert report['statistics']['gitlab_milestones_total'] == 1
+        assert report['statistics']['github_milestones_total'] == 1
+        assert report['statistics']['labels_translated'] == 2
     
     @patch('gitlab_to_github_migrator.gitlab.Gitlab')
     @patch('gitlab_to_github_migrator.Github')
-    def test_validation_report_failure(self, mock_github_class, mock_gitlab_class):
+    def test_validation_report_failure(self, mock_github_class, mock_gitlab_class) -> None:
         """Test validation report with mismatched counts."""
         mock_gitlab_client = Mock()
         mock_github_client = Mock()
@@ -388,6 +387,7 @@ class TestGitLabToGitHubMigrator:
         # Mock mismatched counts
         self.mock_gitlab_project.issues.list.return_value = [Mock(), Mock()]  # 2 issues
         self.mock_gitlab_project.milestones.list.return_value = [Mock()]  # 1 milestone
+        self.mock_gitlab_project.labels.list.return_value = []  # No labels
         
         # Mock GitHub with different counts
         github_issues = [Mock()]  # Only 1 issue
@@ -399,6 +399,9 @@ class TestGitLabToGitHubMigrator:
         for milestone in github_milestones:
             milestone.title = "Real Milestone"
         self.mock_github_repo.get_milestones.return_value = github_milestones
+        
+        # Mock GitHub labels
+        self.mock_github_repo.get_labels.return_value = []
         
         report = migrator.validate_migration()
         
@@ -414,7 +417,7 @@ class TestIntegration:
     @patch('gitlab_to_github_migrator.subprocess.run')
     @patch('gitlab_to_github_migrator.gitlab.Gitlab')
     @patch('gitlab_to_github_migrator.Github')
-    def test_full_migration_dry_run(self, mock_github_class, mock_gitlab_class, mock_subprocess):
+    def test_full_migration_dry_run(self, mock_github_class, mock_gitlab_class, mock_subprocess) -> None:
         """Test a simplified full migration flow."""
         # Setup mocks
         mock_gitlab_client = Mock()
@@ -463,8 +466,8 @@ class TestIntegration:
             report = migrator.migrate()
             
             assert report['success'] is True
-            assert report['statistics']['gitlab_issues'] == 0
-            assert report['statistics']['github_issues'] == 0
+            assert report['statistics']['gitlab_issues_total'] == 0
+            assert report['statistics']['github_issues_total'] == 0
 
 
 if __name__ == '__main__':
