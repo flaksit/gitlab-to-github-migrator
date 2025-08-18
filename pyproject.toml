@@ -1,7 +1,20 @@
 [project]
 name = "gitlab-to-github-migrator"
 version = "0.1.0"
-description = "Add your description here"
+description = "Python tool for migrating GitLab projects to GitHub with full metadata preservation"
 readme = "README.md"
 requires-python = ">=3.13"
-dependencies = []
+dependencies = [
+    "python-gitlab>=4.0.0",
+    "PyGithub>=2.0.0",
+    "requests>=2.31.0",
+]
+
+[project.scripts]
+gitlab-to-github-migrator = "gitlab_to_github_migrator:main"
+
+[tool.uv]
+dev-dependencies = [
+    "pytest>=7.0.0",
+    "pytest-mock>=3.0.0",
+]
