@@ -1,0 +1,15 @@
+*~
+*.swp
+*.swo
+~$*
+__pycache__
+*.egg-info/
+.vim/
+.~lock.*
+_build/*
+.cache/
+*.cache
+.venv
+/build
+/dist
+.task
