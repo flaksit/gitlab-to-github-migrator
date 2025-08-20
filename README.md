@@ -169,36 +169,53 @@ uv run pytest -v -n auto
 # If the GitHub token doesn't have repository deletion rights, run test repo cleanup script
 uv run delete_test_repos github/admin_token
 
-# Run just unit tests (fast)
-uv run pytest tests/test_gitlab_to_github_migrator.py -v
+# Run just unit tests (fast, in parallel)
+uv run pytest -m "not integration" -v -n auto
+```
+
+#### Test Structure
+
+Tests are organized to clearly distinguish between **unit tests** (fast, no real API calls) and **integration tests** (use real APIs):
+
+- **Unit tests**: Warmly encouraged to be marked with the `@pytest.mark.unit` marker (but marking not strictly required).
+- **Integration tests**: Should be marked with the `@pytest.mark.integration` marker. These require real API tokens and may create/delete real resources.
+
+```python
+# At the top of a test file or class
+import pytest
+
+class TestLabelTranslator:
+    ...
+
+@pytest.mark.integration
+class TestRealAPIIntegration:
+    ...
 ```
 
 #### Unit Tests (Fast)
 ```bash
 # Run all unit tests
-uv run pytest tests/test_gitlab_to_github_migrator.py -v
+uv run pytest -m "not integration" -v
 
 # Run specific test class
-uv run pytest tests/test_gitlab_to_github_migrator.py::TestLabelTranslator -v
+uv run pytest -m "not integration" tests/test_gitlab_to_github_migrator.py::TestLabelTranslator -v
 
 # Run with coverage
-uv run pytest tests/test_gitlab_to_github_migrator.py --cov=src/gitlab_to_github_migrator
+uv run pytest -m "not integration" --cov=src/gitlab_to_github_migrator
 ```
 
 #### Integration Tests (Requires Authentication)
 For authentication setup, see the [Authentication Setup](#authentication-setup) section.
 
-**Setting up Environment Variables:**
-
 ```bash
-# Run integration tests in parallel (faster)
-uv run pytest tests/test_integration_real.py -v -n auto
+# Run all integration tests (in parallel)
+uv run pytest -m integration -v -n auto
 
 # Run integration tests sequentially (for debugging)
-uv run pytest tests/test_integration_real.py -v -s
+uv run pytest -m integration -v -s
 
 # Run specific integration test
-uv run pytest tests/test_integration_real.py::TestRealAPIIntegration::test_gitlab_source_project_access -v -s
+uv run pytest -m integration tests/test_integration_real_api.py::TestRealAPIIntegration::test_gitlab_source_project_access -v -s
 ```
 
 #### Cleanup of Test Repositories
@@ -306,11 +323,11 @@ All are configured in `pyproject.toml`:
 - **BasedPyright**: Strict settings for better type safety
 
 #### Adding New Features
-TODO Relax this: allow for more files
-1. **Write Tests First**: Add unit tests in `tests/test_gitlab_to_github_migrator.py`
-2. **Implement Feature**: Update `gitlab_to_github_migrator.py`
-3. **Integration Test**: Add test in `test_integration_real.py` if needed
-4. **Documentation**: Update this README
+
+1. **Write Tests First**: Add unit tests in `tests/unit/` (or mark with `@pytest.mark.unit`).
+2. **Implement Feature**: Update the relevant code in `src/gitlab_to_github_migrator/`.
+3. **Integration Test**: Add integration tests in `tests/integration/` (or mark with `@pytest.mark.integration`) if needed.
+4. **Documentation**: Update this README.
 
 #### Testing Strategy
 

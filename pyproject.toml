@@ -194,3 +194,7 @@ testpaths = ["tests"]
 pythonpath = ["src"]
 norecursedirs = []
 filterwarnings = []
+markers = [
+    "integration: mark test as integration test",
+    "unit: mark test as unit test",
+]

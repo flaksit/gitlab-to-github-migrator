@@ -19,6 +19,7 @@ from github import Github
 from gitlab_to_github_migrator import GitLabToGitHubMigrator, MigrationError
 
 
+@pytest.mark.integration
 class TestRealAPIIntegration:
     """Integration tests using real GitLab and GitHub APIs."""
 

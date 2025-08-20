@@ -13,6 +13,7 @@ from github.AuthenticatedUser import AuthenticatedUser
 from gitlab_to_github_migrator import GitLabToGitHubMigrator, LabelTranslator, MigrationError
 
 
+@pytest.mark.unit
 class TestLabelTranslator:
     """Test label translation functionality."""
 
@@ -40,6 +41,7 @@ class TestLabelTranslator:
         assert translator.translate("bug") == "defect"
 
 
+@pytest.mark.unit
 class TestGitLabToGitHubMigrator:
     """Test main migration functionality."""
 
@@ -473,6 +475,7 @@ class TestGitLabToGitHubMigrator:
         assert "Milestone count mismatch" in report["errors"][1]
 
 
+@pytest.mark.unit
 class TestIntegration:
     """Integration tests for the full migration process."""
 
