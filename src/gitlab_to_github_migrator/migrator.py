@@ -49,20 +49,15 @@ class GitLabToGitHubMigrator:
         *,
         label_translations: list[str] | None = None,
         local_clone_path: str | None = None,
-        gitlab_token_path: str | None = None,
-        github_token_path: str | None = None,
+        gitlab_token: str | None = None,
+        github_token: str,
     ) -> None:
         self.gitlab_project_path: str = gitlab_project_path
         self.github_repo_path: str = github_repo_path
         self.local_clone_path: Path | None = Path(local_clone_path) if local_clone_path else None
-        self.gitlab_token_path: str | None = gitlab_token_path
-        self.github_token_path: str | None = github_token_path
 
         # Initialize API clients with authentication. This falls back to anonymous access if no token is provided.
-        gitlab_token: str | None = glu.get_token(gitlab_token_path)
         self.gitlab_client: gitlab.Gitlab = glu.get_client(gitlab_token)
-
-        github_token: str | None = ghu.get_token(github_token_path)
         self.github_client: Github = ghu.get_client(github_token)
 
         # Get project

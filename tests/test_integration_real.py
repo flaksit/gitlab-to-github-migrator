@@ -41,7 +41,7 @@ class TestRealAPIIntegration:
             import subprocess
 
             try:
-                result = subprocess.run(["pass", "gitlab/cli/ro_token"], capture_output=True, text=True, check=True)
+                result = subprocess.run(["pass", "gitlab/api/ro_token"], capture_output=True, text=True, check=True)
                 gitlab_token = result.stdout.strip()
             except (subprocess.CalledProcessError, FileNotFoundError):
                 pass  # Fall back to anonymous access
@@ -57,7 +57,7 @@ class TestRealAPIIntegration:
             import subprocess
 
             try:
-                result = subprocess.run(["pass", "github/cli/token"], capture_output=True, text=True, check=True)
+                result = subprocess.run(["pass", "github/api/token"], capture_output=True, text=True, check=True)
                 github_token = result.stdout.strip()
             except (subprocess.CalledProcessError, FileNotFoundError):
                 pass  # Fall back to anonymous access
@@ -86,7 +86,7 @@ class TestRealAPIIntegration:
                 if "403" in error_str and "admin rights" in error_str:
                     print(f"⚠️  Cannot delete test repository {cls.target_github_repo}: insufficient permissions")
                     print("   To clean up test repositories, run:")
-                    print("   uv run cleanup_test_repos path/to/admin/token")
+                    print("   uv run delete_test_repos path/to/admin/token")
                     print("   where path/to/admin/token is a 'pass' path containing a GitHub token with admin rights")
                 else:
                     print(f"✗ Failed to cleanup test repository {cls.target_github_repo}: {e}")
@@ -222,7 +222,7 @@ class TestRealAPIIntegration:
                 print(f"✓ Cleaned up failed deletion test repository: {deletion_test_repo_path}")
             except Exception:
                 print(f"✗ Could not clean up failed deletion test repository: {deletion_test_repo_path}."
-                "  You will need to manually run 'uv run cleanup_test_repos path/to/admin/token' to delete it.")
+                "  You will need to manually run 'uv run delete_test_repos path/to/admin/token' to delete it.")
             
             pytest.fail(f"Repository deletion test failed: {e}")
 

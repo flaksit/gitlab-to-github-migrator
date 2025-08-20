@@ -15,29 +15,6 @@ from .exceptions import MigrationError
 # Module-wide logger
 logger: logging.Logger = logging.getLogger(__name__)
 
-_TOKEN_ENV_VAR: Final[str] = "GITHUB_TOKEN"  # noqa: S105
-_DEFAULT_TOKEN_PASS_PATH: Final[str] = "github/cli/token"  # noqa: S105
-
-
-def get_token(pass_path: str | None = None) -> str | None:
-    """Get GitHub token from pass path, env var GITHUB_TOKEN, or default pass location."""
-    # Try pass path first
-    if pass_path:
-        return utils.get_pass_value(pass_path)
-
-    # Try environment variable
-    token: str | None = os.environ.get(_TOKEN_ENV_VAR)
-    if token:
-        return token
-
-    # Try default pass path or default
-    try:
-        return utils.get_pass_value(_DEFAULT_TOKEN_PASS_PATH)
-    except ValueError:
-        logger.warning("No GitHub token specified nor found")
-        return None
-
-
 def get_client(token: str | None = None) -> Github:
     """Get a GitHub client using the token."""
     return Github(token)

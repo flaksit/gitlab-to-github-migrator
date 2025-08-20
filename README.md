@@ -36,17 +36,23 @@ uv run gitlab-to-github-migrator --help
 
 ## Authentication Setup
 
+### Token Requirements
+
+- **GitLab Token**: Read access to source project, issues, milestones, and labels
+- **GitHub Token**: Full repository access for target user/organization. Optional delete_repo permission for cleanup script.
+
 ### Option 1: Using `pass` Utility
 
 ```bash
-# Store GitLab token (read-only recommended)
-pass insert gitlab/cli/ro_token
+# Store GitLab token in the default location (read-only recommended)
+pass insert gitlab/api/ro_token
 
-# Store GitHub token (requires repo creation permissions)
-pass insert github/cli/token
+# Store GitHub token in the default location (requires repo creation permissions)
+pass insert github/api/token
 ```
 
 ### Option 2: Using Environment Variables
+Not recommended to use environment variables directly because this shows tokens in process lists and logs.
 
 ```bash
 # Set environment variables
@@ -54,36 +60,18 @@ export GITLAB_TOKEN="your_gitlab_token"
 export GITHUB_TOKEN="your_github_token"
 ```
 
-### Token Requirements
-
-- **GitLab Token**: Read access to source project, issues, milestones, and labels
-- **GitHub Token**: Full repository access for target user/organization
-
 ## Usage
-
-### Available Commands
-
-The tool provides two main commands:
-
-1. **`gitlab-to-github-migrator`**: Main migration tool
-2. **`cleanup_test_repos`**: (for devs) Cleanup script for orphaned test repositories
 
 ### Basic Migration
 
 ```bash
-# Using positional arguments (recommended)
 uv run gitlab-to-github-migrator flaks/jk/jkx abuflow/migrated-project
-
-# Using named arguments
-uv run gitlab-to-github-migrator \
-  --gitlab-project "namespace/project-name" \
-  --github-repo "owner/repo-name"
 ```
 
 ### Advanced Migration with Label Translation
 
 ```bash
-# Using short options and positional arguments
+# Using short options
 uv run gitlab-to-github-migrator flaks/jk/jkx abuflow/migrated-project \
   -l "p_*:priority: *" \
   -l "comp_*:component: *" \
@@ -99,31 +87,18 @@ uv run gitlab-to-github-migrator \
   --label-translation "comp_*:component: *" \
   --label-translation "t_*:type: *" \
   --local-clone-path "/path/to/existing/clone" \
+  --gitlab-token-pass-path "gitlab/api/other_ro_token" \
+  --github-token-pass-path "github/api/other_token" \
   --verbose
 ```
 
-### Label Translation Patterns
+#### Label Translation Patterns
 
 Label translation uses glob-style patterns:
 
 - `"p_high:priority: high"` - Simple replacement
 - `"p_*:priority: *"` - Wildcard transformation (p_high → priority: high)
 - `"comp_*:component: *"` - Component labels (comp_ui → component: ui)
-
-### Test Repository Cleanup
-
-If you're running integration tests and encounter orphaned test repositories, use the cleanup script:
-
-```bash
-# Clean up test repositories using admin token
-uv run cleanup_test_repos github/admin/token
-
-# Using default token location
-uv run cleanup_test_repos
-
-# Show help
-uv run cleanup_test_repos --help
-```
 
 ### Command Line Options
 
@@ -139,17 +114,17 @@ Optional Arguments:
                               Format: "source_pattern:target_pattern"
                               Example: "p_*:prio: *" translates "p_high" to "prio: high"
   --local-clone             Path to existing git clone (optional)
-  --gitlab-token-path       Path for GitLab token in pass utility (default: gitlab/cli/ro_token)
-  --github-token-path       Path for GitHub token in pass utility (default: github/cli/token)
+  --gitlab-token-path       Path for GitLab token in pass utility (default: gitlab/api/ro_token)
+  --github-token-path       Path for GitHub token in pass utility (default: github/api/token)
   --verbose, -v             Enable verbose logging
   --help, -h                Show help message and exit
 ```
 
-#### Cleanup Script (`cleanup_test_repos`)
+#### Cleanup Script (`delete_test_repos`)
 
 ```
 Positional Arguments:
-  pass_path            Path to 'pass' entry containing GitHub token with admin rights (default: github/cli/token)
+  pass_path            Path to 'pass' entry containing GitHub token with admin rights (default: github/api/token)
 
 Options:
   --help, -h           Show help message and exit
@@ -205,7 +180,6 @@ Migration completed successfully!
 # Clone and setup development environment
 git clone git@github.com:abuflow/gitlab-to-github-migrator.git
 cd gitlab-to-github-migrator
-uv sync
 
 # Install development dependencies
 uv sync
@@ -217,6 +191,8 @@ uv sync
 ```bash
 # Run all tests (unit and integration) in parallel, with default tokens from `pass` (see below)
 uv run pytest -v -n auto
+# If the GitHub token doesn't have repository deletion rights, run test repo cleanup script
+uv run delete_test_repos github/admin_token
 
 # Run just unit tests (fast)
 uv run pytest tests/test_gitlab_to_github_migrator.py -v
@@ -235,35 +211,12 @@ uv run pytest tests/test_gitlab_to_github_migrator.py --cov=src/gitlab_to_github
 ```
 
 #### Integration Tests (Requires Authentication)
-
-**Environment Variables Required:**
-- `GITLAB_TOKEN`: GitLab API token with read access to test project
-- `GITHUB_TOKEN`: GitHub API token with repository creation access (not admin rights)
-
-If these variables are not set, the values will be read automatically from the `pass` utility if available:
-```
-GITLAB_TOKEN from gitlab/cli/ro_token
-GITHUB_TOKEN from github/cli/token
-```
+For authentication setup, see the [Authentication Setup](#authentication-setup) section.
 
 **Setting up Environment Variables:**
 
-Using `pass` utility:
 ```bash
 # Run integration tests in parallel (faster)
-GITLAB_TOKEN=$(pass gitlab/cli/ro_token) GITHUB_TOKEN=$(pass github/cli/token) uv run pytest tests/test_integration_real.py -v -n auto
-
-# Run integration tests sequentially (for debugging)
-GITLAB_TOKEN=$(pass gitlab/cli/ro_token) GITHUB_TOKEN=$(pass github/cli/token) uv run pytest tests/test_integration_real.py -v -s
-```
-
-Using direct environment variables:
-```bash
-# Set environment variables directly
-export GITLAB_TOKEN="your_gitlab_read_token"
-export GITHUB_TOKEN="your_github_token_with_repo_access"
-
-# Run integration tests in parallel
 uv run pytest tests/test_integration_real.py -v -n auto
 
 # Run integration tests sequentially (for debugging)
@@ -273,31 +226,24 @@ uv run pytest tests/test_integration_real.py -v -s
 uv run pytest tests/test_integration_real.py::TestRealAPIIntegration::test_gitlab_source_project_access -v -s
 ```
 
-#### Test Repository Cleanup
+#### Cleanup of Test Repositories
 
-Integration tests create temporary repositories in the `abuflow` GitHub organization for testing. Due to permission limitations, these repositories cannot be automatically deleted and require manual cleanup.
-
-**Automatic Cleanup Instructions:**
-When tests fail to delete repositories (insufficient permissions), they will display instructions like:
+TODO: Update doc to get the GitHub owner from an env var
+Integration tests create temporary repositories in the `abuflow` GitHub organization for testing. If the GitHub token doesn't have delete permissions for repositories, these repositories require manual cleanup. In that case, the tests will display instructions like:
 ```
 ⚠️  Cannot delete test repository abuflow/migration-test-abc123: insufficient permissions
    To clean up test repositories, run:
-   uv run cleanup_test_repos path/to/admin/token
-   where path/to/admin/token is a 'pass' path containing a GitHub token with admin rights
+   uv run delete_test_repos path/to/admin/token
+   where path/to/admin/token is a 'pass' path containing a GitHub token with repository deletion rights.
 ```
 
 **Manual Cleanup:**
 ```bash
 # Using the cleanup script with admin token
-uv run cleanup_test_repos github/admin/token
-
-# Or using the default token path (if it has admin rights)
-uv run cleanup_test_repos
-
-# Show help for cleanup script
-uv run cleanup_test_repos --help
+uv run delete_test_repos github/admin/token
 
 # List what would be cleaned up without actually deleting
+# TODO add a dry-run option to the cleanup script
 uv run python -c "
 import subprocess
 result = subprocess.run(['pass', 'github/admin/token'], capture_output=True, text=True)
@@ -312,12 +258,9 @@ for repo in repos:
 "
 ```
 
-**Token Requirements for Cleanup:**
-- The cleanup script requires a GitHub token with **admin rights** to the `abuflow` organization
-- Regular repository creation tokens cannot delete repositories
-- Store the admin token in `pass` at a separate location (e.g., `github/admin/token`)
-
 #### Test Configuration
+TODO Read owner where to create test repos from an env var
+TODO Read GitLab project from env var
 
 Integration tests use:
 - **Source**: GitLab project `flaks/jk/jkx` (378 issues, 17 milestones, 31 labels)
@@ -383,20 +326,20 @@ uv run ruff check . && uv run basedpyright . && uv run codespell .
 ```
 
 **Configuration:**
-- **Ruff**: Configured in `pyproject.toml` with comprehensive rule set and 119-character line length
-- **BasedPyright**: Configured with strict settings for better type safety
-- **Codespell**: Configured to catch common spelling mistakes in code and documentation
+All are configured in `pyproject.toml`:
+- **Ruff**: Comprehensive rule set and 119-character line length
+- **BasedPyright**: Strict settings for better type safety
 
 #### Adding New Features
-
-1. **Write Tests First**: Add unit tests in `test_gitlab_to_github_migrator.py`
+TODO Relax this: allow for more files
+1. **Write Tests First**: Add unit tests in `tests/test_gitlab_to_github_migrator.py`
 2. **Implement Feature**: Update `gitlab_to_github_migrator.py`
 3. **Integration Test**: Add test in `test_integration_real.py` if needed
 4. **Documentation**: Update this README
 
 #### Testing Strategy
 
-- **Unit Tests**: Mock all external APIs, focus on logic correctness
+- **Unit Tests**: Minimal, for not spending too much resources on mocking external APIs
 - **Integration Tests**: Use real APIs with actual GitLab project data
 - **Test Coverage**: Aim for >90% coverage of core migration logic
 
@@ -409,7 +352,7 @@ uv run ruff check . && uv run basedpyright . && uv run codespell .
 # Verify token access
 uv run python -c "
 import gitlab, os
-token = subprocess.run(['pass', 'gitlab/cli/ro_token'], capture_output=True, text=True).stdout.strip()
+token = subprocess.run(['pass', 'gitlab/api/ro_token'], capture_output=True, text=True).stdout.strip()
 gl = gitlab.Gitlab('https://gitlab.com', private_token=token)
 print('GitLab access:', gl.projects.get('flaks/jk/jkx').name)
 "

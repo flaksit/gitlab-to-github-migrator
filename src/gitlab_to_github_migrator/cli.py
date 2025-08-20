@@ -6,10 +6,22 @@ from __future__ import annotations
 
 import argparse
 import logging
+import os
 import sys
+from logging import Logger
+from typing import Final
+
+from gitlab_to_github_migrator.exceptions import MigrationError
 
 from .migrator import GitLabToGitHubMigrator
-from .utils import setup_logging
+from .utils import PassError, get_pass_value, setup_logging
+
+logger: Logger
+
+GITLAB_TOKEN_ENV_VAR: Final[str] = "GITLAB_TOKEN"  # noqa: S105
+DEFAULT_GITLAB_TOKEN_PASS_PATH: Final[str] = "gitlab/api/ro_token"  # noqa: S105
+GITHUB_TOKEN_ENV_VAR: Final[str] = "GITHUB_TOKEN"  # noqa: S105
+DEFAULT_GITHUB_TOKEN_PASS_PATH: Final[str] = "github/api/token"  # noqa: S105
 
 
 def parse_arguments() -> argparse.Namespace:
@@ -28,21 +40,61 @@ def parse_arguments() -> argparse.Namespace:
         help='Label translation pattern (format: "source_pattern:target_pattern"). Can be specified multiple times.',
     )
 
+    _ = parser.add_argument("--local-clone", help="Path to existing local git clone of GitLab project")
+
     _ = parser.add_argument(
-        "--local-clone", help="Path to existing local git clone of GitLab project"
+        "--gitlab-token-pass-path",
+        help="Path for GitLab token in pass utility. If not set, will use GITLAB_TOKEN env var, or fall back to default pass path gitlab/api/ro_token. ",
     )
 
     _ = parser.add_argument(
-        "--gitlab-pass-token", help="Path for GitLab token in pass utility (default: gitlab/cli/ro_token)"
-    )
-
-    _ = parser.add_argument(
-        "--github-pass-token", help="Path for GitHub token in pass utility (default: github/cli/token)"
+        "--github-token-pass-path",
+        help="Path for GitHub token in pass utility. If not set, will use GITHUB_TOKEN env var, or fall back to default pass path github/api/token.",
     )
 
     _ = parser.add_argument("--verbose", "-v", action="store_true", help="Enable verbose logging")
 
     return parser.parse_args()
+
+
+def _get_gitlab_token(pass_path: str | None = None) -> str | None:
+    """Get GitLab token from pass path, env var GITLAB_TOKEN_ENV_VAR, or default pass location."""
+    # Try pass path first
+    if pass_path:
+        return get_pass_value(pass_path)
+
+    # Try environment variable
+    token: str | None = os.environ.get(GITLAB_TOKEN_ENV_VAR)
+    if token:
+        return token
+
+    # Try default pass path or default
+    try:
+        return get_pass_value(DEFAULT_GITLAB_TOKEN_PASS_PATH)
+    except PassError:
+        logger.warning(
+            f"No GitLab token specified nor found. If non-anonymous access is required, specify correct pass path or set {GITLAB_TOKEN_ENV_VAR} environment variable."
+        )
+        return None
+
+
+def _get_github_token(pass_path: str | None = None) -> str:
+    """Get GitHub token from pass path, env var GITHUB_TOKEN_ENV_VAR, or default pass location."""
+    # Try pass path first
+    if pass_path:
+        return get_pass_value(pass_path)
+
+    # Try environment variable
+    token: str | None = os.environ.get(GITHUB_TOKEN_ENV_VAR)
+    if token:
+        return token
+
+    # Try default pass path or default
+    try:
+        return get_pass_value(DEFAULT_GITHUB_TOKEN_PASS_PATH)
+    except PassError:
+        msg = f"No GitHub token specified nor found. Specify correct pass path or set {GITHUB_TOKEN_ENV_VAR} environment variable."
+        raise MigrationError(msg) from None
 
 
 def main() -> None:
@@ -52,43 +104,44 @@ def main() -> None:
     # Setup logging
     verbose: bool = getattr(args, "verbose", False)
     setup_logging(verbose=verbose)
+    global logger  # noqa: PLW0603
+    logger = logging.getLogger(__name__)
 
-    try:
-        # Initialize migrator
-        label_translation: list[str] | None = getattr(args, "label_translation", None)
-        local_clone_path: str | None = getattr(args, "local_clone_path", None)
-        gitlab_token_path: str | None = getattr(args, "gitlab_token_path", None)
-        github_token_path: str | None = getattr(args, "github_token_path", None)
+    # Initialize migrator
+    label_translation: list[str] | None = getattr(args, "label_translation", None)
+    local_clone_path: str | None = getattr(args, "local_clone_path", None)
+    gitlab_token_pass_path: str | None = getattr(args, "gitlab_token_pass_path", None)
+    github_token_pass_path: str | None = getattr(args, "github_token_pass_path", None)
 
-        migrator = GitLabToGitHubMigrator(
-            args.gitlab_project,
-            args.github_repo,
-            label_translations=label_translation,
-            local_clone_path=local_clone_path,
-            gitlab_token_path=gitlab_token_path,
-            github_token_path=github_token_path,
-        )
+    migrator = GitLabToGitHubMigrator(
+        args.gitlab_project,
+        args.github_repo,
+        label_translations=label_translation,
+        local_clone_path=local_clone_path,
+        gitlab_token=_get_gitlab_token(gitlab_token_pass_path),
+        github_token=_get_github_token(github_token_pass_path),
+    )
 
-        # Execute migration
-        report = migrator.migrate()
+    # Execute migration
+    report = migrator.migrate()
 
-        # Print report
-        errors = report["errors"]
-        statistics = report["statistics"]
+    # Print report
+    # TODO: Implement report printing
+    errors = report["errors"]
+    statistics = report["statistics"]
 
-        if errors:
-            for _error in errors:
-                pass
-
-        for _key, _value in statistics.items():
+    if errors:
+        for _error in errors:
             pass
 
-        if report["success"]:
-            sys.exit(0)
-        else:
-            sys.exit(1)
+    for _key, _value in statistics.items():
+        pass
 
-    except Exception:
-        logger = logging.getLogger(__name__)
-        logger.exception("Migration failed")
+    if report["success"]:
+        sys.exit(0)
+    else:
         sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()

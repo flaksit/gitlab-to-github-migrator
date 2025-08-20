@@ -29,7 +29,7 @@ classifiers = [
 
 [project.scripts]
 gitlab-to-github-migrator = "gitlab_to_github_migrator:main"
-cleanup_test_repos = "gitlab_to_github_migrator.cleanup_test_repos:main"
+delete_test_repos = "gitlab_to_github_migrator.delete_test_repos:main"
 
 [tool.uv]
 dev-dependencies = [
