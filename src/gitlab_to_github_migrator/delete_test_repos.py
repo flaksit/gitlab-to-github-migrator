@@ -40,7 +40,7 @@ def _get_github_token(pass_path: str | None = None) -> str:
     if token:
         return token
 
-    # Try default pass path or default
+    # Try default pass path
     try:
         return get_pass_value(DEFAULT_GITHUB_TOKEN_PASS_PATH)
     except PassError as e:
@@ -113,6 +113,8 @@ def delete_test_repositories(pass_path: str | None = None) -> None:
 
 def main() -> None:
     """Main entry point for the cleanup script."""
+
+    setup_logging(verbose=True)
 
     parser = argparse.ArgumentParser(
         description="Cleanup orphaned test repositories from GitHub",

@@ -5,6 +5,7 @@ Utility functions for the GitLab to GitHub migration tool.
 from __future__ import annotations
 
 import logging
+import os
 import re
 import subprocess
 from subprocess import CompletedProcess
@@ -49,13 +50,31 @@ def get_pass_value(pass_path: str) -> str:
             ["pass", pass_path], capture_output=True, text=True, check=True
         )
     except subprocess.CalledProcessError as e:
-        if e.returncode == 1:
+        if e.returncode == 1 and "not in the password store" in e.stderr.lower():
             msg = f"Pass path '{pass_path}' not found or invalid."
             raise InvalidPassPathError(msg) from e
-        if e.returncode == 2:
-            # TODO If we are in an interactive session, ask user for passphrase and pass it to the command. See https://unix.stackexchange.com/questions/688163/unix-pass-passing-passphrase-with-the-usage-of-password-store-gpg-opts#702718 and https://www.gnupg.org/documentation/manuals/gnupg24/gpg.1.html
-            msg = "Pass needs you to enter the passphrase for the GPG key. Do that first and retry."
-            raise PassphraseRequiredError(msg) from e
+        if e.returncode == 2 and "gpg" in e.stderr.lower() and "public key decryption failed" in e.stderr.lower():
+            # Failed, likely because user needs to enter the passphrase for the GPG key.
+            # We ask user for passphrase here and pass it to pass. This will fail in non-interactive sessions (e.g. pytest).
+            try:
+                passphrase = input("Enter passphrase for GPG key used by pass: ")
+            except EOFError as e:
+                msg = "Passphrase input was interrupted. Please run the command in an interactive session."
+                raise PassphraseRequiredError(msg) from e
+            
+            env = os.environ.copy() | {"PASSWORD_STORE_GPG_OPTS": "--pinentry-mode=loopback --passphrase-fd 0"}
+            try:
+                result = subprocess.run(  # noqa: S603
+                    ["pass", pass_path], input=passphrase, capture_output=True, text=True, check=True, env=env
+                )
+            except subprocess.CalledProcessError as e:
+                msg = (
+                    f"Failed to get value from pass at '{pass_path}' with passphrase.\n"
+                    f"Output: {e.stdout.strip()}\n"
+                    f"Error: {e.stderr.strip()}\n"
+                    f"Return code: {e.returncode}"
+                )
+                raise PassphraseRequiredError(msg) from e
         msg = (
             f"Failed to get value from pass at '{pass_path}'.\n"
             f"Output: {e.stdout.strip()}\n"
@@ -63,5 +82,5 @@ def get_pass_value(pass_path: str) -> str:
             f"Return code: {e.returncode}"
         )
         raise PassError(msg) from e
-    else:
-        return result.stdout.strip()
+        
+    return result.stdout.strip()

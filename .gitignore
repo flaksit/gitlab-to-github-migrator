@@ -13,3 +13,4 @@ _build/*
 /build
 /dist
 .task
+migration.log

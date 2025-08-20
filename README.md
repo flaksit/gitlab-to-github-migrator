@@ -28,7 +28,7 @@ git clone git@github.com:abuflow/gitlab-to-github-migrator.git
 cd gitlab-to-github-migrator
 
 # Install dependencies
-uv sync
+uv sync --no-dev
 
 # The tool is now ready to use
 uv run gitlab-to-github-migrator --help
@@ -71,6 +71,9 @@ uv run gitlab-to-github-migrator flaks/jk/jkx abuflow/migrated-project
 ### Advanced Migration with Label Translation
 
 ```bash
+# See help for available options
+uv run gitlab-to-github-migrator -h
+
 # Using short options
 uv run gitlab-to-github-migrator flaks/jk/jkx abuflow/migrated-project \
   -l "p_*:priority: *" \
@@ -96,39 +99,9 @@ uv run gitlab-to-github-migrator \
 
 Label translation uses glob-style patterns:
 
-- `"p_high:priority: high"` - Simple replacement
+- `"p_high:priority: high"` - Literal replacement
 - `"p_*:priority: *"` - Wildcard transformation (p_high → priority: high)
-- `"comp_*:component: *"` - Component labels (comp_ui → component: ui)
 
-### Command Line Options
-
-#### Migration Tool (`gitlab-to-github-migrator`)
-
-```
-Positional Arguments:
-  gitlab_project            GitLab project path (namespace/project)
-  github_repo               GitHub repository path (org/repo)
-
-Optional Arguments:
-  --relabel, -l             Label translation pattern. Can be used multiple times. Supports * as a glob-style wildcard.
-                              Format: "source_pattern:target_pattern"
-                              Example: "p_*:prio: *" translates "p_high" to "prio: high"
-  --local-clone             Path to existing git clone (optional)
-  --gitlab-token-path       Path for GitLab token in pass utility (default: gitlab/api/ro_token)
-  --github-token-path       Path for GitHub token in pass utility (default: github/api/token)
-  --verbose, -v             Enable verbose logging
-  --help, -h                Show help message and exit
-```
-
-#### Cleanup Script (`delete_test_repos`)
-
-```
-Positional Arguments:
-  pass_path            Path to 'pass' entry containing GitHub token with admin rights (default: github/api/token)
-
-Options:
-  --help, -h           Show help message and exit
-```
 
 ## Migration Process
 
@@ -189,6 +162,8 @@ uv sync
 
 #### TL;DR
 ```bash
+# Before running, ensure the passphrase cache won't expire during the tests, so just run `pass` once to enter the passphrase.
+pass github/api/token > /dev/null
 # Run all tests (unit and integration) in parallel, with default tokens from `pass` (see below)
 uv run pytest -v -n auto
 # If the GitHub token doesn't have repository deletion rights, run test repo cleanup script
@@ -359,11 +334,11 @@ print('GitLab access:', gl.projects.get('flaks/jk/jkx').name)
 ```
 
 **Rate Limiting**
+TODO verify if this is true
 - The tool includes automatic rate limit handling
 - Use `--verbose` to monitor API usage
-- Consider running during off-peak hours for large migrations
 
-**Repository Already Exists**
+**Target Repository Already Exists**
 - Tool will abort if target repository exists
 - Manually delete or choose different name
 
@@ -371,10 +346,7 @@ print('GitLab access:', gl.projects.get('flaks/jk/jkx').name)
 
 ```bash
 # Enable maximum verbosity
-uv run gitlab-to-github-migrator \
-  --gitlab-project "source/project" \
-  --github-repo "target/repo" \
-  --verbose
+uv run gitlab-to-github-migrator "source/project" "target/repo" --verbose
 
 # Check migration logs
 tail -f migration.log
@@ -390,11 +362,3 @@ tail -f migration.log
 ## License
 
 This project is part of the Abu trading platform ecosystem.
-
-## Support
-
-For issues or questions:
-
-1. Check existing [GitHub Issues](https://github.com/abuflow/gitlab-to-github-migrator/issues)
-2. Run tests to verify your environment: `uv run pytest -v`
-3. Enable verbose logging for detailed error information

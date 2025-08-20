@@ -37,7 +37,7 @@ def parse_arguments() -> argparse.Namespace:
         "--relabel",
         "-l",
         action="append",
-        help='Label translation pattern (format: "source_pattern:target_pattern"). Can be specified multiple times.',
+        help='Label translation pattern (format: "source_pattern:target_pattern"). Can be specified multiple times. Supports * as a glob-style wildcard. Example: "p_*:prio: *" translates "p_high" to "prio: high"',
     )
 
     _ = parser.add_argument("--local-clone", help="Path to existing local git clone of GitLab project")
@@ -68,7 +68,7 @@ def _get_gitlab_token(pass_path: str | None = None) -> str | None:
     if token:
         return token
 
-    # Try default pass path or default
+    # Try default pass path
     try:
         return get_pass_value(DEFAULT_GITLAB_TOKEN_PASS_PATH)
     except PassError:
@@ -89,7 +89,7 @@ def _get_github_token(pass_path: str | None = None) -> str:
     if token:
         return token
 
-    # Try default pass path or default
+    # Try default pass path
     try:
         return get_pass_value(DEFAULT_GITHUB_TOKEN_PASS_PATH)
     except PassError:
