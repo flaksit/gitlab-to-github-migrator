@@ -61,7 +61,7 @@ def get_pass_value(pass_path: str) -> str:
             except EOFError as e:
                 msg = "Passphrase input was interrupted. Please run the command in an interactive session."
                 raise PassphraseRequiredError(msg) from e
-            
+
             env = os.environ.copy() | {"PASSWORD_STORE_GPG_OPTS": "--pinentry-mode=loopback --passphrase-fd 0"}
             try:
                 result = subprocess.run(  # noqa: S603
@@ -75,12 +75,13 @@ def get_pass_value(pass_path: str) -> str:
                     f"Return code: {e.returncode}"
                 )
                 raise PassphraseRequiredError(msg) from e
-        msg = (
-            f"Failed to get value from pass at '{pass_path}'.\n"
-            f"Output: {e.stdout.strip()}\n"
-            f"Error: {e.stderr.strip()}\n"
-            f"Return code: {e.returncode}"
-        )
-        raise PassError(msg) from e
-        
+        else:
+            msg = (
+                f"Failed to get value from pass at '{pass_path}'.\n"
+                f"Output: {e.stdout.strip()}\n"
+                f"Error: {e.stderr.strip()}\n"
+                f"Return code: {e.returncode}"
+            )
+            raise PassError(msg) from e
+
     return result.stdout.strip()
