@@ -29,14 +29,18 @@ classifiers = [
 
 [project.scripts]
 gitlab-to-github-migrator = "gitlab_to_github_migrator:main"
+cleanup_test_repos = "gitlab_to_github_migrator.cleanup_test_repos:main"
 
 [tool.uv]
 dev-dependencies = [
-    "basedpyright==1.31.2",
-    "codespell==2.4.1",
-    "pytest==8.4.1",
-    "pytest-mock==3.14.1",
-    "ruff==0.12.9",
+    "basedpyright>=1.31.2",
+    "codespell>=2.4.1",
+    "ipykernel>=6.30.1",
+    "ipython>=9.4.0",
+    "pytest>=8.4.1",
+    "pytest-mock>=3.14.1",
+    "pytest-xdist>=3.6.1",
+    "ruff>=0.12.9",
 ]
 
 [tool.ruff]
@@ -126,6 +130,8 @@ ignore = [
     "S607",  # Starting a process with a partial executable path - git/subprocess are safe
     "SIM105", # Use contextlib.suppress - try-except-pass is clearer sometimes
     "SIM108",  # Allow if-else-block instead of ternary if-exp
+    "TC006", # Allow non-quoted types in type cast https://docs.astral.sh/ruff/rules/runtime-cast-value/
+    "TRY003", # Avoid specifying long messages outside the exception class
     "TRY301", # Abstract raise to an inner function - not needed for simple cases
     "W191", # https://docs.astral.sh/ruff/rules/tab-indentation/
 ]
@@ -155,11 +161,13 @@ reportImplicitStringConcatenation = false
 # reportUnreachable = false
 reportPrivateImportUsage = false
 reportPrivateLocalImportUsage = false
+reportUnusedImport = false  # Done by Ruff F401
 # reportMissingImports = false
 # reportUnnecessaryIsInstance = false
 # reportUnknownVariableType = false
 # reportUnknownArgumentType = false
-# reportUnknownMemberType = false
+reportUnknownMemberType = false  # gitlab has no type hints
+reportUnknownLambdaType = false  # gitlab has no type hints
 # reportMissingParameterType = false
 # reportUnknownParameterType = false
 # reportUnannotatedClassAttribute = false

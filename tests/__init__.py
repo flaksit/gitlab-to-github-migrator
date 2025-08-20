@@ -1,1 +1,0 @@
-"""Tests for GitLab to GitHub Migration Tool"""
