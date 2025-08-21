@@ -52,8 +52,8 @@ except UnknownObjectException as e:
 ## Implementation Strategy
 
 ### Argument Design Decision
-- `github_owner` → **Required positional argument** (essential data)
-- `pass_path` → **Optional flag** `--token-path` or `--pass-path` (configuration)
+- `github_owner` → **Required positional argument** (essential data)  
+- `pass_path` → **Required positional argument** (remains required as currently designed)
 
 ### Owner Handling Strategy
 Reuse the proven pattern from `github_utils.py`:

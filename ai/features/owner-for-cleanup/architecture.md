@@ -15,13 +15,13 @@ uv run delete_test_repos [pass_path]
 
 **New:**
 ```bash
-uv run delete_test_repos <github_owner> [--token-path pass_path]
+uv run delete_test_repos <github_owner> <pass_path>
 ```
 
 **Rationale:**
 - `github_owner` is essential data → required positional argument
-- `pass_path` is configuration option → optional flag following Unix conventions
-- Aligns with CLI best practices researched
+- `pass_path` remains required positional argument (maintains current behavior)
+- Both arguments are essential for the script's operation
 
 ### 2. Owner Detection Strategy
 
@@ -94,13 +94,13 @@ except MigrationError as e:
 ### 5. Backwards Compatibility Impact
 
 **Breaking Changes:**
-- Required positional argument added
-- Optional argument changed from positional to flag
+- Required positional argument added (github_owner)
+- Argument order changed (github_owner now comes first)
 
 **Migration Path:**
 - Update documentation and help text
 - Consider this a minor version bump
-- Existing scripts will need updating
+- Existing scripts will need to add github_owner as first argument
 
 ## Implementation Architecture
 
@@ -142,7 +142,7 @@ sequenceDiagram
     participant Owner as get_owner_repos()
     participant GitHub as GitHub API
 
-    CLI->>Main: github_owner, --token-path
+    CLI->>Main: github_owner, pass_path
     Main->>Delete: owner_name, pass_path
     Delete->>Owner: client, owner_name
     Owner->>GitHub: get_organization(owner)

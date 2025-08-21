@@ -7,8 +7,8 @@
 #### Task 1.1: Update argument parser configuration
 - **File:** `delete_test_repos.py:119-133` (main function)
 - **Changes:**
-  - Add required positional argument `github_owner`
-  - Change `pass_path` from positional to optional flag `--token-path`
+  - Add required positional argument `github_owner` as first argument
+  - Change `pass_path` from optional (`nargs="?"`) to required positional argument
   - Update help text and examples in epilog
 - **Validation:** Help output shows correct argument structure
 - **Estimate:** 15 minutes
@@ -21,7 +21,7 @@
 - **File:** `delete_test_repos.py:135` (main function call)
 - **Changes:**
   - Pass `args.github_owner` to delete_test_repositories
-  - Pass `args.token_path` instead of `args.pass_path`
+  - Pass `args.pass_path` as second argument
 - **Validation:** Function signatures match new calling pattern
 - **Estimate:** 10 minutes
 
@@ -107,9 +107,9 @@
 - **Example:**
   ```
   Examples:
-    uv run delete_test_repos abuflow                    # Organization
-    uv run delete_test_repos myusername                 # User  
-    uv run delete_test_repos abuflow --token-path github/admin/token
+    uv run delete_test_repos abuflow github/api/token           # Organization
+    uv run delete_test_repos myusername github/api/token        # User  
+    uv run delete_test_repos abuflow github/admin/token         # With admin token
   ```
 - **Validation:** Help text is clear and accurate
 - **Estimate:** 10 minutes
@@ -122,7 +122,7 @@
   2. Run with user owner (new functionality)
   3. Run with invalid owner (error handling)
   4. Run with mismatched user (security validation)
-  5. Test new argument parsing (required positional + optional flag)
+  5. Test new argument parsing (two required positional arguments)
 - **Validation Method:** Manual execution with test scenarios
 - **Estimate:** 30 minutes
 
@@ -159,8 +159,8 @@
 
 ## Success Criteria
 
-- ✅ Script accepts `github_owner` as required positional argument
-- ✅ Script accepts `--token-path` as optional flag
+- ✅ Script accepts `github_owner` as first required positional argument
+- ✅ Script accepts `pass_path` as second required positional argument
 - ✅ Script works with organization owners (preserves existing functionality)  
 - ✅ Script works with user owners (new functionality)
 - ✅ Script provides clear error messages for invalid owners
