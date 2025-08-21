@@ -78,18 +78,16 @@ def delete_test_repositories(owner_name: str, pass_path: str | None = None) -> N
 
 **Approach:**
 ```python
-try:
-    owner_type, repos = get_owner_repos(client, owner_name)
-    print(f"🔍 Scanning repositories for {owner_type} '{owner_name}'...")
-except MigrationError as e:
-    print(f"❌ {e}")
-    sys.exit(1)
+# Let errors fall through naturally - developers prefer stack traces
+owner_type, repos = get_owner_repos(client, owner_name)
+print(f"🔍 Scanning repositories for {owner_type} '{owner_name}'...")
 ```
 
 **Benefits:**
-- Preserves existing error handling patterns
-- Clear error messages for new failure modes
-- Consistent with existing `github_utils.py` error handling
+- Natural Python exception behavior for developer audience
+- Stack traces provide full context for debugging
+- Simpler code without unnecessary error wrapping
+- Consistent with "let it fail" philosophy for dev tools
 
 ### 5. Backwards Compatibility Impact
 
@@ -119,7 +117,7 @@ delete_test_repos.py
    - Input: GitHub client, owner name string
    - Output: tuple[owner_type, repos_list]  
    - Responsibility: Owner detection and repository fetching
-   - Error handling: Raise MigrationError for invalid owners
+   - Error handling: Let PyGithub exceptions propagate naturally
 
 2. **`delete_test_repositories(owner_name, pass_path)`**
    - Input: owner name, optional token path
