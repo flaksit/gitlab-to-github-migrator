@@ -168,7 +168,7 @@ pass github/api/token > /dev/null
 # Run all tests (unit and integration) in parallel, with default tokens from `pass` (see below)
 uv run pytest -v -n auto
 # If the GitHub token doesn't have repository deletion rights, run test repo cleanup script
-uv run delete_test_repos github/admin_token
+uv run delete_test_repos abuflow github/admin_token
 
 # Run just unit tests (fast, in parallel)
 uv run pytest -m "not integration" -v -n auto
@@ -225,14 +225,18 @@ Integration tests create temporary repositories in the `abuflow` GitHub organiza
 ```
 ⚠️  Cannot delete test repository abuflow/migration-test-abc123: insufficient permissions
    To clean up test repositories, run:
-   uv run delete_test_repos path/to/admin/token
-   where path/to/admin/token is a 'pass' path containing a GitHub token with repository deletion rights.
+   uv run delete_test_repos <github_owner> <pass_path>
+   where <github_owner> is the GitHub organization or user (e.g., 'abuflow')
+   and <pass_path> is a 'pass' path containing a GitHub token with repository deletion rights.
 ```
 
 **Manual Cleanup:**
 ```bash
-# Using the cleanup script
-uv run delete_test_repos github_owner github/admin/token
+# Using the cleanup script with admin token for organization
+uv run delete_test_repos abuflow github/admin/token
+
+# Using the cleanup script for a user account
+uv run delete_test_repos myusername github/admin/token
 
 # List what would be cleaned up without actually deleting
 # TODO add a dry-run option to the cleanup script
@@ -251,9 +255,6 @@ for repo in repos:
 ```
 
 #### Test Configuration
-TODO Read owner where to create test repos from an env var
-
-TODO Read GitLab project from env var
 
 Integration tests use:
 - **Source**: GitLab project `flaks/jk/jkx` (378 issues, 17 milestones, 31 labels)

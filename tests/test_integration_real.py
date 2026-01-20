@@ -87,8 +87,9 @@ class TestRealAPIIntegration:
                 if "403" in error_str and "admin rights" in error_str:
                     print(f"⚠️  Cannot delete test repository {cls.target_github_repo}: insufficient permissions")
                     print("   To clean up test repositories, run:")
-                    print("   uv run delete_test_repos path/to/admin/token")
-                    print("   where path/to/admin/token is a 'pass' path containing a GitHub token with admin rights")
+                    print("   uv run delete_test_repos <github_owner> <pass_path>")
+                    print("   where <github_owner> is the GitHub organization or user (e.g., 'abuflow')")
+                    print("   and <pass_path> is a 'pass' path containing a GitHub token with admin rights")
                 else:
                     print(f"✗ Failed to cleanup test repository {cls.target_github_repo}: {e}")
                     # Re-raise for unexpected errors
@@ -222,8 +223,10 @@ class TestRealAPIIntegration:
                 self.github_client.get_repo(deletion_test_repo_path).delete()
                 print(f"✓ Cleaned up failed deletion test repository: {deletion_test_repo_path}")
             except Exception:
-                print(f"✗ Could not clean up failed deletion test repository: {deletion_test_repo_path}."
-                "  You will need to manually run 'uv run delete_test_repos path/to/admin/token' to delete it.")
+                print(
+                    f"✗ Could not clean up failed deletion test repository: {deletion_test_repo_path}. "
+                    "You will need to manually run 'uv run delete_test_repos <github_owner> <pass_path>' to delete it."
+                )
             
             pytest.fail(f"Repository deletion test failed: {e}")
 
