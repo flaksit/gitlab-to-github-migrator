@@ -223,8 +223,10 @@ class TestRealAPIIntegration:
                 self.github_client.get_repo(deletion_test_repo_path).delete()
                 print(f"✓ Cleaned up failed deletion test repository: {deletion_test_repo_path}")
             except Exception:
-                print(f"✗ Could not clean up failed deletion test repository: {deletion_test_repo_path}."
-                "  You will need to manually run 'uv run delete_test_repos <github_owner> <pass_path>' to delete it.")
+                print(
+                    f"✗ Could not clean up failed deletion test repository: {deletion_test_repo_path}. "
+                    "You will need to manually run 'uv run delete_test_repos <github_owner> <pass_path>' to delete it."
+                )
             
             pytest.fail(f"Repository deletion test failed: {e}")
 
