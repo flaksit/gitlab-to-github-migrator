@@ -39,6 +39,20 @@ class DownloadedFile:
     short_gitlab_url: str
     full_gitlab_url: str
 
+
+def format_timestamp(timestamp_str: str) -> str:
+    """Format a GitLab timestamp string to 'YYYY-MM-DD HH:mm' format.
+    
+    Args:
+        timestamp_str: ISO format timestamp string from GitLab
+        
+    Returns:
+        Formatted timestamp string in 'YYYY-MM-DD HH:mm' format
+    """
+    # Parse ISO format timestamp and format as required
+    timestamp = dt.datetime.fromisoformat(timestamp_str.replace('Z', '+00:00'))
+    return timestamp.strftime('%Y-%m-%d %H:%M')
+
 class GitLabToGitHubMigrator:
     """Main migration class."""
 
@@ -578,6 +592,10 @@ class GitLabToGitHubMigrator:
                     issue_body += f"**GitLab URL:** {gitlab_issue.web_url}\n\n"
                     issue_body += "---\n\n"
 
+                    # Add timestamp as first line of description
+                    created_timestamp = format_timestamp(gitlab_issue.created_at)
+                    issue_body += f"Original created at {created_timestamp}\n\n"
+
                     if gitlab_issue.description:
                         # Download and process attachments
                         updated_description, files = self.download_gitlab_attachments(
@@ -708,6 +726,10 @@ class GitLabToGitHubMigrator:
                     # Regular comment
                     comment_body = f"**Comment by** {note.author['name']} (@{note.author['username']}) **on** {note.created_at}\n\n"
                     comment_body += "---\n\n"
+                    
+                    # Add timestamp as first line of comment
+                    created_timestamp = format_timestamp(note.created_at)
+                    comment_body += f"Original created at {created_timestamp}\n\n"
 
                     if note.body:
                         # Process attachments in comment

@@ -11,6 +11,31 @@ from github import GithubException
 from github.AuthenticatedUser import AuthenticatedUser
 
 from gitlab_to_github_migrator import GitLabToGitHubMigrator, LabelTranslator, MigrationError
+from gitlab_to_github_migrator.migrator import format_timestamp
+
+
+@pytest.mark.unit
+class TestTimestampFormatting:
+    """Test timestamp formatting functionality."""
+
+    def test_format_timestamp_basic(self) -> None:
+        """Test basic timestamp formatting."""
+        # Test with ISO format timestamp
+        timestamp = "2024-01-15T10:30:45.123Z"
+        result = format_timestamp(timestamp)
+        assert result == "2024-01-15 10:30"
+
+    def test_format_timestamp_different_times(self) -> None:
+        """Test timestamp formatting with different times."""
+        timestamp = "2023-12-25T23:59:00.000Z"
+        result = format_timestamp(timestamp)
+        assert result == "2023-12-25 23:59"
+
+    def test_format_timestamp_midnight(self) -> None:
+        """Test timestamp formatting at midnight."""
+        timestamp = "2024-06-01T00:00:00.000Z"
+        result = format_timestamp(timestamp)
+        assert result == "2024-06-01 00:00"
 
 
 @pytest.mark.unit
