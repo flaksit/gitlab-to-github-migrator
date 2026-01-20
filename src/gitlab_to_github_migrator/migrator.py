@@ -50,7 +50,7 @@ def format_timestamp(timestamp_str: str) -> str:
         Formatted timestamp string in 'YYYY-MM-DD HH:mm' format
     """
     # Parse ISO format timestamp and format as required
-    timestamp = dt.datetime.fromisoformat(timestamp_str.replace('Z', '+00:00'))
+    timestamp = dt.datetime.fromisoformat(timestamp_str.removesuffix('Z') + '+00:00' if timestamp_str.endswith('Z') else timestamp_str)
     return timestamp.strftime('%Y-%m-%d %H:%M')
 
 class GitLabToGitHubMigrator:
