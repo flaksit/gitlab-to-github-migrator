@@ -160,7 +160,6 @@ def _print_validation_report(report: dict[str, Any]) -> None:
     logger.info("=" * 80)
 
 
-
 def main() -> None:
     """Main entry point."""
     args = parse_arguments()
