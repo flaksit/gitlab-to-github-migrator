@@ -132,9 +132,6 @@ def delete_test_repositories(github_owner: str, pass_path: str) -> None:
 
 def main() -> None:
     """Main entry point for the cleanup script."""
-
-    setup_logging(verbose=True)
-
     parser = argparse.ArgumentParser(
         description="Cleanup orphaned test repositories from GitHub",
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -146,8 +143,10 @@ def main() -> None:
     )
     parser.add_argument("github_owner", help="GitHub organization or user to search for test repositories")
     parser.add_argument("pass_path", help="Path to 'pass' entry containing GitHub token with admin rights")
+    parser.add_argument("--verbose", "-v", action="store_true", help="Enable verbose logging")
 
     args = parser.parse_args()
+    setup_logging(verbose=args.verbose)
     delete_test_repositories(args.github_owner, args.pass_path)
 
 
