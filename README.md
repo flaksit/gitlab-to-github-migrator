@@ -221,7 +221,6 @@ uv run pytest -m integration tests/test_integration_real_api.py::TestRealAPIInte
 
 #### Cleanup of Test Repositories
 
-TODO: Update doc to get the GitHub owner from an env var
 Integration tests create temporary repositories in the `abuflow` GitHub organization for testing. If the GitHub token doesn't have delete permissions for repositories, these repositories require manual cleanup. In that case, the tests will display instructions like:
 ```
 ⚠️  Cannot delete test repository abuflow/migration-test-abc123: insufficient permissions
@@ -232,8 +231,8 @@ Integration tests create temporary repositories in the `abuflow` GitHub organiza
 
 **Manual Cleanup:**
 ```bash
-# Using the cleanup script with admin token
-uv run delete_test_repos github/admin/token
+# Using the cleanup script
+uv run delete_test_repos github_owner github/admin/token
 
 # List what would be cleaned up without actually deleting
 # TODO add a dry-run option to the cleanup script
@@ -253,6 +252,7 @@ for repo in repos:
 
 #### Test Configuration
 TODO Read owner where to create test repos from an env var
+
 TODO Read GitLab project from env var
 
 Integration tests use:
