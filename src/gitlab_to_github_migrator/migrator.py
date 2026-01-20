@@ -222,46 +222,7 @@ class GitLabToGitHubMigrator:
 
         return children
 
-    def detect_issue_tasks_from_description(self, description: str) -> list[dict[str, Any]]:
-        """Detect task items in issue description using markdown task list syntax.
 
-        This is a fallback method when GraphQL Work Items API is not available
-        or when tasks are defined as simple markdown checkboxes.
-
-        Args:
-            description: The issue description text
-
-        Returns:
-            List of task information extracted from description
-
-        TODO Remove this method completely. It is based on a wrong idea that GitLab issues can have tasks in description. The issue>task relationship in GitLab is explicitly modeled as a relationship between GitLab objects. The GraphQL query just needs to work.
-        """
-        if not description:
-            return []
-
-        tasks = []
-
-        # Pattern to match markdown task lists: - [ ] or - [x] followed by issue reference
-        task_pattern = r"^[\s]*-\s*\[[\sx]\]\s*#(\d+)(?:\s+(.+))?$"
-
-        for line in description.split("\n"):
-            match = re.match(task_pattern, line.strip())
-            if match:
-                issue_number = int(match.group(1))
-                task_title = match.group(2) or f"Task #{issue_number}"
-
-                task_info = {
-                    "iid": issue_number,
-                    "title": task_title.strip(),
-                    "state": "opened",  # We don't know the actual state from description
-                    "type": "task",
-                    "web_url": f"{self.gitlab_project.web_url}/-/issues/{issue_number}",
-                    "relationship_type": "child_of",
-                    "source": "description",  # Mark that this came from description parsing
-                }
-                tasks.append(task_info)
-
-        return tasks
 
     def migrate_git_content(self) -> None:
         """Migrate git repository content from GitLab to GitHub."""
@@ -563,18 +524,6 @@ class GitLabToGitHubMigrator:
         # Process regular issue links (blocks, is_blocked_by, relates_to)
         for link_info in regular_links:
             link_type = link_info["type"]
-
-            # Skip links that might represent parent-child relationships in description tasks
-            # to avoid duplication
-            is_task_duplicate = any(
-                task_rel["target_iid"] == link_info["target_iid"]
-                for task_rel in parent_child_relations
-                if task_rel["source"] == "description_tasks"
-            )
-
-            if is_task_duplicate:
-                logger.debug(f"Skipping duplicate link #{link_info['target_iid']} - already captured as task")
-                continue
 
             # Format relationship description
             if link_type == "blocks":

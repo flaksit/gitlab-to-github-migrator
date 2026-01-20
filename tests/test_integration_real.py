@@ -755,60 +755,6 @@ Original test issue description.
         except Exception as e:
             pytest.fail(f"GraphQL Work Items API test failed: {e}")
 
-    def test_description_task_detection_functionality(self) -> None:
-        """Test task detection from issue descriptions."""
-        try:
-            migrator = GitLabToGitHubMigrator(
-                gitlab_project_path=self.source_gitlab_project, github_repo_path=self.target_github_repo
-            )
-
-            # Test with known issue #382 which has task items
-            source_project = self.gitlab_client.projects.get(self.source_gitlab_project)
-
-            # Find issue #382 or similar issue with tasks
-            test_issue = None
-            try:
-                test_issue = source_project.issues.get(382)  # Known to have tasks
-            except Exception:
-                # Fallback: find any issue with task syntax
-                issues = source_project.issues.list(per_page=30)
-                for issue in issues:
-                    if issue.description and ("- [ ] #" in issue.description or "- [x] #" in issue.description):
-                        test_issue = issue
-                        break
-
-            if not test_issue:
-                pytest.skip("No issues with description tasks found")
-
-            # Test description task detection
-            tasks = migrator.detect_issue_tasks_from_description(test_issue.description)
-
-            # Should find task items
-            if "- [ ] #" in test_issue.description or "- [x] #" in test_issue.description:
-                assert len(tasks) > 0
-
-                # Verify task structure
-                for task in tasks:
-                    assert "iid" in task
-                    assert "title" in task
-                    assert "relationship_type" in task
-                    assert task["relationship_type"] == "child_of"
-                    assert task["source"] == "description"
-                    assert isinstance(task["iid"], int)
-
-                # Task detection successful
-
-            # Test empty description handling
-            empty_tasks = migrator.detect_issue_tasks_from_description("")
-            assert empty_tasks == []
-
-            # Test description without tasks
-            no_task_description = "This is a regular issue description without any task references."
-            no_tasks = migrator.detect_issue_tasks_from_description(no_task_description)
-            assert no_tasks == []
-
-        except Exception as e:
-            pytest.fail(f"Description task detection test failed: {e}")
 
     def test_enhanced_cross_linking_functionality(self) -> None:
         """Test the enhanced cross-linking functionality with task separation."""
@@ -867,7 +813,7 @@ Original test issue description.
                 assert "is_same_project" in relation
                 assert "source" in relation
                 assert relation["type"] in ["child_of", "relates_to", "blocks", "is_blocked_by"]
-                assert relation["source"] in ["graphql_work_items", "description_tasks"]
+                assert relation["source"] == "graphql_work_items"
 
             # If there are cross-links, verify formatting
             if cross_links_text:
@@ -930,65 +876,6 @@ Original test issue description.
         except Exception as e:
             pytest.fail(f"Closed issues and milestones retrieval test failed: {e}")
 
-    def test_task_relationship_separation_from_regular_links(self) -> None:
-        """Test that task relationships are properly separated from regular issue links."""
-        try:
-            migrator = GitLabToGitHubMigrator(
-                gitlab_project_path=self.source_gitlab_project, github_repo_path=self.target_github_repo
-            )
-
-            # Create test descriptions to verify parsing logic
-            test_cases = [
-                {
-                    "description": "- [ ] #314\n- [ ] #315\nSome other content",
-                    "expected_tasks": 2,
-                    "expected_task_numbers": [314, 315],
-                },
-                {"description": "Regular issue without tasks", "expected_tasks": 0, "expected_task_numbers": []},
-                {
-                    "description": "- [x] #123 Completed task\n- [ ] #456 Pending task",
-                    "expected_tasks": 2,
-                    "expected_task_numbers": [123, 456],
-                },
-            ]
-
-            for test_case in test_cases:
-                tasks = migrator.detect_issue_tasks_from_description(test_case["description"])
-
-                assert len(tasks) == test_case["expected_tasks"]
-
-                found_numbers = [task["iid"] for task in tasks]
-                for expected_number in test_case["expected_task_numbers"]:
-                    assert expected_number in found_numbers
-
-            # Test with real project data if available
-            source_project = self.gitlab_client.projects.get(self.source_gitlab_project)
-
-            # Find issue with both description tasks and regular links
-            test_issue = None
-            try:
-                issue_382 = source_project.issues.get(382)
-                if issue_382.description and "- [ ] #" in issue_382.description:
-                    test_issue = issue_382
-            except Exception:
-                pass
-
-            if test_issue:
-                cross_links_text, parent_child_relations = migrator.get_issue_cross_links(test_issue)
-
-                # Should have parent-child relations from description
-                task_relations = [rel for rel in parent_child_relations if rel["source"] == "description_tasks"]
-                if task_relations:
-                    # Verify task relations are not in cross-links text
-                    for task_rel in task_relations:
-                        assert f"#{task_rel['target_iid']}" not in cross_links_text
-
-                    # Task separation successful
-
-            # Task relationship separation test completed
-
-        except Exception as e:
-            pytest.fail(f"Task relationship separation test failed: {e}")
 
     def test_comprehensive_cleanup_verification(self) -> None:
         """Verify that all test artifacts are properly identified for cleanup."""
