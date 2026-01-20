@@ -5,6 +5,7 @@ A Python tool for migrating GitLab projects to GitHub with full metadata preserv
 ## Features
 
 - **Complete Metadata Preservation**: Migrates issues, milestones, labels, comments, and attachments
+- **Attachment Handling**: Downloads and preserves GitLab attachment references in issues and comments
 - **Exact Number Preservation**: Ensures GitLab issue #X becomes GitHub issue #X
 - **Configurable Label Translation**: Transform GitLab labels using flexible patterns
 - **Cross-Reference Preservation**: Maintains issue relationships and references
