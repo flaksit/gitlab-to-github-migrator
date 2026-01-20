@@ -48,10 +48,20 @@ def format_timestamp(timestamp_str: str) -> str:
         
     Returns:
         Formatted timestamp string in 'YYYY-MM-DD HH:mm' format
+        
+    Raises:
+        ValueError: If the timestamp string cannot be parsed
     """
-    # Parse ISO format timestamp and format as required
-    timestamp = dt.datetime.fromisoformat(timestamp_str.removesuffix('Z') + '+00:00' if timestamp_str.endswith('Z') else timestamp_str)
-    return timestamp.strftime('%Y-%m-%d %H:%M')
+    try:
+        # Parse ISO format timestamp and format as required
+        # Handle 'Z' suffix by replacing with '+00:00' for proper timezone handling
+        if timestamp_str.endswith('Z'):
+            timestamp_str = timestamp_str.removesuffix('Z') + '+00:00'
+        timestamp = dt.datetime.fromisoformat(timestamp_str)
+        return timestamp.strftime('%Y-%m-%d %H:%M')
+    except (ValueError, AttributeError) as e:
+        msg = f"Failed to parse timestamp '{timestamp_str}': {e}"
+        raise ValueError(msg) from e
 
 class GitLabToGitHubMigrator:
     """Main migration class."""

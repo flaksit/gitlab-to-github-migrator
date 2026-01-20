@@ -37,6 +37,17 @@ class TestTimestampFormatting:
         result = format_timestamp(timestamp)
         assert result == "2024-06-01 00:00"
 
+    def test_format_timestamp_invalid_input(self) -> None:
+        """Test timestamp formatting with invalid input."""
+        with pytest.raises(ValueError, match="Failed to parse timestamp"):
+            format_timestamp("invalid-timestamp")
+
+    def test_format_timestamp_without_z_suffix(self) -> None:
+        """Test timestamp formatting without Z suffix."""
+        timestamp = "2024-01-15T10:30:45.123+00:00"
+        result = format_timestamp(timestamp)
+        assert result == "2024-01-15 10:30"
+
 
 @pytest.mark.unit
 class TestLabelTranslator:
