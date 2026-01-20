@@ -353,9 +353,10 @@ print('GitLab access:', gl.projects.get('flaks/jk/jkx').name)
 ```
 
 **Rate Limiting**
-TODO verify if this is true
-- The tool includes automatic rate limit handling
-- Use `--verbose` to monitor API usage
+- Rate limit handling is built into the PyGithub and python-gitlab libraries and enabled by default
+- PyGithub: Uses `GithubRetry` with 10 retries, automatically waits on 403 with Retry-After header
+- python-gitlab: Uses `obey_rate_limit=True` by default with `max_retries=10`, sleeps on 429 responses
+- Note: GraphQL calls for Work Items and attachment downloads use raw `requests` without retry logic, but these are low-volume operations (one call per issue/attachment) and unlikely to hit rate limits
 
 **Target Repository Already Exists**
 - Tool will abort if target repository exists
