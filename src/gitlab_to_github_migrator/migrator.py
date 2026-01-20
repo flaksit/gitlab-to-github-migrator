@@ -732,6 +732,9 @@ class GitLabToGitHubMigrator:
                 if note.system:
                     # System note - convert to regular comment
                     comment_body = f"**System note:** {note.body}\n\n"
+                    # Add timestamp as first line for system note as well
+                    created_timestamp = format_timestamp(note.created_at)
+                    comment_body = f"Original created at {created_timestamp}\n\n{comment_body}"
                 else:
                     # Regular comment
                     comment_body = f"**Comment by** {note.author['name']} (@{note.author['username']}) **on** {note.created_at}\n\n"
