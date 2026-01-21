@@ -4,8 +4,8 @@ Integration tests for GitLab to GitHub Migration Tool using real APIs
 These tests connect to real GitLab and GitHub APIs to ensure the migration
 functionality works correctly with actual data.
 
-Test source: GitLab project (configurable via GITLAB_TEST_PROJECT, defaults to flaks/jk/jkx)
-Test target: Temporary GitHub repo (configurable via GITHUB_TEST_ORG, defaults to abuflow organization)
+Test source: GitLab project (REQUIRED: set via GITLAB_TEST_PROJECT environment variable)
+Test target: Temporary GitHub repo (REQUIRED: set via GITHUB_TEST_ORG environment variable)
 """
 
 import os
@@ -28,12 +28,24 @@ class TestRealAPIIntegration:
     def setup_class(cls) -> None:
         """Setup class-level fixtures."""
         # GitLab project to use as source (read-only)
-        # Can be overridden via GITLAB_TEST_PROJECT environment variable
-        cls.source_gitlab_project = os.environ.get("GITLAB_TEST_PROJECT", "flaks/jk/jkx")
+        # REQUIRED: Must be set via GITLAB_TEST_PROJECT environment variable
+        cls.source_gitlab_project = os.environ.get("GITLAB_TEST_PROJECT")
+        if not cls.source_gitlab_project:
+            msg = (
+                "GITLAB_TEST_PROJECT environment variable is required. "
+                "Example: export GITLAB_TEST_PROJECT='your-namespace/your-project'"
+            )
+            raise ValueError(msg)
 
         # GitHub organization/user for test repositories
-        # Can be overridden via GITHUB_TEST_ORG environment variable
-        cls.target_github_org = os.environ.get("GITHUB_TEST_ORG", "abuflow")
+        # REQUIRED: Must be set via GITHUB_TEST_ORG environment variable
+        cls.target_github_org = os.environ.get("GITHUB_TEST_ORG")
+        if not cls.target_github_org:
+            msg = (
+                "GITHUB_TEST_ORG environment variable is required. "
+                "Example: export GITHUB_TEST_ORG='your-org-or-username'"
+            )
+            raise ValueError(msg)
 
         # Generate unique test repo name
         random_suffix = "".join(random.choices(string.ascii_lowercase + string.digits, k=8))

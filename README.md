@@ -260,20 +260,20 @@ for repo in repos:
 
 #### Test Configuration
 
-Integration tests use:
-- **Source**: GitLab project (configurable via `GITLAB_TEST_PROJECT` environment variable, defaults to `flaks/jk/jkx` with 378 issues, 17 milestones, 31 labels)
-- **Target**: Temporary GitHub repositories (configurable via `GITHUB_TEST_ORG` environment variable, defaults to `abuflow` organization)
+Integration tests require configuration via environment variables:
+- **Source**: GitLab project (REQUIRED via `GITLAB_TEST_PROJECT` environment variable)
+- **Target**: Temporary GitHub repositories (REQUIRED via `GITHUB_TEST_ORG` environment variable)
 
-**Environment Variables for Testing:**
+**Required Environment Variables for Testing:**
 
 ```bash
-# Optional: Override default GitLab test project
+# Required: Set GitLab test project
 export GITLAB_TEST_PROJECT="your-namespace/your-project"
 
-# Optional: Override default GitHub organization/user for test repositories
+# Required: Set GitHub organization/user for test repositories
 export GITHUB_TEST_ORG="your-org-or-username"
 
-# Run integration tests with custom configuration
+# Run integration tests
 uv run pytest -m integration -v
 ```
 
