@@ -66,6 +66,11 @@ class GitLabToGitHubMigrator:
 
         # Get project
         self.gitlab_project: Any = self.gitlab_client.projects.get(gitlab_project_path)
+        
+        # Initialize GraphQL client using the gitlab.GraphQL class
+        # Extract base URL from the gitlab client or use default gitlab.com
+        gitlab_url = self.gitlab_client.url or "https://gitlab.com"
+        self.graphql_client: gitlab.GraphQL = glu.get_graphql_client(url=gitlab_url, token=gitlab_token)
 
         self._github_repo: github.Repository.Repository | None = None
 
@@ -114,8 +119,8 @@ class GitLabToGitHubMigrator:
     def _make_graphql_request(self, query: str, variables: dict[str, Any] | None = None) -> dict[str, Any]:
         """Make a GraphQL request to GitLab API using python-gitlab's native GraphQL support."""
         try:
-            # Use python-gitlab's native GraphQL support
-            response = self.gitlab_client.graphql(query, variables=variables or {})  # pyright: ignore[reportAttributeAccessIssue]
+            # Use python-gitlab's native GraphQL support via the dedicated GraphQL client
+            response = self.graphql_client.execute(query, variables=variables or {})
 
             # Check for errors in the response
             if "errors" in response:
