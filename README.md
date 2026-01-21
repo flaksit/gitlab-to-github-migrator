@@ -8,7 +8,10 @@ A Python tool for migrating GitLab projects to GitHub with full metadata preserv
 - **Attachment Handling**: Downloads and preserves GitLab attachment references in issues and comments
 - **Exact Number Preservation**: Ensures GitLab issue #X becomes GitHub issue #X
 - **Configurable Label Translation**: Transform GitLab labels using flexible patterns
-- **Cross-Reference Preservation**: Maintains issue relationships and references
+- **Issue Relationship Migration**:
+  - **Blocking relationships** (`blocks`/`is_blocked_by`): Migrated to GitHub's native issue dependencies API
+  - **Parent-child relationships** (GitLab work item hierarchy): Migrated to GitHub sub-issues
+  - **Related issues** (`relates_to`): Preserved as formatted text in issue description
 - **Robust Error Handling**: Comprehensive validation and rollback capabilities
 - **Authentication Support**: Works with environment variables or `pass` utility
 
@@ -112,8 +115,9 @@ Label translation uses glob-style patterns:
 4. **Label Migration**: Creates and translates labels
 5. **Milestone Migration**: Preserves milestone numbers using placeholders
 6. **Issue Migration**: Preserves issue numbers with full content
-7. **Cleanup**: Removes placeholder items
-8. **Validation**: Generates migration report
+7. **Relationship Migration**: Creates GitHub sub-issues and issue dependencies
+8. **Cleanup**: Removes placeholder items
+9. **Validation**: Generates migration report
 
 ## Example Migration Report
 

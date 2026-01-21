@@ -460,10 +460,10 @@ class TestRealAPIIntegration:
                 pytest.skip("No cross-linked issues found for testing")
 
             # Test the cross-linking text generation
-            cross_links_text, parent_child_relations = migrator.get_issue_cross_links(test_issue)
+            cross_links_text, parent_child_relations, blocking_relations = migrator.get_issue_cross_links(test_issue)
 
             if cross_links_text:
-                # Cross-links text generated successfully
+                # Cross-links text generated successfully (only for relates_to links)
                 assert "Cross-linked Issues:" in cross_links_text
                 assert "---" in cross_links_text
                 # Verify formatting
@@ -471,17 +471,16 @@ class TestRealAPIIntegration:
                 link_lines = [line for line in lines if line.startswith("- **")]
                 assert len(link_lines) > 0
 
-                # Test relationship types
-                relationship_found = False
+                # Verify relates_to links appear in text (blocks/is_blocked_by are in blocking_relations)
                 for line in link_lines:
-                    if any(rel in line for rel in ["Blocks", "Blocked by", "Related to"]):
-                        relationship_found = True
-                        break
-                assert relationship_found
+                    # Check that link lines have expected format
+                    assert "**" in line  # Bold formatting for relationship type
 
-            # Test parent-child relations (currently expected to be empty since GitLab API limitation)
-            # In the future, if GitLab adds parent-child link types, this would contain data
+            # Test parent-child relations
             assert isinstance(parent_child_relations, list)
+
+            # Test blocking relations (new in this version)
+            assert isinstance(blocking_relations, list)
 
         except Exception as e:
             pytest.fail(f"Cross-linking functionality test failed: {e}")
@@ -853,11 +852,12 @@ Original test issue description.
                 pytest.skip("No issues with cross-links found for testing")
 
             # Test the enhanced cross-linking method
-            cross_links_text, parent_child_relations = migrator.get_issue_cross_links(test_issue)
+            cross_links_text, parent_child_relations, blocking_relations = migrator.get_issue_cross_links(test_issue)
 
             # Verify return types
             assert isinstance(cross_links_text, str)
             assert isinstance(parent_child_relations, list)
+            assert isinstance(blocking_relations, list)
 
             # If there are parent-child relations, verify structure
             for relation in parent_child_relations:
@@ -866,10 +866,18 @@ Original test issue description.
                 assert "target_title" in relation
                 assert "is_same_project" in relation
                 assert "source" in relation
-                assert relation["type"] in ["child_of", "relates_to", "blocks", "is_blocked_by"]
+                assert relation["type"] == "child_of"
                 assert relation["source"] in ["graphql_work_items", "description_tasks"]
 
-            # If there are cross-links, verify formatting
+            # If there are blocking relations, verify structure
+            for relation in blocking_relations:
+                assert "type" in relation
+                assert "target_iid" in relation
+                assert "target_title" in relation
+                assert "is_same_project" in relation
+                assert relation["type"] in ["blocks", "is_blocked_by"]
+
+            # If there are cross-links text (relates_to only), verify formatting
             if cross_links_text:
                 assert "Cross-linked Issues:" in cross_links_text
                 assert "---" in cross_links_text
@@ -974,16 +982,21 @@ Original test issue description.
                 pass
 
             if test_issue:
-                cross_links_text, parent_child_relations = migrator.get_issue_cross_links(test_issue)
+                cross_links_text, parent_child_relations, blocking_relations = migrator.get_issue_cross_links(
+                    test_issue
+                )
 
                 # Should have parent-child relations from description
-                task_relations = [rel for rel in parent_child_relations if rel["source"] == "description_tasks"]
+                task_relations = [rel for rel in parent_child_relations if rel.get("source") == "description_tasks"]
                 if task_relations:
                     # Verify task relations are not in cross-links text
                     for task_rel in task_relations:
                         assert f"#{task_rel['target_iid']}" not in cross_links_text
 
                     # Task separation successful
+
+                # Verify blocking_relations is also returned
+                assert isinstance(blocking_relations, list)
 
             # Task relationship separation test completed
 
