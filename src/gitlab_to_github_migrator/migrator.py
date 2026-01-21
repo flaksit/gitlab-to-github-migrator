@@ -451,10 +451,11 @@ class GitLabToGitHubMigrator:
             logger.warning(f"Failed to create GitHub sub-issue: {e}")
 
     def create_github_issue_dependency(self, blocked_issue_number: int, blocking_issue_id: int) -> bool:
-        """Create a GitHub issue dependency using the REST API.
+        """Create a GitHub issue dependency using PyGithub's requester.
 
-        GitHub's issue dependencies API (August 2025) is not yet supported by PyGithub,
-        so we call the REST API directly.
+        GitHub's issue dependencies API (August 2025) is not yet supported by PyGithub's
+        classes, so we use the requester to make raw API calls while benefiting from
+        PyGithub's authentication and rate limiting.
 
         Args:
             blocked_issue_number: The issue number that is blocked
@@ -469,34 +470,32 @@ class GitLabToGitHubMigrator:
         # The API endpoint adds a "blocked by" relationship to an issue.
         # POST /repos/{owner}/{repo}/issues/{issue_number}/dependencies/blocked_by
         # with body: {"issue_id": <blocking_issue_id>}
-        url = f"https://api.github.com/repos/{owner}/{repo}/issues/{blocked_issue_number}/dependencies/blocked_by"
-        headers = {
-            "Authorization": f"Bearer {self.github_token}",
-            "Accept": "application/vnd.github+json",
-            "X-GitHub-Api-Version": "2022-11-28",
-        }
+        endpoint = f"/repos/{owner}/{repo}/issues/{blocked_issue_number}/dependencies/blocked_by"
         payload = {"issue_id": blocking_issue_id}
 
         try:
-            response = requests.post(url, json=payload, headers=headers, timeout=30)
-        except requests.RequestException as e:
+            # Use PyGithub's requester for consistent auth and rate limiting
+            status, _, data = self.github_client.requester.requestJson(
+                "POST", endpoint, input=payload
+            )
+        except GithubException as e:
+            if e.status == 422:
+                # Dependency may already exist or be invalid
+                logger.debug(
+                    f"Could not create dependency (may already exist): {e.status} - {e.data}"
+                )
+                return False
             logger.warning(f"Request failed when creating issue dependency: {e}")
             return False
 
-        if response.status_code == 201:
+        if status == 201:
             logger.debug(
                 f"Created issue dependency: issue #{blocked_issue_number} blocked by issue ID {blocking_issue_id}"
             )
             return True
-        if response.status_code == 422:
-            # Dependency may already exist or be invalid
-            logger.debug(
-                f"Could not create dependency (may already exist): {response.status_code} - {response.text}"
-            )
-            return False
 
         logger.warning(
-            f"Failed to create issue dependency: {response.status_code} - {response.text}"
+            f"Failed to create issue dependency: {status} - {data}"
         )
         return False
 
