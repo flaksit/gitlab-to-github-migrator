@@ -28,9 +28,9 @@ class TestRealAPIIntegration:
     def setup_class(cls) -> None:
         """Setup class-level fixtures."""
         # GitLab project to use as source (read-only)
-        # REQUIRED: Must be set via GITLAB_TEST_PROJECT environment variable
+        # REQUIRED: Must be set via GITLAB_TEST_PROJECT environment variable (non-empty)
         cls.source_gitlab_project = os.environ.get("GITLAB_TEST_PROJECT")
-        if not cls.source_gitlab_project:
+        if not cls.source_gitlab_project:  # Treats both None and empty string as missing
             msg = (
                 "GITLAB_TEST_PROJECT environment variable is required. "
                 "Example: export GITLAB_TEST_PROJECT='your-namespace/your-project'"
@@ -38,9 +38,9 @@ class TestRealAPIIntegration:
             raise ValueError(msg)
 
         # GitHub organization/user for test repositories
-        # REQUIRED: Must be set via GITHUB_TEST_ORG environment variable
+        # REQUIRED: Must be set via GITHUB_TEST_ORG environment variable (non-empty)
         cls.target_github_org = os.environ.get("GITHUB_TEST_ORG")
-        if not cls.target_github_org:
+        if not cls.target_github_org:  # Treats both None and empty string as missing
             msg = (
                 "GITHUB_TEST_ORG environment variable is required. "
                 "Example: export GITHUB_TEST_ORG='your-org-or-username'"
