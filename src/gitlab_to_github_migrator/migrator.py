@@ -68,9 +68,8 @@ class GitLabToGitHubMigrator:
         self.gitlab_project: Any = self.gitlab_client.projects.get(gitlab_project_path)
         
         # Initialize GraphQL client using the gitlab.GraphQL class
-        # The gitlab_client.url defaults to "https://gitlab.com" if not explicitly set,
-        # but we add a fallback for safety
-        gitlab_url = getattr(self.gitlab_client, 'url', 'https://gitlab.com') or 'https://gitlab.com'
+        # The gitlab_client.url defaults to "https://gitlab.com" if not explicitly set
+        gitlab_url = getattr(self.gitlab_client, 'url', 'https://gitlab.com')
         self.graphql_client: gitlab.GraphQL = glu.get_graphql_client(url=gitlab_url, token=gitlab_token)
 
         self._github_repo: github.Repository.Repository | None = None
