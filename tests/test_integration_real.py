@@ -15,7 +15,7 @@ import string
 
 import gitlab
 import pytest
-from github import Github
+from github import Github, GithubException, UnknownObjectException
 
 from gitlab_to_github_migrator import GitLabToGitHubMigrator, MigrationError
 
@@ -145,21 +145,21 @@ class TestRealAPIIntegration:
             try:
                 self.github_client.get_organization(self.target_github_org)
                 # Organization access successful
-            except Exception as e:
+            except (UnknownObjectException, GithubException) as e:
                 # Not an organization, might be a user account - that's also fine
                 # Just verify we can access the user
-                # (Common exception types: UnknownObjectException for 404)
+                # (UnknownObjectException is raised for 404 errors)
                 try:
                     self.github_client.get_user(self.target_github_org)
                     # User account access successful
-                except Exception as user_err:
+                except (UnknownObjectException, GithubException) as user_err:
                     # If both org and user lookup failed, this is a real error
                     pytest.fail(
                         f"Failed to access '{self.target_github_org}' as organization: {e}; "
                         f"also failed as user: {user_err}"
                     )
 
-        except Exception as e:
+        except (GithubException, Exception) as e:
             pytest.fail(f"Failed to access GitHub API: {e}")
 
     def test_migrator_initialization_with_real_apis(self) -> None:
