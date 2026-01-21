@@ -10,6 +10,7 @@ Test target: Temporary GitHub repo in abuflow organization
 
 import os
 import random
+import re
 import string
 
 import gitlab
@@ -392,8 +393,6 @@ class TestRealAPIIntegration:
 
             for issue in issues:
                 if issue.description:
-                    import re
-
                     attachments = re.findall(attachment_pattern, issue.description)
                     if attachments:
                         issues_with_attachments.append((issue, attachments))

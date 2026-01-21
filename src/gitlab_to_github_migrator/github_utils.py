@@ -1,16 +1,16 @@
 from __future__ import annotations
 
 import logging
-import os
-from typing import Final
+from typing import TYPE_CHECKING
 
-from github import Github, GithubException, UnknownObjectException
+from github import Github, UnknownObjectException
 from github.AuthenticatedUser import AuthenticatedUser
-from github.Organization import Organization
-from github.Repository import Repository
 
-from . import utils
 from .exceptions import MigrationError
+
+if TYPE_CHECKING:
+    from github.Organization import Organization
+    from github.Repository import Repository
 
 # Module-wide logger
 logger: logging.Logger = logging.getLogger(__name__)

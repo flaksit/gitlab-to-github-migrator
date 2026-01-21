@@ -137,8 +137,23 @@ ignore = [
     "T201", # Allow print()
 ]
 "*.ipynb" = [
-    "T201", # Allow print()
+    "T201",  # Allow print()
+    "E741",  # Allow ambiguous variable names in notebooks
+    "F401",  # Allow unused imports in notebooks
 ]
+"tests/**/*.py" = [
+    "T201",   # Allow print() in tests
+    "ANN",    # No annotation requirements in tests
+    "S106",   # Allow hardcoded test tokens
+    "S110",   # Allow try-except-pass in tests
+    "S112",   # Allow try-except-continue in tests
+    "INP001", # Tests don't need __init__.py
+    "PLR0912", # Allow more branches in test methods
+    "B017",   # Allow broad exception assertions in tests
+    "EM102",  # Allow f-string exceptions in tests
+    "SLF001", # Allow private member access in tests
+]
+
 [tool.basedpyright]
 # BasedPyright currently seems like the best type checker option, much faster
 # than mypy and with a good extension for VSCode/Cursor.
@@ -147,6 +162,7 @@ ignore = [
 include = ["src", "tests"]
 
 allowedUntypedLibraries = ["gitlab"]
+
 
 # By default BasedPyright is very strict, so you almost certainly want to disable
 # some of the rules.
@@ -177,6 +193,22 @@ reportUnknownLambdaType = false # gitlab has no type hints
 # reportOptionalMemberAccess = false
 # reportPossiblyUnboundVariable = false
 # reportUninitializedInstanceVariable = false
+
+# Relaxed rules for test files (tests often use pytest fixtures and mocks)
+[[tool.basedpyright.executionEnvironments]]
+root = "tests"
+reportUninitializedInstanceVariable = false
+reportMissingParameterType = false
+reportUnknownParameterType = false
+reportUnknownVariableType = false
+reportUnknownArgumentType = false
+reportAttributeAccessIssue = false
+reportCallIssue = false
+
+# Exclude notebooks from strict checking
+[[tool.basedpyright.executionEnvironments]]
+root = "src/explore.ipynb"
+reportAttributeAccessIssue = false
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/gitlab_to_github_migrator"]

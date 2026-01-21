@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import Any
 
 import github.AuthenticatedUser
+import github.Issue
 import github.Repository
 import gitlab  # noqa: TC002 - used at runtime, not just for type hints
 import requests
@@ -394,7 +395,7 @@ class GitLabToGitHubMigrator:
 
         return downloaded_files
 
-    def upload_github_attachments(self, files: list[dict[str, Any]], content: str) -> str:
+    def upload_github_attachments(self, files: list[DownloadedFile], content: str) -> str:
         """Upload files to GitHub and update content with new URLs."""
         updated_content = content
 
@@ -403,20 +404,20 @@ class GitLabToGitHubMigrator:
                 # Create a temporary file for GitHub API
                 with tempfile.NamedTemporaryFile(delete=False) as temp_file:
                     temp_path = temp_file.name
-                    temp_file.write(file_info["content"])
+                    temp_file.write(file_info.content)
 
                 # GitHub doesn't have a direct file upload API for arbitrary files
                 # We'll create a commit with the file and reference it
                 try:
                     # Try to upload as release asset if possible, otherwise skip file upload
                     # and keep original reference with a note
-                    logger.warning(f"File upload not implemented for {file_info['filename']}")
+                    logger.warning(f"File upload not implemented for {file_info.filename}")
                     # For now, we'll keep the original URL with a note
                     updated_content = updated_content.replace(
-                        file_info["original_url"], f"{file_info['original_url']} (Original GitLab attachment)"
+                        file_info.short_gitlab_url, f"{file_info.short_gitlab_url} (Original GitLab attachment)"
                     )
                 except Exception as e:
-                    logger.warning(f"Failed to upload {file_info['filename']}: {e}")
+                    logger.warning(f"Failed to upload {file_info.filename}: {e}")
 
                 # Clean up temp file
                 temp_file_path = Path(temp_path)
@@ -424,11 +425,13 @@ class GitLabToGitHubMigrator:
                     temp_file_path.unlink()
 
             except Exception as e:
-                logger.warning(f"Failed to process attachment {file_info['filename']}: {e}")
+                logger.warning(f"Failed to process attachment {file_info.filename}: {e}")
 
         return updated_content
 
-    def create_github_sub_issue(self, parent_github_issue, sub_issue_title: str, sub_issue_body: str) -> None:
+    def create_github_sub_issue(
+        self, parent_github_issue: github.Issue.Issue, sub_issue_title: str, sub_issue_body: str
+    ) -> None:
         """Create a GitHub sub-issue using PyGithub's native sub-issue support.
 
         This uses GitHub's sub-issues API introduced in December 2024, now supported
@@ -498,8 +501,8 @@ class GitLabToGitHubMigrator:
         return False
 
     def get_issue_cross_links(  # noqa: PLR0912 - complex categorization logic
-        self, gitlab_issue
-    ) -> tuple[str, list[dict], list[dict]]:
+        self, gitlab_issue: Any  # noqa: ANN401 - gitlab has no type stubs
+    ) -> tuple[str, list[dict[str, Any]], list[dict[str, Any]]]:
         """Get cross-linked issues and separate different relationship types.
 
         This method uses both GitLab's Work Items GraphQL API and REST API to properly
@@ -648,10 +651,8 @@ class GitLabToGitHubMigrator:
 
                     if gitlab_issue.description:
                         # Download and process attachments
-                        updated_description, files = self.download_gitlab_attachments(
-                            gitlab_issue.description
-                        )
-                        updated_description = self.upload_github_attachments(files, updated_description)
+                        files = self.download_gitlab_attachments(gitlab_issue.description)
+                        updated_description = self.upload_github_attachments(files, gitlab_issue.description)
                         issue_body += updated_description
 
                     # Add cross-linked issues to the description and collect relationships
@@ -688,10 +689,15 @@ class GitLabToGitHubMigrator:
                         milestone_number = self.milestone_mapping[gitlab_issue.milestone["id"]]
                         milestone = self.github_repo.get_milestone(milestone_number)
 
-                    # Create GitHub issue
-                    github_issue = self.github_repo.create_issue(
-                        title=gitlab_issue.title, body=issue_body, labels=issue_labels, milestone=milestone
-                    )
+                    # Create GitHub issue (only pass milestone if it exists)
+                    if milestone:
+                        github_issue = self.github_repo.create_issue(
+                            title=gitlab_issue.title, body=issue_body, labels=issue_labels, milestone=milestone
+                        )
+                    else:
+                        github_issue = self.github_repo.create_issue(
+                            title=gitlab_issue.title, body=issue_body, labels=issue_labels
+                        )
 
                     # Verify issue number
                     if github_issue.number != issue_number:
@@ -814,7 +820,9 @@ class GitLabToGitHubMigrator:
             msg = f"Failed to migrate issues: {e}"
             raise MigrationError(msg) from e
 
-    def migrate_issue_comments(self, gitlab_issue, github_issue) -> None:
+    def migrate_issue_comments(
+        self, gitlab_issue: Any, github_issue: github.Issue.Issue  # noqa: ANN401 - gitlab has no type stubs
+    ) -> None:
         """Migrate comments for an issue."""
         try:
             # Get all notes/comments
@@ -832,8 +840,8 @@ class GitLabToGitHubMigrator:
 
                     if note.body:
                         # Process attachments in comment
-                        updated_body, files = self.download_gitlab_attachments(note.body)
-                        updated_body = self.upload_github_attachments(files, updated_body)
+                        files = self.download_gitlab_attachments(note.body)
+                        updated_body = self.upload_github_attachments(files, note.body)
                         comment_body += updated_body
 
                 # Create GitHub comment
@@ -867,12 +875,14 @@ class GitLabToGitHubMigrator:
 
     def validate_migration(self) -> dict[str, Any]:
         """Validate migration results and generate report."""
-        report = {
+        errors: list[str] = []
+        statistics: dict[str, int] = {}
+        report: dict[str, Any] = {
             "gitlab_project": self.gitlab_project_path,
             "github_repo": self.github_repo_path,
             "success": True,
-            "errors": [],
-            "statistics": {},
+            "errors": errors,
+            "statistics": statistics,
         }
 
         try:
@@ -904,7 +914,7 @@ class GitLabToGitHubMigrator:
             # Use the initial label count we captured at repository creation
             labels_created = len(github_labels_all) - len(self.initial_github_labels)
 
-            report["statistics"] = {
+            statistics.update({
                 "gitlab_issues_total": len(gitlab_issues),
                 "gitlab_issues_open": len(gitlab_issues_open),
                 "gitlab_issues_closed": len(gitlab_issues_closed),
@@ -918,20 +928,20 @@ class GitLabToGitHubMigrator:
                 "github_milestones_open": len(github_milestones_open),
                 "github_milestones_closed": len(github_milestones_closed),
                 "gitlab_labels_total": len(gitlab_labels),
-                "github_labels_existing": self.initial_github_labels_count,
+                "github_labels_existing": len(self.initial_github_labels),
                 "github_labels_created": max(0, labels_created),
                 "labels_translated": len(self.label_mapping),
-            }
+            })
 
             # Validate counts
             if len(gitlab_issues) != len(github_issues):
-                report["errors"].append(
+                errors.append(
                     f"Issue count mismatch: GitLab {len(gitlab_issues)}, GitHub {len(github_issues)}"
                 )
                 report["success"] = False
 
             if len(gitlab_milestones) != len(github_milestones):
-                report["errors"].append(
+                errors.append(
                     f"Milestone count mismatch: GitLab {len(gitlab_milestones)}, GitHub {len(github_milestones)}"
                 )
                 report["success"] = False
@@ -940,7 +950,7 @@ class GitLabToGitHubMigrator:
 
         except Exception as e:
             report["success"] = False
-            report["errors"].append(f"Validation failed: {e}")
+            errors.append(f"Validation failed: {e}")
             logger.exception("Validation failed")
 
         return report

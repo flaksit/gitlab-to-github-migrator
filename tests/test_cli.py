@@ -2,7 +2,7 @@
 Tests for CLI module.
 """
 
-from unittest.mock import Mock, call, patch
+from unittest.mock import patch
 
 import pytest
 

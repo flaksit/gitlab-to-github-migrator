@@ -11,12 +11,11 @@ import sys
 from logging import Logger
 from typing import Any, Final
 
-from gitlab_to_github_migrator.exceptions import MigrationError
-
+from .exceptions import MigrationError
 from .migrator import GitLabToGitHubMigrator
 from .utils import PassError, get_pass_value, setup_logging
 
-logger: Logger
+logger: Logger = logging.getLogger(__name__)
 
 GITLAB_TOKEN_ENV_VAR: Final[str] = "GITLAB_TOKEN"  # noqa: S105
 DEFAULT_GITLAB_TOKEN_PASS_PATH: Final[str] = "gitlab/api/ro_token"  # noqa: S105
@@ -131,29 +130,29 @@ def _print_validation_report(report: dict[str, Any]) -> None:
     
     # Issues section
     logger.info("Issues:")
-    logger.info(f"  GitLab:  Total={stats.get('gitlab_issues_total', 0)}, " +
-                f"Open={stats.get('gitlab_issues_open', 0)}, " +
+    logger.info(f"  GitLab:  Total={stats.get('gitlab_issues_total', 0)}, "
+                f"Open={stats.get('gitlab_issues_open', 0)}, "
                 f"Closed={stats.get('gitlab_issues_closed', 0)}")
-    logger.info(f"  GitHub:  Total={stats.get('github_issues_total', 0)}, " +
-                f"Open={stats.get('github_issues_open', 0)}, " +
+    logger.info(f"  GitHub:  Total={stats.get('github_issues_total', 0)}, "
+                f"Open={stats.get('github_issues_open', 0)}, "
                 f"Closed={stats.get('github_issues_closed', 0)}")
     logger.info("")
     
     # Milestones section
     logger.info("Milestones:")
-    logger.info(f"  GitLab:  Total={stats.get('gitlab_milestones_total', 0)}, " +
-                f"Open={stats.get('gitlab_milestones_open', 0)}, " +
+    logger.info(f"  GitLab:  Total={stats.get('gitlab_milestones_total', 0)}, "
+                f"Open={stats.get('gitlab_milestones_open', 0)}, "
                 f"Closed={stats.get('gitlab_milestones_closed', 0)}")
-    logger.info(f"  GitHub:  Total={stats.get('github_milestones_total', 0)}, " +
-                f"Open={stats.get('github_milestones_open', 0)}, " +
+    logger.info(f"  GitHub:  Total={stats.get('github_milestones_total', 0)}, "
+                f"Open={stats.get('github_milestones_open', 0)}, "
                 f"Closed={stats.get('github_milestones_closed', 0)}")
     logger.info("")
     
     # Labels section
     logger.info("Labels:")
     logger.info(f"  GitLab:  Total={stats.get('gitlab_labels_total', 0)}")
-    logger.info(f"  GitHub:  Existing={stats.get('github_labels_existing', 0)}, " +
-                f"Created={stats.get('github_labels_created', 0)}, " +
+    logger.info(f"  GitHub:  Existing={stats.get('github_labels_existing', 0)}, "
+                f"Created={stats.get('github_labels_created', 0)}, "
                 f"Translated={stats.get('labels_translated', 0)}")
     logger.info("")
     
