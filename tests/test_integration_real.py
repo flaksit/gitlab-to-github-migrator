@@ -148,8 +148,7 @@ class TestRealAPIIntegration:
                 # Organization access successful
             except GithubException as e:
                 # Not an organization, might be a user account - that's also fine
-                # Just verify we can access the user
-                # (UnknownObjectException is a subclass of GithubException, raised for 404 errors)
+                # Just verify we can access the user (404 errors are caught by GithubException)
                 try:
                     self.github_client.get_user(self.target_github_org)
                     # User account access successful
@@ -160,7 +159,7 @@ class TestRealAPIIntegration:
                         f"also failed as user: {user_err}"
                     )
 
-        except (GithubException, Exception) as e:
+        except Exception as e:
             pytest.fail(f"Failed to access GitHub API: {e}")
 
     def test_migrator_initialization_with_real_apis(self) -> None:
