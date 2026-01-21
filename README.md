@@ -261,8 +261,23 @@ for repo in repos:
 #### Test Configuration
 
 Integration tests use:
-- **Source**: GitLab project `flaks/jk/jkx` (378 issues, 17 milestones, 31 labels)
-- **Target**: Temporary GitHub repositories in `abuflow` organization (manual cleanup required)
+- **Source**: GitLab project (configurable via `GITLAB_TEST_PROJECT` environment variable, defaults to `flaks/jk/jkx` with 378 issues, 17 milestones, 31 labels)
+- **Target**: Temporary GitHub repositories (configurable via `GITHUB_TEST_ORG` environment variable, defaults to `abuflow` organization)
+
+**Environment Variables for Testing:**
+
+```bash
+# Optional: Override default GitLab test project
+export GITLAB_TEST_PROJECT="your-namespace/your-project"
+
+# Optional: Override default GitHub organization/user for test repositories
+export GITHUB_TEST_ORG="your-org-or-username"
+
+# Run integration tests with custom configuration
+uv run pytest -m integration -v
+```
+
+**Note:** Test repositories require manual cleanup if the GitHub token doesn't have deletion permissions.
 
 ### Project Structure
 
