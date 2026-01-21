@@ -330,9 +330,14 @@ All are configured in `pyproject.toml`:
 
 #### Adding New Features
 
-1. **Write Tests First**: Add unit tests in `tests/unit/` (or mark with `@pytest.mark.unit`).
-2. **Implement Feature**: Update the relevant code in `src/gitlab_to_github_migrator/`.
-3. **Integration Test**: Add integration tests in `tests/integration/` (or mark with `@pytest.mark.integration`) if needed.
+Follow full **Test-Driven Development (TDD)** red-green approach:
+
+1. **Write ALL Tests First** (Red Phase):
+   - Add **unit tests** in `tests/unit/` (or mark with `@pytest.mark.unit`)
+   - Add **integration tests** in `tests/integration/` (or mark with `@pytest.mark.integration`)
+   - Run tests to verify they fail (red)
+2. **Implement Feature** (Green Phase): Update the relevant code in `src/gitlab_to_github_migrator/` to make tests pass.
+3. **Verify Tests Pass**: Run all tests (unit and integration) to ensure they pass (green).
 4. **Documentation**: Update this README.
 
 #### Testing Strategy
