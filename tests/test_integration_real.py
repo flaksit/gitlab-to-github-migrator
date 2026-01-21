@@ -15,7 +15,7 @@ import string
 
 import gitlab
 import pytest
-from github import Github, GithubException, UnknownObjectException
+from github import Github, GithubException
 
 from gitlab_to_github_migrator import GitLabToGitHubMigrator, MigrationError
 
@@ -117,7 +117,8 @@ class TestRealAPIIntegration:
         """Test that we can access the source GitLab project."""
         try:
             project = self.gitlab_client.projects.get(self.source_gitlab_project)
-            assert project.name.lower() == "jkx"
+            # Verify we got a valid project object
+            assert project.path_with_namespace == self.source_gitlab_project
             # Successfully accessed GitLab project
 
             # Test that we can read issues
@@ -145,14 +146,14 @@ class TestRealAPIIntegration:
             try:
                 self.github_client.get_organization(self.target_github_org)
                 # Organization access successful
-            except (UnknownObjectException, GithubException) as e:
+            except GithubException as e:
                 # Not an organization, might be a user account - that's also fine
                 # Just verify we can access the user
-                # (UnknownObjectException is raised for 404 errors)
+                # (UnknownObjectException is a subclass of GithubException, raised for 404 errors)
                 try:
                     self.github_client.get_user(self.target_github_org)
                     # User account access successful
-                except (UnknownObjectException, GithubException) as user_err:
+                except GithubException as user_err:
                     # If both org and user lookup failed, this is a real error
                     pytest.fail(
                         f"Failed to access '{self.target_github_org}' as organization: {e}; "
