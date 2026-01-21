@@ -30,7 +30,7 @@ class TestRealAPIIntegration:
         # GitLab project to use as source (read-only)
         # REQUIRED: Must be set via GITLAB_TEST_PROJECT environment variable (non-empty)
         cls.source_gitlab_project = os.environ.get("GITLAB_TEST_PROJECT")
-        if not cls.source_gitlab_project:  # Check if variable is None or empty string (both are invalid)
+        if not cls.source_gitlab_project:
             msg = (
                 "GITLAB_TEST_PROJECT environment variable is required. "
                 "Example: export GITLAB_TEST_PROJECT='your-namespace/your-project'"
@@ -40,7 +40,7 @@ class TestRealAPIIntegration:
         # GitHub organization/user for test repositories
         # REQUIRED: Must be set via GITHUB_TEST_ORG environment variable (non-empty)
         cls.target_github_org = os.environ.get("GITHUB_TEST_ORG")
-        if not cls.target_github_org:  # Check if variable is None or empty string (both are invalid)
+        if not cls.target_github_org:
             msg = (
                 "GITHUB_TEST_ORG environment variable is required. "
                 "Example: export GITHUB_TEST_ORG='your-org-or-username'"
