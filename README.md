@@ -385,4 +385,4 @@ tail -f migration.log
 
 ## License
 
-This project is part of the Abu trading platform ecosystem.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
