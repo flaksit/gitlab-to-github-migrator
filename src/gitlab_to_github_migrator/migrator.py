@@ -111,30 +111,19 @@ class GitLabToGitHubMigrator:
             raise MigrationError(msg) from e
 
     def _make_graphql_request(self, query: str, variables: dict[str, Any] | None = None) -> dict[str, Any]:
-        """Make a GraphQL request to GitLab API."""
-        # TODO refactor to use the python-gitlab library's GraphQL support: https://python-gitlab.readthedocs.io/en/stable/api-usage-graphql.html
-        if not self.gitlab_token:
-            msg = "GitLab token required for GraphQL API access"
-            raise MigrationError(msg)
-
-        url = "https://gitlab.com/api/graphql"
-        headers = {"Authorization": f"Bearer {self.gitlab_token}", "Content-Type": "application/json"}
-
-        payload = {"query": query, "variables": variables or {}}
-
+        """Make a GraphQL request to GitLab API using python-gitlab's native GraphQL support."""
         try:
-            response = requests.post(url, json=payload, headers=headers, timeout=30)
-            response.raise_for_status()
+            # Use python-gitlab's native GraphQL support
+            response = self.gitlab_client.graphql(query, variables=variables or {})  # pyright: ignore[reportAttributeAccessIssue]
 
-            data = response.json()
-
-            if "errors" in data:
-                msg = f"GraphQL errors: {data['errors']}"
+            # Check for errors in the response
+            if "errors" in response:
+                msg = f"GraphQL errors: {response['errors']}"
                 raise MigrationError(msg)
 
-            return data.get("data", {})
+            return response.get("data", {})
 
-        except requests.RequestException as e:
+        except Exception as e:
             msg = f"GraphQL request failed: {e}"
             raise MigrationError(msg) from e
 
@@ -225,46 +214,7 @@ class GitLabToGitHubMigrator:
 
         return children
 
-    def detect_issue_tasks_from_description(self, description: str) -> list[dict[str, Any]]:
-        """Detect task items in issue description using markdown task list syntax.
 
-        This is a fallback method when GraphQL Work Items API is not available
-        or when tasks are defined as simple markdown checkboxes.
-
-        Args:
-            description: The issue description text
-
-        Returns:
-            List of task information extracted from description
-
-        TODO Remove this method completely. It is based on a wrong idea that GitLab issues can have tasks in description. The issue>task relationship in GitLab is explicitly modeled as a relationship between GitLab objects. The GraphQL query just needs to work.
-        """
-        if not description:
-            return []
-
-        tasks = []
-
-        # Pattern to match markdown task lists: - [ ] or - [x] followed by issue reference
-        task_pattern = r"^[\s]*-\s*\[[\sx]\]\s*#(\d+)(?:\s+(.+))?$"
-
-        for line in description.split("\n"):
-            match = re.match(task_pattern, line.strip())
-            if match:
-                issue_number = int(match.group(1))
-                task_title = match.group(2) or f"Task #{issue_number}"
-
-                task_info = {
-                    "iid": issue_number,
-                    "title": task_title.strip(),
-                    "state": "opened",  # We don't know the actual state from description
-                    "type": "task",
-                    "web_url": f"{self.gitlab_project.web_url}/-/issues/{issue_number}",
-                    "relationship_type": "child_of",
-                    "source": "description",  # Mark that this came from description parsing
-                }
-                tasks.append(task_info)
-
-        return tasks
 
     def migrate_git_content(self) -> None:
         """Migrate git repository content from GitLab to GitHub."""
@@ -565,8 +515,7 @@ class GitLabToGitHubMigrator:
                 blocking_relations: list[dict] - For GitHub issue dependencies
             )
         """
-        # Step 1: Get child tasks using GraphQL Work Items API
-        # TODO check that this uses python gitlab library's GraphQL support https://python-gitlab.readthedocs.io/en/stable/api-usage-graphql.html
+        # Step 1: Get child tasks using GraphQL Work Items API (using python-gitlab's native GraphQL support)
         child_work_items = []
         child_work_items = self.get_work_item_children(gitlab_issue.iid)
         logger.debug(f"Found {len(child_work_items)} tasks via GraphQL for issue #{gitlab_issue.iid}")
@@ -626,18 +575,6 @@ class GitLabToGitHubMigrator:
         # Process regular issue links (blocks, is_blocked_by, relates_to)
         for link_info in regular_links:
             link_type = link_info["type"]
-
-            # Skip links that might represent parent-child relationships in description tasks
-            # to avoid duplication
-            is_task_duplicate = any(
-                task_rel["target_iid"] == link_info["target_iid"]
-                for task_rel in parent_child_relations
-                if task_rel.get("source") == "description_tasks"
-            )
-
-            if is_task_duplicate:
-                logger.debug(f"Skipping duplicate link #{link_info['target_iid']} - already captured as task")
-                continue
 
             # Categorize by relationship type
             if link_type in ("blocks", "is_blocked_by"):
