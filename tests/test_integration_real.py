@@ -4,8 +4,8 @@ Integration tests for GitLab to GitHub Migration Tool using real APIs
 These tests connect to real GitLab and GitHub APIs to ensure the migration
 functionality works correctly with actual data.
 
-Test source: GitLab project flaks/jk/jkx
-Test target: Temporary GitHub repo in abuflow organization
+Test source: GitLab project (REQUIRED: set via GITLAB_TEST_PROJECT environment variable)
+Test target: Temporary GitHub repo (REQUIRED: set via GITHUB_TEST_ORG environment variable)
 """
 
 import os
@@ -15,7 +15,7 @@ import string
 
 import gitlab
 import pytest
-from github import Github
+from github import Github, GithubException
 
 from gitlab_to_github_migrator import GitLabToGitHubMigrator, MigrationError
 
@@ -28,13 +28,29 @@ class TestRealAPIIntegration:
     def setup_class(cls) -> None:
         """Setup class-level fixtures."""
         # GitLab project to use as source (read-only)
-        # Can be overridden via GITLAB_TEST_PROJECT environment variable
-        cls.source_gitlab_project = os.environ.get("GITLAB_TEST_PROJECT", "flaks/jk/jkx")
+        # REQUIRED: Must be set via GITLAB_TEST_PROJECT environment variable (non-empty)
+        cls.source_gitlab_project = os.environ.get("GITLAB_TEST_PROJECT")
+        if not cls.source_gitlab_project:
+            msg = (
+                "GITLAB_TEST_PROJECT environment variable is required. "
+                "Example: export GITLAB_TEST_PROJECT='your-namespace/your-project'"
+            )
+            raise ValueError(msg)
+
+        # GitHub organization/user for test repositories
+        # REQUIRED: Must be set via GITHUB_TEST_ORG environment variable (non-empty)
+        cls.target_github_org = os.environ.get("GITHUB_TEST_ORG")
+        if not cls.target_github_org:
+            msg = (
+                "GITHUB_TEST_ORG environment variable is required. "
+                "Example: export GITHUB_TEST_ORG='your-org-or-username'"
+            )
+            raise ValueError(msg)
 
         # Generate unique test repo name
         random_suffix = "".join(random.choices(string.ascii_lowercase + string.digits, k=8))
         cls.test_repo_name = f"migration-test-{random_suffix}"
-        cls.target_github_repo = f"abuflow/{cls.test_repo_name}"
+        cls.target_github_repo = f"{cls.target_github_org}/{cls.test_repo_name}"
 
         # Initialize API clients with authentication
         # GitLab client - try env var, then pass, then anonymous
@@ -89,7 +105,7 @@ class TestRealAPIIntegration:
                     print(f"⚠️  Cannot delete test repository {cls.target_github_repo}: insufficient permissions")
                     print("   To clean up test repositories, run:")
                     print("   uv run delete_test_repos <github_owner> <pass_path>")
-                    print("   where <github_owner> is the GitHub organization or user (e.g., 'abuflow')")
+                    print(f"   where <github_owner> is the GitHub organization or user (e.g., '{cls.target_github_org}')")
                     print("   and <pass_path> is a 'pass' path containing a GitHub token with admin rights")
                 else:
                     print(f"✗ Failed to cleanup test repository {cls.target_github_repo}: {e}")
@@ -113,7 +129,8 @@ class TestRealAPIIntegration:
         """Test that we can access the source GitLab project."""
         try:
             project = self.gitlab_client.projects.get(self.source_gitlab_project)
-            assert project.name.lower() == "jkx"
+            # Verify we got a valid project object
+            assert project.path_with_namespace == self.source_gitlab_project
             # Successfully accessed GitLab project
 
             # Test that we can read issues
@@ -137,9 +154,22 @@ class TestRealAPIIntegration:
             self.github_client.get_user()
             # GitHub API access successful
 
-            # Test organization access
-            self.github_client.get_organization("abuflow")
-            # Organization access successful
+            # Test organization access (if using an organization, not a user account)
+            try:
+                self.github_client.get_organization(self.target_github_org)
+                # Organization access successful
+            except GithubException as e:
+                # Not an organization, might be a user account - that's also fine
+                # Just verify we can access the user (404 errors are caught by GithubException)
+                try:
+                    self.github_client.get_user(self.target_github_org)
+                    # User account access successful
+                except GithubException as user_err:
+                    # If both org and user lookup failed, this is a real error
+                    pytest.fail(
+                        f"Failed to access '{self.target_github_org}' as organization: {e}; "
+                        f"also failed as user: {user_err}"
+                    )
 
         except Exception as e:
             pytest.fail(f"Failed to access GitHub API: {e}")
@@ -195,7 +225,7 @@ class TestRealAPIIntegration:
         # Create a separate test repository for deletion testing
         random_suffix = "".join(random.choices(string.ascii_lowercase + string.digits, k=8))
         deletion_test_repo_name = f"deletion-test-{random_suffix}"
-        deletion_test_repo_path = f"abuflow/{deletion_test_repo_name}"
+        deletion_test_repo_path = f"{self.target_github_org}/{deletion_test_repo_name}"
 
         try:
             migrator = GitLabToGitHubMigrator(
