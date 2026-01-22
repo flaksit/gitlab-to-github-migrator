@@ -446,7 +446,9 @@ class GitLabToGitHubMigrator:
             temp_path = None
             try:
                 # Create a temporary file for GitHub API
-                with tempfile.NamedTemporaryFile(delete=False, suffix=f"_{file_info.filename}") as temp_file:
+                # Use only the file extension for the suffix to avoid filesystem issues
+                file_ext = Path(file_info.filename).suffix if file_info.filename else ""
+                with tempfile.NamedTemporaryFile(delete=False, suffix=file_ext) as temp_file:
                     temp_path = temp_file.name
                     temp_file.write(file_info.content)
 
