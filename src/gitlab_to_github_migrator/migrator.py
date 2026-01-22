@@ -18,7 +18,6 @@ import github.AuthenticatedUser
 import github.Issue
 import github.Repository
 import gitlab  # noqa: TC002 - used at runtime, not just for type hints
-import requests
 from github import Github, GithubException
 
 from . import github_utils as ghu
@@ -61,11 +60,14 @@ class GitLabToGitHubMigrator:
         self.github_token: str = github_token
 
         # Initialize API clients with authentication. This falls back to anonymous access if no token is provided.
-        self.gitlab_client: gitlab.Gitlab = glu.get_client(gitlab_token)
+        self.gitlab_client: gitlab.Gitlab = glu.get_client(token=gitlab_token)
         self.github_client: Github = ghu.get_client(github_token)
 
         # Get project
         self.gitlab_project: Any = self.gitlab_client.projects.get(gitlab_project_path)
+        
+        # Initialize GitLab GraphQL client using the gitlab.GraphQL class
+        self.gitlab_graphql_client: gitlab.GraphQL = glu.get_graphql_client(token=gitlab_token)
 
         self._github_repo: github.Repository.Repository | None = None
 
@@ -114,8 +116,8 @@ class GitLabToGitHubMigrator:
     def _make_graphql_request(self, query: str, variables: dict[str, Any] | None = None) -> dict[str, Any]:
         """Make a GraphQL request to GitLab API using python-gitlab's native GraphQL support."""
         try:
-            # Use python-gitlab's native GraphQL support
-            response = self.gitlab_client.graphql(query, variables=variables or {})  # pyright: ignore[reportAttributeAccessIssue]
+            # Use python-gitlab's native GraphQL support via the dedicated GraphQL client
+            response = self.gitlab_graphql_client.execute(query, variables=variables or {})
 
             # Check for errors in the response
             if "errors" in response:
@@ -374,10 +376,8 @@ class GitLabToGitHubMigrator:
                 # Build full URL
                 full_url = f"{self.gitlab_project.web_url}{attachment_url}"
 
-                # Download file
-                response = requests.get(
-                    full_url, headers={"Authorization": f"Bearer {self.gitlab_client.private_token}"}, timeout=30
-                )
+                # Download file using python-gitlab's http_get method (authenticated)
+                response = self.gitlab_client.http_get(full_url, raw=True, timeout=30)
                 response.raise_for_status()
 
                 # Extract filename

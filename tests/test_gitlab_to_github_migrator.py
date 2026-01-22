@@ -2,7 +2,6 @@
 Tests for GitLab to GitHub Migration Tool
 """
 
-import os
 import tempfile
 from unittest.mock import Mock, PropertyMock, patch
 
@@ -269,16 +268,14 @@ class TestGitLabToGitHubMigrator:
         assert migrator.milestone_mapping[103] == 3
         assert migrator.milestone_mapping[105] == 5
 
-    @patch("gitlab_to_github_migrator.migrator.requests.get")
     @patch("gitlab_to_github_migrator.gitlab_utils.Gitlab")
     @patch("gitlab_to_github_migrator.github_utils.Github")
-    def test_download_gitlab_attachments(self, mock_github_class, mock_gitlab_class, mock_requests_get) -> None:
+    def test_download_gitlab_attachments(self, mock_github_class, mock_gitlab_class) -> None:
         """Test GitLab attachment download."""
         # Mock successful response
         mock_response = Mock()
         mock_response.content = b"file content"
         mock_response.raise_for_status.return_value = None
-        mock_requests_get.return_value = mock_response
 
         # Setup GitLab/GitHub mocks
         mock_gitlab_client = Mock()
@@ -286,12 +283,13 @@ class TestGitLabToGitHubMigrator:
         mock_gitlab_class.return_value = mock_gitlab_client
         mock_github_class.return_value = mock_github_client
         mock_gitlab_client.projects.get.return_value = self.mock_gitlab_project
+        
+        # Mock the http_get method
+        mock_gitlab_client.http_get.return_value = mock_response
 
         migrator = GitLabToGitHubMigrator(
             self.gitlab_project_path, self.github_repo_path, github_token="test_token"
         )
-        # Use environment variable for test token
-        migrator.gitlab_client.private_token = os.environ.get("GITLAB_TOKEN", "test-token")
 
         content = "Here is an attachment: /uploads/abcdef0123456789abcdef0123456789/file.pdf"
         files = migrator.download_gitlab_attachments(content)
