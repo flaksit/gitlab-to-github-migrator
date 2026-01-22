@@ -76,7 +76,7 @@ class TestGitLabToGitHubMigrator:
             self.github_repo_path,
             label_translations=["p_*:priority: *"],
             gitlab_token="test_gitlab_token",
-            gitlab_token="test_gitlab_token", github_token="test_token",
+            github_token="test_token",
         )
 
         assert migrator.gitlab_project_path == self.gitlab_project_path
