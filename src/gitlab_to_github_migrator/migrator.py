@@ -15,9 +15,11 @@ from pathlib import Path
 from typing import Any
 
 import github.AuthenticatedUser
+import github.GitRelease
 import github.Issue
 import github.Repository
 import gitlab  # noqa: TC002 - used at runtime, not just for type hints
+import requests
 from github import Github, GithubException
 from gitlab.exceptions import GitlabAuthenticationError, GitlabError
 
@@ -71,6 +73,7 @@ class GitLabToGitHubMigrator:
         self.gitlab_graphql_client: gitlab.GraphQL = glu.get_graphql_client(token=gitlab_token)
 
         self._github_repo: github.Repository.Repository | None = None
+        self._attachments_release: github.GitRelease.GitRelease | None = None
 
         # Initialize label translator
         self.label_translator: LabelTranslator = LabelTranslator(label_translations)
@@ -396,37 +399,74 @@ class GitLabToGitHubMigrator:
 
         return downloaded_files
 
+    @property
+    def attachments_release(self) -> github.GitRelease.GitRelease:
+        """Get or create the 'gitlab-issue-attachments' release for storing attachment files (cached)."""
+        if self._attachments_release is None:
+            release_tag = "gitlab-issue-attachments"
+            
+            try:
+                # Try to get existing release by tag
+                release = self.github_repo.get_release(release_tag)
+            except GithubException as e:
+                if e.status == 404:
+                    # Release doesn't exist, create it
+                    logger.info("Creating new 'gitlab-issue-attachments' release for storing attachment files")
+                    release = self.github_repo.create_git_release(
+                        tag=release_tag,
+                        name="GitLab issue attachments",
+                        message="Storage for migrated GitLab attachments. Do not delete.",
+                        draft=True,  # Keep it as a draft to minimize visibility
+                    )
+                    logger.info(f"Created attachments release: {release.tag_name}")
+                else:
+                    # Re-raise other GitHub exceptions
+                    raise
+            else:
+                logger.debug(f"Using existing attachments release: {release.tag_name}")
+            
+            self._attachments_release = release
+        
+        return self._attachments_release
+
     def upload_github_attachments(self, files: list[DownloadedFile], content: str) -> str:
-        """Upload files to GitHub and update content with new URLs."""
+        """Upload files to GitHub release assets and update content with new URLs."""
+        if not files:
+            return content
+        
         updated_content = content
 
+        # Get or create the attachments release (cached property)
+        release = self.attachments_release
+
         for file_info in files:
+            temp_path = None
             try:
                 # Create a temporary file for GitHub API
-                with tempfile.NamedTemporaryFile(delete=False) as temp_file:
+                # Use only the file extension for the suffix to avoid filesystem issues
+                file_ext = Path(file_info.filename).suffix if file_info.filename else ""
+                with tempfile.NamedTemporaryFile(delete=False, suffix=file_ext) as temp_file:
                     temp_path = temp_file.name
                     temp_file.write(file_info.content)
 
-                # GitHub doesn't have a direct file upload API for arbitrary files
-                # We'll create a commit with the file and reference it
-                try:
-                    # Try to upload as release asset if possible, otherwise skip file upload
-                    # and keep original reference with a note
-                    logger.warning(f"File upload not implemented for {file_info.filename}")
-                    # For now, we'll keep the original URL with a note
-                    updated_content = updated_content.replace(
-                        file_info.short_gitlab_url, f"{file_info.short_gitlab_url} (Original GitLab attachment)"
-                    )
-                except GithubException as e:
-                    logger.warning(f"Failed to upload {file_info.filename}: {e}")
+                # Upload file as release asset
+                asset = release.upload_asset(path=temp_path, name=file_info.filename)
+                # Get the download URL for the asset
+                download_url = asset.browser_download_url
+                
+                # Replace the GitLab URL with the GitHub URL in content
+                updated_content = updated_content.replace(file_info.short_gitlab_url, download_url)
+                logger.debug(f"Uploaded {file_info.filename} to release assets: {download_url}")
 
+            except (GithubException, OSError):
+                logger.exception(f"Failed to process attachment {file_info.filename}")
+                raise
+            finally:
                 # Clean up temp file
-                temp_file_path = Path(temp_path)
-                if temp_file_path.exists():
-                    temp_file_path.unlink()
-
-            except OSError as e:
-                logger.warning(f"Failed to process attachment {file_info.filename}: {e}")
+                if temp_path:
+                    temp_file_path = Path(temp_path)
+                    if temp_file_path.exists():
+                        temp_file_path.unlink()
 
         return updated_content
 
