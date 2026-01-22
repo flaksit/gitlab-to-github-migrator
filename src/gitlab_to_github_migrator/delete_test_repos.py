@@ -19,7 +19,7 @@ import sys
 import textwrap
 from typing import TYPE_CHECKING
 
-from github import Github, UnknownObjectException
+from github import Github, GithubException, UnknownObjectException
 from github.AuthenticatedUser import AuthenticatedUser
 
 from .utils import get_pass_value, setup_logging
@@ -109,7 +109,7 @@ def delete_test_repositories(github_owner: str, pass_path: str) -> None:
                 repo.delete()
                 print(f"✅ Deleted: {repo.name}")
                 success_count += 1
-            except Exception as e:
+            except GithubException as e:
                 print(f"❌ Failed to delete {repo.name}: {e}")
                 failed_repos.append((repo.name, str(e)))
 
@@ -125,7 +125,7 @@ def delete_test_repositories(github_owner: str, pass_path: str) -> None:
         if success_count > 0:
             print(f"\n🎉 Cleanup completed! Deleted {success_count} test repositories.")
 
-    except Exception as e:
+    except (GithubException, ValueError) as e:
         print(f"❌ Error during cleanup: {e}")
         sys.exit(1)
 
