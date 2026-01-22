@@ -18,7 +18,6 @@ import github.AuthenticatedUser
 import github.Issue
 import github.Repository
 import gitlab  # noqa: TC002 - used at runtime, not just for type hints
-import requests
 from github import Github, GithubException
 
 from . import github_utils as ghu
@@ -379,10 +378,8 @@ class GitLabToGitHubMigrator:
                 # Build full URL
                 full_url = f"{self.gitlab_project.web_url}{attachment_url}"
 
-                # Download file
-                response = requests.get(
-                    full_url, headers={"Authorization": f"Bearer {self.gitlab_client.private_token}"}, timeout=30
-                )
+                # Download file using python-gitlab's session (authenticated)
+                response = self.gitlab_client.session.get(full_url, timeout=30)
                 response.raise_for_status()
 
                 # Extract filename

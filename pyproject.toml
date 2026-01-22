@@ -8,7 +8,7 @@ version = "0.1.0"
 description = "Python tool for migrating GitLab projects to GitHub with full metadata preservation"
 readme = "README.md"
 requires-python = ">=3.13"
-dependencies = ["PyGithub>=2.7.0", "python-gitlab[graphql]>=6.2.0", "requests>=2.32.5"]
+dependencies = ["PyGithub>=2.7.0", "python-gitlab[graphql]>=6.2.0"]
 license = {text = "MIT"}
 # https://pypi.org/classifiers/
 classifiers = [
