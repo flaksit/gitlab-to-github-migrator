@@ -399,7 +399,7 @@ class GitLabToGitHubMigrator:
         return downloaded_files
 
     def _get_or_create_attachments_release(self) -> github.GitRelease.GitRelease:
-        """Get or create the 'attachments' release for storing attachment files."""
+        """Get or create the 'gitlab-issue-attachments' release for storing attachment files."""
         release_tag = "gitlab-issue-attachments"
         
         try:
