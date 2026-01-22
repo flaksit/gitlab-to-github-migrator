@@ -388,6 +388,129 @@ class TestGitLabToGitHubMigrator:
         assert "Issue count mismatch" in report["errors"][0]
         assert "Milestone count mismatch" in report["errors"][1]
 
+    @patch("gitlab_to_github_migrator.gitlab_utils.Gitlab")
+    @patch("gitlab_to_github_migrator.github_utils.Github")
+    def test_upload_github_attachments_success(self, mock_github_class, mock_gitlab_class) -> None:
+        """Test successful attachment upload to GitHub release."""
+        from gitlab_to_github_migrator.migrator import DownloadedFile
+        
+        mock_gitlab_client = Mock()
+        mock_github_client = Mock()
+        mock_gitlab_class.return_value = mock_gitlab_client
+        mock_github_class.return_value = mock_github_client
+
+        mock_gitlab_client.projects.get.return_value = self.mock_gitlab_project
+
+        migrator = GitLabToGitHubMigrator(
+            self.gitlab_project_path, self.github_repo_path, github_token="test_token"
+        )
+        migrator._github_repo = self.mock_github_repo
+
+        # Mock the release
+        mock_release = Mock()
+        mock_asset = Mock()
+        mock_asset.browser_download_url = "https://github.com/org/repo/releases/download/attachments/test.png"
+        mock_release.upload_asset.return_value = mock_asset
+        self.mock_github_repo.get_release.return_value = mock_release
+
+        # Create test file
+        test_file = DownloadedFile(
+            filename="test.png",
+            content=b"fake image data",
+            short_gitlab_url="/uploads/abc123/test.png",
+            full_gitlab_url="https://gitlab.com/test/project/uploads/abc123/test.png",
+        )
+
+        # Test content update
+        content = "Here is an image: ![test](/uploads/abc123/test.png)"
+        updated_content = migrator.upload_github_attachments([test_file], content)
+
+        # Verify the URL was replaced
+        assert "/uploads/abc123/test.png" not in updated_content
+        assert "https://github.com/org/repo/releases/download/attachments/test.png" in updated_content
+        assert mock_release.upload_asset.called
+
+    @patch("gitlab_to_github_migrator.gitlab_utils.Gitlab")
+    @patch("gitlab_to_github_migrator.github_utils.Github")
+    def test_upload_github_attachments_empty_list(self, mock_github_class, mock_gitlab_class) -> None:
+        """Test that empty file list returns original content unchanged."""
+        mock_gitlab_client = Mock()
+        mock_github_client = Mock()
+        mock_gitlab_class.return_value = mock_gitlab_client
+        mock_github_class.return_value = mock_github_client
+
+        mock_gitlab_client.projects.get.return_value = self.mock_gitlab_project
+
+        migrator = GitLabToGitHubMigrator(
+            self.gitlab_project_path, self.github_repo_path, github_token="test_token"
+        )
+        migrator._github_repo = self.mock_github_repo
+
+        content = "No attachments here"
+        updated_content = migrator.upload_github_attachments([], content)
+
+        assert updated_content == content
+
+    @patch("gitlab_to_github_migrator.gitlab_utils.Gitlab")
+    @patch("gitlab_to_github_migrator.github_utils.Github")
+    def test_get_or_create_attachments_release_existing(self, mock_github_class, mock_gitlab_class) -> None:
+        """Test getting existing attachments release."""
+        mock_gitlab_client = Mock()
+        mock_github_client = Mock()
+        mock_gitlab_class.return_value = mock_gitlab_client
+        mock_github_class.return_value = mock_github_client
+
+        mock_gitlab_client.projects.get.return_value = self.mock_gitlab_project
+
+        migrator = GitLabToGitHubMigrator(
+            self.gitlab_project_path, self.github_repo_path, github_token="test_token"
+        )
+        migrator._github_repo = self.mock_github_repo
+
+        # Mock existing release
+        mock_release = Mock()
+        mock_release.tag_name = "attachments"
+        self.mock_github_repo.get_release.return_value = mock_release
+
+        release = migrator._get_or_create_attachments_release()
+
+        assert release == mock_release
+        self.mock_github_repo.get_release.assert_called_once_with("attachments")
+        self.mock_github_repo.create_git_release.assert_not_called()
+
+    @patch("gitlab_to_github_migrator.gitlab_utils.Gitlab")
+    @patch("gitlab_to_github_migrator.github_utils.Github")
+    def test_get_or_create_attachments_release_create_new(self, mock_github_class, mock_gitlab_class) -> None:
+        """Test creating new attachments release when it doesn't exist."""
+        mock_gitlab_client = Mock()
+        mock_github_client = Mock()
+        mock_gitlab_class.return_value = mock_gitlab_client
+        mock_github_class.return_value = mock_github_client
+
+        mock_gitlab_client.projects.get.return_value = self.mock_gitlab_project
+
+        migrator = GitLabToGitHubMigrator(
+            self.gitlab_project_path, self.github_repo_path, github_token="test_token"
+        )
+        migrator._github_repo = self.mock_github_repo
+
+        # Mock 404 error when getting release
+        mock_error = GithubException(404, "Not Found", headers={})
+        self.mock_github_repo.get_release.side_effect = mock_error
+
+        # Mock create release
+        mock_release = Mock()
+        mock_release.tag_name = "attachments"
+        self.mock_github_repo.create_git_release.return_value = mock_release
+
+        release = migrator._get_or_create_attachments_release()
+
+        assert release == mock_release
+        self.mock_github_repo.create_git_release.assert_called_once()
+        call_args = self.mock_github_repo.create_git_release.call_args
+        assert call_args.kwargs["tag"] == "attachments"
+        assert call_args.kwargs["draft"] is True
+
 
 @pytest.mark.unit
 class TestIntegration:
