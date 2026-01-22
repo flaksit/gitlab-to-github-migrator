@@ -453,7 +453,7 @@ class TestGitLabToGitHubMigrator:
 
     @patch("gitlab_to_github_migrator.gitlab_utils.Gitlab")
     @patch("gitlab_to_github_migrator.github_utils.Github")
-    def test_get_or_create_attachments_release_existing(self, mock_github_class, mock_gitlab_class) -> None:
+    def test_attachments_release_existing(self, mock_github_class, mock_gitlab_class) -> None:
         """Test getting existing attachments release."""
         mock_gitlab_client = Mock()
         mock_github_client = Mock()
@@ -472,7 +472,7 @@ class TestGitLabToGitHubMigrator:
         mock_release.tag_name = "gitlab-issue-attachments"
         self.mock_github_repo.get_release.return_value = mock_release
 
-        release = migrator._get_or_create_attachments_release()
+        release = migrator.attachments_release
 
         assert release == mock_release
         self.mock_github_repo.get_release.assert_called_once_with("gitlab-issue-attachments")
@@ -480,7 +480,7 @@ class TestGitLabToGitHubMigrator:
 
     @patch("gitlab_to_github_migrator.gitlab_utils.Gitlab")
     @patch("gitlab_to_github_migrator.github_utils.Github")
-    def test_get_or_create_attachments_release_create_new(self, mock_github_class, mock_gitlab_class) -> None:
+    def test_attachments_release_create_new(self, mock_github_class, mock_gitlab_class) -> None:
         """Test creating new attachments release when it doesn't exist."""
         mock_gitlab_client = Mock()
         mock_github_client = Mock()
@@ -503,13 +503,44 @@ class TestGitLabToGitHubMigrator:
         mock_release.tag_name = "gitlab-issue-attachments"
         self.mock_github_repo.create_git_release.return_value = mock_release
 
-        release = migrator._get_or_create_attachments_release()
+        release = migrator.attachments_release
 
         assert release == mock_release
         self.mock_github_repo.create_git_release.assert_called_once()
         call_args = self.mock_github_repo.create_git_release.call_args
         assert call_args.kwargs["tag"] == "gitlab-issue-attachments"
         assert call_args.kwargs["draft"] is True
+
+    @patch("gitlab_to_github_migrator.gitlab_utils.Gitlab")
+    @patch("gitlab_to_github_migrator.github_utils.Github")
+    def test_attachments_release_cached(self, mock_github_class, mock_gitlab_class) -> None:
+        """Test that attachments release is cached after first access."""
+        mock_gitlab_client = Mock()
+        mock_github_client = Mock()
+        mock_gitlab_class.return_value = mock_gitlab_client
+        mock_github_class.return_value = mock_github_client
+
+        mock_gitlab_client.projects.get.return_value = self.mock_gitlab_project
+
+        migrator = GitLabToGitHubMigrator(
+            self.gitlab_project_path, self.github_repo_path, github_token="test_token"
+        )
+        migrator._github_repo = self.mock_github_repo
+
+        # Mock existing release
+        mock_release = Mock()
+        mock_release.tag_name = "gitlab-issue-attachments"
+        self.mock_github_repo.get_release.return_value = mock_release
+
+        # Access the property twice
+        release1 = migrator.attachments_release
+        release2 = migrator.attachments_release
+
+        # Should be the same object
+        assert release1 == release2
+        assert release1 is release2
+        # API should only be called once (cached after first call)
+        self.mock_github_repo.get_release.assert_called_once_with("gitlab-issue-attachments")
 
 
 @pytest.mark.unit

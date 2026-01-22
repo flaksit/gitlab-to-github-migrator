@@ -73,6 +73,7 @@ class GitLabToGitHubMigrator:
         self.gitlab_graphql_client: gitlab.GraphQL = glu.get_graphql_client(token=gitlab_token)
 
         self._github_repo: github.Repository.Repository | None = None
+        self._attachments_release: github.GitRelease.GitRelease | None = None
 
         # Initialize label translator
         self.label_translator: LabelTranslator = LabelTranslator(label_translations)
@@ -398,30 +399,35 @@ class GitLabToGitHubMigrator:
 
         return downloaded_files
 
-    def _get_or_create_attachments_release(self) -> github.GitRelease.GitRelease:
-        """Get or create the 'gitlab-issue-attachments' release for storing attachment files."""
-        release_tag = "gitlab-issue-attachments"
+    @property
+    def attachments_release(self) -> github.GitRelease.GitRelease:
+        """Get or create the 'gitlab-issue-attachments' release for storing attachment files (cached)."""
+        if self._attachments_release is None:
+            release_tag = "gitlab-issue-attachments"
+            
+            try:
+                # Try to get existing release by tag
+                release = self.github_repo.get_release(release_tag)
+            except GithubException as e:
+                if e.status == 404:
+                    # Release doesn't exist, create it
+                    logger.info("Creating new 'gitlab-issue-attachments' release for storing attachment files")
+                    release = self.github_repo.create_git_release(
+                        tag=release_tag,
+                        name="GitLab issue attachments",
+                        message="Storage for migrated GitLab attachments. Do not delete.",
+                        draft=True,  # Keep it as a draft to minimize visibility
+                    )
+                    logger.info(f"Created attachments release: {release.tag_name}")
+                else:
+                    # Re-raise other GitHub exceptions
+                    raise
+            else:
+                logger.debug(f"Using existing attachments release: {release.tag_name}")
+            
+            self._attachments_release = release
         
-        try:
-            # Try to get existing release by tag
-            release = self.github_repo.get_release(release_tag)
-        except GithubException as e:
-            if e.status == 404:
-                # Release doesn't exist, create it
-                logger.info("Creating new 'gitlab-issue-attachments' release for storing attachment files")
-                release = self.github_repo.create_git_release(
-                    tag=release_tag,
-                    name="GitLab issue attachments",
-                    message="Storage for migrated GitLab attachments. Do not delete.",
-                    draft=True,  # Keep it as a draft to minimize visibility
-                )
-                logger.info(f"Created attachments release: {release.tag_name}")
-                return release
-            # Re-raise other GitHub exceptions
-            raise
-        else:
-            logger.debug(f"Using existing attachments release: {release.tag_name}")
-            return release
+        return self._attachments_release
 
     def upload_github_attachments(self, files: list[DownloadedFile], content: str) -> str:
         """Upload files to GitHub release assets and update content with new URLs."""
@@ -430,8 +436,8 @@ class GitLabToGitHubMigrator:
         
         updated_content = content
 
-        # Get or create the attachments release
-        release = self._get_or_create_attachments_release()
+        # Get or create the attachments release (cached property)
+        release = self.attachments_release
 
         for file_info in files:
             temp_path = None
