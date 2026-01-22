@@ -51,7 +51,7 @@ class GitLabToGitHubMigrator:
         *,
         label_translations: list[str] | None = None,
         local_clone_path: str | None = None,
-        gitlab_token: str | None = None,
+        gitlab_token: str,
         github_token: str,
     ) -> None:
         self.gitlab_project_path: str = gitlab_project_path
@@ -59,10 +59,10 @@ class GitLabToGitHubMigrator:
         self.local_clone_path: Path | None = Path(local_clone_path) if local_clone_path else None
 
         # Store tokens for direct API access
-        self.gitlab_token: str | None = gitlab_token
+        self.gitlab_token: str = gitlab_token
         self.github_token: str = github_token
 
-        # Initialize API clients with authentication. This falls back to anonymous access if no token is provided.
+        # Initialize API clients with authentication
         self.gitlab_client: gitlab.Gitlab = glu.get_client(token=gitlab_token)
         self.github_client: Github = ghu.get_client(github_token)
 
@@ -214,12 +214,11 @@ class GitLabToGitHubMigrator:
                         children.append(child_info)
 
             logger.debug(f"Found {len(children)} child work items for issue #{issue_iid}")
+            return children
 
         except GitlabError as e:
-            logger.warning(f"Failed to get work item children for issue #{issue_iid}: {e}")
-            children = []
-
-        return children
+            msg = f"Failed to get work item children for issue #{issue_iid}: {e}"
+            raise MigrationError(msg) from e
 
 
 
@@ -395,7 +394,8 @@ class GitLabToGitHubMigrator:
                 ))
 
             except (requests.RequestException, OSError) as e:
-                logger.warning(f"Failed to download attachment {attachment_url}: {e}")
+                msg = f"Failed to download attachment {attachment_url}: {e}"
+                raise MigrationError(msg) from e
 
         return downloaded_files
 
@@ -478,18 +478,14 @@ class GitLabToGitHubMigrator:
         This uses GitHub's sub-issues API introduced in December 2024, now supported
         natively by PyGithub.
         """
-        try:
-            # First create a regular issue
-            sub_issue = self.github_repo.create_issue(title=sub_issue_title, body=sub_issue_body)
+        # First create a regular issue
+        sub_issue = self.github_repo.create_issue(title=sub_issue_title, body=sub_issue_body)
 
-            # Add the issue as a sub-issue to the parent using PyGithub's native support
-            # Note: PyGithub requires the issue ID (not number) for sub-issue operations
-            parent_github_issue.add_sub_issue(sub_issue.id)
+        # Add the issue as a sub-issue to the parent using PyGithub's native support
+        # Note: PyGithub requires the issue ID (not number) for sub-issue operations
+        parent_github_issue.add_sub_issue(sub_issue.id)
 
-            logger.debug(f"Created sub-issue #{sub_issue.number} under parent #{parent_github_issue.number}")
-
-        except GithubException as e:
-            logger.warning(f"Failed to create GitHub sub-issue: {e}")
+        logger.debug(f"Created sub-issue #{sub_issue.number} under parent #{parent_github_issue.number}")
 
     def create_github_issue_dependency(self, blocked_issue_number: int, blocking_issue_id: int) -> bool:
         """Create a GitHub issue dependency using PyGithub's requester.
@@ -526,8 +522,8 @@ class GitLabToGitHubMigrator:
                     f"Could not create dependency (may already exist): {e.status} - {e.data}"
                 )
                 return False
-            logger.warning(f"Request failed when creating issue dependency: {e}")
-            return False
+            # Re-raise other GitHub exceptions as they represent real errors
+            raise
 
         if status == 201:
             logger.debug(
@@ -535,10 +531,8 @@ class GitLabToGitHubMigrator:
             )
             return True
 
-        logger.warning(
-            f"Failed to create issue dependency: {status} - {data}"
-        )
-        return False
+        msg = f"Failed to create issue dependency: {status} - {data}"
+        raise MigrationError(msg)
 
     def get_issue_cross_links(  # noqa: PLR0912 - complex categorization logic
         self, gitlab_issue: Any  # noqa: ANN401 - gitlab has no type stubs
@@ -776,83 +770,75 @@ class GitLabToGitHubMigrator:
                 logger.info(f"Processing {len(pending_parent_child_relations)} parent-child relationships...")
 
                 for pending_relation in pending_parent_child_relations:
-                    try:
-                        parent_gitlab_iid = pending_relation["parent_gitlab_iid"]
-                        child_relation = pending_relation["relation"]
+                    parent_gitlab_iid = pending_relation["parent_gitlab_iid"]
+                    child_relation = pending_relation["relation"]
 
-                        # Get the parent GitHub issue
-                        if parent_gitlab_iid in github_issue_dict:
-                            parent_github_issue = github_issue_dict[parent_gitlab_iid]
+                    # Get the parent GitHub issue
+                    if parent_gitlab_iid in github_issue_dict:
+                        parent_github_issue = github_issue_dict[parent_gitlab_iid]
 
-                            # Get the child issue info
-                            child_gitlab_iid = child_relation["target_iid"]
-                            if child_gitlab_iid in github_issue_dict:
-                                child_github_issue = github_issue_dict[child_gitlab_iid]
+                        # Get the child issue info
+                        child_gitlab_iid = child_relation["target_iid"]
+                        if child_gitlab_iid in github_issue_dict:
+                            child_github_issue = github_issue_dict[child_gitlab_iid]
 
-                                # Create sub-issue relationship
-                                # Note: This will attempt to use GitHub's new sub-issues API
-                                self.create_github_sub_issue(
-                                    parent_github_issue,
-                                    f"Link to #{child_github_issue.number}",
-                                    f"This issue is linked as a child of #{parent_github_issue.number}.\n\nOriginal GitLab relationship: {child_relation['type']}",
-                                )
-
-                                logger.debug(f"Linked issue #{child_gitlab_iid} as sub-issue of #{parent_gitlab_iid}")
-                            else:
-                                logger.warning(
-                                    f"Child issue #{child_gitlab_iid} not found for parent-child relationship"
-                                )
-                        else:
-                            logger.warning(
-                                f"Parent issue #{parent_gitlab_iid} not found for parent-child relationship"
+                            # Create sub-issue relationship
+                            # Note: This will attempt to use GitHub's new sub-issues API
+                            self.create_github_sub_issue(
+                                parent_github_issue,
+                                f"Link to #{child_github_issue.number}",
+                                f"This issue is linked as a child of #{parent_github_issue.number}.\n\nOriginal GitLab relationship: {child_relation['type']}",
                             )
 
-                    except GithubException as e:
-                        logger.warning(f"Failed to create parent-child relationship: {e}")
+                            logger.debug(f"Linked issue #{child_gitlab_iid} as sub-issue of #{parent_gitlab_iid}")
+                        else:
+                            logger.warning(
+                                f"Child issue #{child_gitlab_iid} not found for parent-child relationship"
+                            )
+                    else:
+                        logger.warning(
+                            f"Parent issue #{parent_gitlab_iid} not found for parent-child relationship"
+                        )
 
             # Third pass: Create blocking relationships as GitHub issue dependencies
             if pending_blocking_relations:
                 logger.info(f"Processing {len(pending_blocking_relations)} blocking relationships...")
 
                 for pending_relation in pending_blocking_relations:
-                    try:
-                        source_gitlab_iid = pending_relation["source_gitlab_iid"]
-                        relation = pending_relation["relation"]
-                        link_type = relation["type"]
-                        target_gitlab_iid = relation["target_iid"]
+                    source_gitlab_iid = pending_relation["source_gitlab_iid"]
+                    relation = pending_relation["relation"]
+                    link_type = relation["type"]
+                    target_gitlab_iid = relation["target_iid"]
 
-                        # Get both GitHub issues
-                        if source_gitlab_iid not in github_issue_dict:
-                            logger.warning(f"Source issue #{source_gitlab_iid} not found for blocking relationship")
-                            continue
-                        if target_gitlab_iid not in github_issue_dict:
-                            logger.warning(f"Target issue #{target_gitlab_iid} not found for blocking relationship")
-                            continue
+                    # Get both GitHub issues
+                    if source_gitlab_iid not in github_issue_dict:
+                        logger.warning(f"Source issue #{source_gitlab_iid} not found for blocking relationship")
+                        continue
+                    if target_gitlab_iid not in github_issue_dict:
+                        logger.warning(f"Target issue #{target_gitlab_iid} not found for blocking relationship")
+                        continue
 
-                        source_github_issue = github_issue_dict[source_gitlab_iid]
-                        target_github_issue = github_issue_dict[target_gitlab_iid]
+                    source_github_issue = github_issue_dict[source_gitlab_iid]
+                    target_github_issue = github_issue_dict[target_gitlab_iid]
 
-                        # Determine which issue is blocked and which is blocking based on GitLab link type
-                        # GitLab "blocks" means: source blocks target -> target is blocked by source
-                        # GitLab "is_blocked_by" means: source is blocked by target -> source is blocked by target
-                        if link_type == "blocks":
-                            # Source blocks target: target is blocked by source
-                            blocked_issue_number = target_github_issue.number
-                            blocking_issue_id = source_github_issue.id
-                        else:  # is_blocked_by
-                            # Source is blocked by target: source is blocked by target
-                            blocked_issue_number = source_github_issue.number
-                            blocking_issue_id = target_github_issue.id
+                    # Determine which issue is blocked and which is blocking based on GitLab link type
+                    # GitLab "blocks" means: source blocks target -> target is blocked by source
+                    # GitLab "is_blocked_by" means: source is blocked by target -> source is blocked by target
+                    if link_type == "blocks":
+                        # Source blocks target: target is blocked by source
+                        blocked_issue_number = target_github_issue.number
+                        blocking_issue_id = source_github_issue.id
+                    else:  # is_blocked_by
+                        # Source is blocked by target: source is blocked by target
+                        blocked_issue_number = source_github_issue.number
+                        blocking_issue_id = target_github_issue.id
 
-                        success = self.create_github_issue_dependency(blocked_issue_number, blocking_issue_id)
+                    success = self.create_github_issue_dependency(blocked_issue_number, blocking_issue_id)
 
-                        if success:
-                            logger.debug(
-                                f"Created blocking relationship: #{source_gitlab_iid} {link_type} #{target_gitlab_iid}"
-                            )
-
-                    except GithubException as e:
-                        logger.warning(f"Failed to create blocking relationship: {e}")
+                    if success:
+                        logger.debug(
+                            f"Created blocking relationship: #{source_gitlab_iid} {link_type} #{target_gitlab_iid}"
+                        )
 
             logger.info(f"Migrated {len(gitlab_issues)} issues")
 
@@ -864,54 +850,46 @@ class GitLabToGitHubMigrator:
         self, gitlab_issue: Any, github_issue: github.Issue.Issue  # noqa: ANN401 - gitlab has no type stubs
     ) -> None:
         """Migrate comments for an issue."""
-        try:
-            # Get all notes/comments
-            notes = gitlab_issue.notes.list(all=True)
-            notes.sort(key=lambda n: n.created_at)
+        # Get all notes/comments
+        notes = gitlab_issue.notes.list(all=True)
+        notes.sort(key=lambda n: n.created_at)
 
-            for note in notes:
-                if note.system:
-                    # System note - convert to regular comment
-                    comment_body = f"**System note:** {note.body}\n\n"
-                else:
-                    # Regular comment
-                    comment_body = f"**Comment by** {note.author['name']} (@{note.author['username']}) **on** {note.created_at}\n\n"
-                    comment_body += "---\n\n"
+        for note in notes:
+            if note.system:
+                # System note - convert to regular comment
+                comment_body = f"**System note:** {note.body}\n\n"
+            else:
+                # Regular comment
+                comment_body = f"**Comment by** {note.author['name']} (@{note.author['username']}) **on** {note.created_at}\n\n"
+                comment_body += "---\n\n"
 
-                    if note.body:
-                        # Process attachments in comment
-                        files = self.download_gitlab_attachments(note.body)
-                        updated_body = self.upload_github_attachments(files, note.body)
-                        comment_body += updated_body
+                if note.body:
+                    # Process attachments in comment
+                    files = self.download_gitlab_attachments(note.body)
+                    updated_body = self.upload_github_attachments(files, note.body)
+                    comment_body += updated_body
 
-                # Create GitHub comment
-                github_issue.create_comment(comment_body)
-                logger.debug(f"Migrated comment by {note.author['username']}")
-
-        except (GitlabError, GithubException) as e:
-            logger.warning(f"Failed to migrate comments for issue #{gitlab_issue.iid}: {e}")
+            # Create GitHub comment
+            github_issue.create_comment(comment_body)
+            logger.debug(f"Migrated comment by {note.author['username']}")
 
     def cleanup_placeholders(self) -> None:
         """Delete placeholder issues and milestones."""
-        try:
-            # Clean up placeholder issues
-            issues = self.github_repo.get_issues(state="all")
-            for issue in issues:
-                if issue.title == "Placeholder":
-                    # GitHub API doesn't allow deleting issues, so we'll leave them closed
-                    logger.debug(f"Placeholder issue #{issue.number} left closed (cannot delete)")
+        # Clean up placeholder issues
+        issues = self.github_repo.get_issues(state="all")
+        for issue in issues:
+            if issue.title == "Placeholder":
+                # GitHub API doesn't allow deleting issues, so we'll leave them closed
+                logger.debug(f"Placeholder issue #{issue.number} left closed (cannot delete)")
 
-            # Clean up placeholder milestones
-            milestones = self.github_repo.get_milestones(state="all")
-            for milestone in milestones:
-                if milestone.title == "Placeholder Milestone":
-                    milestone.delete()
-                    logger.debug(f"Deleted placeholder milestone #{milestone.number}")
+        # Clean up placeholder milestones
+        milestones = self.github_repo.get_milestones(state="all")
+        for milestone in milestones:
+            if milestone.title == "Placeholder Milestone":
+                milestone.delete()
+                logger.debug(f"Deleted placeholder milestone #{milestone.number}")
 
-            logger.info("Cleanup completed")
-
-        except GithubException as e:
-            logger.warning(f"Cleanup failed: {e}")
+        logger.info("Cleanup completed")
 
     def validate_migration(self) -> dict[str, Any]:
         """Validate migration results and generate report."""

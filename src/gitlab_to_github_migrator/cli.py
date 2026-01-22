@@ -56,7 +56,7 @@ def parse_arguments() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def _get_gitlab_token(pass_path: str | None = None) -> str | None:
+def _get_gitlab_token(pass_path: str | None = None) -> str:
     """Get GitLab token from pass path, env var GITLAB_TOKEN_ENV_VAR, or default pass location."""
     # Try pass path first
     if pass_path:
@@ -68,13 +68,7 @@ def _get_gitlab_token(pass_path: str | None = None) -> str | None:
         return token
 
     # Try default pass path
-    try:
-        return get_pass_value(DEFAULT_GITLAB_TOKEN_PASS_PATH)
-    except PassError:
-        logger.warning(
-            f"No GitLab token specified nor found. If non-anonymous access is required, specify correct pass path or set {GITLAB_TOKEN_ENV_VAR} environment variable."
-        )
-        return None
+    return get_pass_value(DEFAULT_GITLAB_TOKEN_PASS_PATH)
 
 
 def _get_github_token(pass_path: str | None = None) -> str:
