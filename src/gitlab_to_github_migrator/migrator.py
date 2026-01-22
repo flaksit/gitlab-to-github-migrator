@@ -19,6 +19,7 @@ import github.Issue
 import github.Repository
 import gitlab  # noqa: TC002 - used at runtime, not just for type hints
 from github import Github, GithubException
+from gitlab.exceptions import GitlabAuthenticationError, GitlabError
 
 from . import github_utils as ghu
 from . import gitlab_utils as glu
@@ -101,7 +102,7 @@ class GitLabToGitHubMigrator:
             # Test GitLab access
             _ = self.gitlab_project.name
             logger.info("GitLab API access validated")
-        except Exception as e:
+        except (GitlabError, GitlabAuthenticationError) as e:
             msg = f"GitLab API access failed: {e}"
             raise MigrationError(msg) from e
 
@@ -109,7 +110,7 @@ class GitLabToGitHubMigrator:
             # Test GitHub access
             self.github_client.get_user()
             logger.info("GitHub API access validated")
-        except Exception as e:
+        except GithubException as e:
             msg = f"GitHub API access failed: {e}"
             raise MigrationError(msg) from e
 
@@ -126,7 +127,7 @@ class GitLabToGitHubMigrator:
 
             return response.get("data", {})
 
-        except Exception as e:
+        except GitlabError as e:
             msg = f"GraphQL request failed: {e}"
             raise MigrationError(msg) from e
 
@@ -211,7 +212,7 @@ class GitLabToGitHubMigrator:
 
             logger.debug(f"Found {len(children)} child work items for issue #{issue_iid}")
 
-        except Exception as e:
+        except GitlabError as e:
             logger.warning(f"Failed to get work item children for issue #{issue_iid}: {e}")
             children = []
 
@@ -262,7 +263,7 @@ class GitLabToGitHubMigrator:
 
             logger.info("Repository content migrated successfully")
 
-        except Exception as e:
+        except (subprocess.CalledProcessError, OSError) as e:
             msg = f"Failed to migrate repository content: {e}"
             raise MigrationError(msg) from e
         finally:
@@ -300,7 +301,7 @@ class GitLabToGitHubMigrator:
 
             logger.info(f"Migrated {len(self.label_mapping)} labels")
 
-        except Exception as e:
+        except (GitlabError, GithubException) as e:
             msg = f"Failed to migrate labels: {e}"
             raise MigrationError(msg) from e
 
@@ -359,7 +360,7 @@ class GitLabToGitHubMigrator:
 
             logger.info(f"Migrated {len(self.milestone_mapping)} milestones")
 
-        except Exception as e:
+        except (GitlabError, GithubException) as e:
             msg = f"Failed to migrate milestones: {e}"
             raise MigrationError(msg) from e
 
@@ -390,7 +391,7 @@ class GitLabToGitHubMigrator:
                     full_gitlab_url=full_url,
                 ))
 
-            except Exception as e:
+            except (requests.RequestException, OSError) as e:
                 logger.warning(f"Failed to download attachment {attachment_url}: {e}")
 
         return downloaded_files
@@ -416,7 +417,7 @@ class GitLabToGitHubMigrator:
                     updated_content = updated_content.replace(
                         file_info.short_gitlab_url, f"{file_info.short_gitlab_url} (Original GitLab attachment)"
                     )
-                except Exception as e:
+                except GithubException as e:
                     logger.warning(f"Failed to upload {file_info.filename}: {e}")
 
                 # Clean up temp file
@@ -424,7 +425,7 @@ class GitLabToGitHubMigrator:
                 if temp_file_path.exists():
                     temp_file_path.unlink()
 
-            except Exception as e:
+            except OSError as e:
                 logger.warning(f"Failed to process attachment {file_info.filename}: {e}")
 
         return updated_content
@@ -447,7 +448,7 @@ class GitLabToGitHubMigrator:
 
             logger.debug(f"Created sub-issue #{sub_issue.number} under parent #{parent_github_issue.number}")
 
-        except Exception as e:
+        except GithubException as e:
             logger.warning(f"Failed to create GitHub sub-issue: {e}")
 
     def create_github_issue_dependency(self, blocked_issue_number: int, blocking_issue_id: int) -> bool:
@@ -766,7 +767,7 @@ class GitLabToGitHubMigrator:
                                 f"Parent issue #{parent_gitlab_iid} not found for parent-child relationship"
                             )
 
-                    except Exception as e:
+                    except GithubException as e:
                         logger.warning(f"Failed to create parent-child relationship: {e}")
 
             # Third pass: Create blocking relationships as GitHub issue dependencies
@@ -810,12 +811,12 @@ class GitLabToGitHubMigrator:
                                 f"Created blocking relationship: #{source_gitlab_iid} {link_type} #{target_gitlab_iid}"
                             )
 
-                    except Exception as e:
+                    except GithubException as e:
                         logger.warning(f"Failed to create blocking relationship: {e}")
 
             logger.info(f"Migrated {len(gitlab_issues)} issues")
 
-        except Exception as e:
+        except (GitlabError, GithubException) as e:
             msg = f"Failed to migrate issues: {e}"
             raise MigrationError(msg) from e
 
@@ -847,7 +848,7 @@ class GitLabToGitHubMigrator:
                 github_issue.create_comment(comment_body)
                 logger.debug(f"Migrated comment by {note.author['username']}")
 
-        except Exception as e:
+        except (GitlabError, GithubException) as e:
             logger.warning(f"Failed to migrate comments for issue #{gitlab_issue.iid}: {e}")
 
     def cleanup_placeholders(self) -> None:
@@ -869,7 +870,7 @@ class GitLabToGitHubMigrator:
 
             logger.info("Cleanup completed")
 
-        except Exception as e:
+        except GithubException as e:
             logger.warning(f"Cleanup failed: {e}")
 
     def validate_migration(self) -> dict[str, Any]:
@@ -947,7 +948,7 @@ class GitLabToGitHubMigrator:
 
             logger.info("Migration validation completed")
 
-        except Exception as e:
+        except (GitlabError, GithubException) as e:
             report["success"] = False
             errors.append(f"Validation failed: {e}")
             logger.exception("Validation failed")
@@ -981,14 +982,14 @@ class GitLabToGitHubMigrator:
 
             logger.info("Migration completed successfully")
 
-        except Exception as e:
+        except (GitlabError, GithubException, subprocess.CalledProcessError, OSError) as e:
             logger.exception("Migration failed")
             # Optionally clean up created repository
             if self.github_repo:
                 try:
                     logger.info("Cleaning up created repository due to failure")
                     self.github_repo.delete()
-                except Exception:
+                except GithubException:
                     logger.exception("Failed to cleanup repository")
 
             msg = f"Migration failed: {e}"
