@@ -400,7 +400,7 @@ class GitLabToGitHubMigrator:
 
     def _get_or_create_attachments_release(self) -> github.GitRelease.GitRelease:
         """Get or create the 'attachments' release for storing attachment files."""
-        release_tag = "attachments"
+        release_tag = "gitlab-issue-attachments"
         
         try:
             # Try to get existing release by tag
@@ -408,10 +408,10 @@ class GitLabToGitHubMigrator:
         except GithubException as e:
             if e.status == 404:
                 # Release doesn't exist, create it
-                logger.info("Creating new 'attachments' release for storing attachment files")
+                logger.info("Creating new 'gitlab-issue-attachments' release for storing attachment files")
                 release = self.github_repo.create_git_release(
                     tag=release_tag,
-                    name="Attachments",
+                    name="GitLab issue attachments",
                     message="Storage for migrated GitLab attachments. Do not delete.",
                     draft=True,  # Keep it as a draft to minimize visibility
                 )
@@ -431,16 +431,7 @@ class GitLabToGitHubMigrator:
         updated_content = content
 
         # Get or create the attachments release
-        try:
-            release = self._get_or_create_attachments_release()
-        except GithubException as e:
-            logger.warning(f"Failed to get or create attachments release: {e}")
-            # Fall back to keeping original URLs with a note
-            for file_info in files:
-                updated_content = updated_content.replace(
-                    file_info.short_gitlab_url, f"{file_info.short_gitlab_url} (Original GitLab attachment)"
-                )
-            return updated_content
+        release = self._get_or_create_attachments_release()
 
         for file_info in files:
             temp_path = None
@@ -453,28 +444,17 @@ class GitLabToGitHubMigrator:
                     temp_file.write(file_info.content)
 
                 # Upload file as release asset
-                try:
-                    asset = release.upload_asset(path=temp_path, name=file_info.filename)
-                    # Get the download URL for the asset
-                    download_url = asset.browser_download_url
-                    
-                    # Replace the GitLab URL with the GitHub URL in content
-                    updated_content = updated_content.replace(file_info.short_gitlab_url, download_url)
-                    logger.debug(f"Uploaded {file_info.filename} to release assets: {download_url}")
-                    
-                except GithubException as e:
-                    logger.warning(f"Failed to upload {file_info.filename} to GitHub: {e}")
-                    # Keep the original URL with a note
-                    updated_content = updated_content.replace(
-                        file_info.short_gitlab_url, f"{file_info.short_gitlab_url} (Original GitLab attachment)"
-                    )
+                asset = release.upload_asset(path=temp_path, name=file_info.filename)
+                # Get the download URL for the asset
+                download_url = asset.browser_download_url
+                
+                # Replace the GitLab URL with the GitHub URL in content
+                updated_content = updated_content.replace(file_info.short_gitlab_url, download_url)
+                logger.debug(f"Uploaded {file_info.filename} to release assets: {download_url}")
 
-            except OSError as e:
-                logger.warning(f"Failed to process attachment {file_info.filename}: {e}")
-                # Keep the original URL with a note
-                updated_content = updated_content.replace(
-                    file_info.short_gitlab_url, f"{file_info.short_gitlab_url} (Original GitLab attachment)"
-                )
+            except (GithubException, OSError):
+                logger.exception(f"Failed to process attachment {file_info.filename}")
+                raise
             finally:
                 # Clean up temp file
                 if temp_path:

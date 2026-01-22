@@ -469,13 +469,13 @@ class TestGitLabToGitHubMigrator:
 
         # Mock existing release
         mock_release = Mock()
-        mock_release.tag_name = "attachments"
+        mock_release.tag_name = "gitlab-issue-attachments"
         self.mock_github_repo.get_release.return_value = mock_release
 
         release = migrator._get_or_create_attachments_release()
 
         assert release == mock_release
-        self.mock_github_repo.get_release.assert_called_once_with("attachments")
+        self.mock_github_repo.get_release.assert_called_once_with("gitlab-issue-attachments")
         self.mock_github_repo.create_git_release.assert_not_called()
 
     @patch("gitlab_to_github_migrator.gitlab_utils.Gitlab")
@@ -500,7 +500,7 @@ class TestGitLabToGitHubMigrator:
 
         # Mock create release
         mock_release = Mock()
-        mock_release.tag_name = "attachments"
+        mock_release.tag_name = "gitlab-issue-attachments"
         self.mock_github_repo.create_git_release.return_value = mock_release
 
         release = migrator._get_or_create_attachments_release()
@@ -508,7 +508,7 @@ class TestGitLabToGitHubMigrator:
         assert release == mock_release
         self.mock_github_repo.create_git_release.assert_called_once()
         call_args = self.mock_github_repo.create_git_release.call_args
-        assert call_args.kwargs["tag"] == "attachments"
+        assert call_args.kwargs["tag"] == "gitlab-issue-attachments"
         assert call_args.kwargs["draft"] is True
 
 
