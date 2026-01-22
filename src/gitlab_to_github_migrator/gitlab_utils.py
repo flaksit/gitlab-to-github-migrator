@@ -7,12 +7,12 @@ from gitlab import Gitlab, GraphQL
 # Module-wide logger
 logger: logging.Logger = logging.getLogger(__name__)
 
-def get_client(token: str | None = None, url: str = "https://gitlab.com") -> Gitlab:
+def get_client(url: str = "https://gitlab.com", token: str | None = None) -> Gitlab:
     """Get a GitLab client using the token.
     
     Args:
-        token: Private access token for authentication
         url: GitLab instance URL (defaults to gitlab.com)
+        token: Private access token for authentication
         
     Returns:
         Gitlab client instance

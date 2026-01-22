@@ -60,16 +60,14 @@ class GitLabToGitHubMigrator:
         self.github_token: str = github_token
 
         # Initialize API clients with authentication. This falls back to anonymous access if no token is provided.
-        self.gitlab_client: gitlab.Gitlab = glu.get_client(gitlab_token)
+        self.gitlab_client: gitlab.Gitlab = glu.get_client(token=gitlab_token)
         self.github_client: Github = ghu.get_client(github_token)
 
         # Get project
         self.gitlab_project: Any = self.gitlab_client.projects.get(gitlab_project_path)
         
-        # Initialize GraphQL client using the gitlab.GraphQL class
-        # The gitlab_client.url defaults to "https://gitlab.com" if not explicitly set
-        gitlab_url = getattr(self.gitlab_client, 'url', 'https://gitlab.com')
-        self.graphql_client: gitlab.GraphQL = glu.get_graphql_client(url=gitlab_url, token=gitlab_token)
+        # Initialize GitLab GraphQL client using the gitlab.GraphQL class
+        self.gitlab_graphql_client: gitlab.GraphQL = glu.get_graphql_client(token=gitlab_token)
 
         self._github_repo: github.Repository.Repository | None = None
 
@@ -119,7 +117,7 @@ class GitLabToGitHubMigrator:
         """Make a GraphQL request to GitLab API using python-gitlab's native GraphQL support."""
         try:
             # Use python-gitlab's native GraphQL support via the dedicated GraphQL client
-            response = self.graphql_client.execute(query, variables=variables or {})
+            response = self.gitlab_graphql_client.execute(query, variables=variables or {})
 
             # Check for errors in the response
             if "errors" in response:
@@ -378,8 +376,8 @@ class GitLabToGitHubMigrator:
                 # Build full URL
                 full_url = f"{self.gitlab_project.web_url}{attachment_url}"
 
-                # Download file using python-gitlab's session (authenticated)
-                response = self.gitlab_client.session.get(full_url, timeout=30)
+                # Download file using python-gitlab's http_get method (authenticated)
+                response = self.gitlab_client.http_get(full_url, raw=True, timeout=30)
                 response.raise_for_status()
 
                 # Extract filename

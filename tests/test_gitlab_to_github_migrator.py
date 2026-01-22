@@ -284,8 +284,8 @@ class TestGitLabToGitHubMigrator:
         mock_github_class.return_value = mock_github_client
         mock_gitlab_client.projects.get.return_value = self.mock_gitlab_project
         
-        # Mock the session.get method
-        mock_gitlab_client.session.get.return_value = mock_response
+        # Mock the http_get method
+        mock_gitlab_client.http_get.return_value = mock_response
 
         migrator = GitLabToGitHubMigrator(
             self.gitlab_project_path, self.github_repo_path, github_token="test_token"
