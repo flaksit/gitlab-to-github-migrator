@@ -75,7 +75,6 @@ class TestGitLabToGitHubMigrator:
             self.gitlab_project_path,
             self.github_repo_path,
             label_translations=["p_*:priority: *"],
-            gitlab_token="test_gitlab_token",
             github_token="test_token",
         )
 
@@ -96,7 +95,7 @@ class TestGitLabToGitHubMigrator:
         mock_github_client.get_user.return_value = Mock()
 
         migrator = GitLabToGitHubMigrator(
-            self.gitlab_project_path, self.github_repo_path, gitlab_token="test_gitlab_token", github_token="test_token"
+            self.gitlab_project_path, self.github_repo_path, github_token="test_token"
         )
 
         # Should not raise an exception
@@ -117,7 +116,7 @@ class TestGitLabToGitHubMigrator:
         mock_gitlab_client.projects.get.return_value = mock_gitlab_project
 
         migrator = GitLabToGitHubMigrator(
-            self.gitlab_project_path, self.github_repo_path, gitlab_token="test_gitlab_token", github_token="test_token"
+            self.gitlab_project_path, self.github_repo_path, github_token="test_token"
         )
 
         # Now make the name property fail by replacing the project
@@ -187,7 +186,7 @@ class TestGitLabToGitHubMigrator:
             self.gitlab_project_path,
             self.github_repo_path,
             label_translations=["p_*:priority: *"],
-            gitlab_token="test_gitlab_token", github_token="test_token",
+            github_token="test_token",
         )
         migrator.github_repo = self.mock_github_repo
 
@@ -251,7 +250,7 @@ class TestGitLabToGitHubMigrator:
         self.mock_github_repo.create_milestone.side_effect = create_milestone_side_effect
 
         migrator = GitLabToGitHubMigrator(
-            self.gitlab_project_path, self.github_repo_path, gitlab_token="test_gitlab_token", github_token="test_token"
+            self.gitlab_project_path, self.github_repo_path, github_token="test_token"
         )
         migrator.github_repo = self.mock_github_repo
 
@@ -289,7 +288,7 @@ class TestGitLabToGitHubMigrator:
         mock_gitlab_client.http_get.return_value = mock_response
 
         migrator = GitLabToGitHubMigrator(
-            self.gitlab_project_path, self.github_repo_path, gitlab_token="test_gitlab_token", github_token="test_token"
+            self.gitlab_project_path, self.github_repo_path, github_token="test_token"
         )
 
         content = "Here is an attachment: /uploads/abcdef0123456789abcdef0123456789/file.pdf"
@@ -311,7 +310,7 @@ class TestGitLabToGitHubMigrator:
         mock_gitlab_client.projects.get.return_value = self.mock_gitlab_project
 
         migrator = GitLabToGitHubMigrator(
-            self.gitlab_project_path, self.github_repo_path, gitlab_token="test_gitlab_token", github_token="test_token"
+            self.gitlab_project_path, self.github_repo_path, github_token="test_token"
         )
         migrator.gitlab_project = self.mock_gitlab_project
         migrator.github_repo = self.mock_github_repo
@@ -357,7 +356,7 @@ class TestGitLabToGitHubMigrator:
         mock_gitlab_client.projects.get.return_value = self.mock_gitlab_project
 
         migrator = GitLabToGitHubMigrator(
-            self.gitlab_project_path, self.github_repo_path, gitlab_token="test_gitlab_token", github_token="test_token"
+            self.gitlab_project_path, self.github_repo_path, github_token="test_token"
         )
         migrator.gitlab_project = self.mock_gitlab_project
         migrator.github_repo = self.mock_github_repo
@@ -403,7 +402,7 @@ class TestGitLabToGitHubMigrator:
         mock_gitlab_client.projects.get.return_value = self.mock_gitlab_project
 
         migrator = GitLabToGitHubMigrator(
-            self.gitlab_project_path, self.github_repo_path, gitlab_token="test_gitlab_token", github_token="test_token"
+            self.gitlab_project_path, self.github_repo_path, github_token="test_token"
         )
         migrator._github_repo = self.mock_github_repo
 
@@ -443,7 +442,7 @@ class TestGitLabToGitHubMigrator:
         mock_gitlab_client.projects.get.return_value = self.mock_gitlab_project
 
         migrator = GitLabToGitHubMigrator(
-            self.gitlab_project_path, self.github_repo_path, gitlab_token="test_gitlab_token", github_token="test_token"
+            self.gitlab_project_path, self.github_repo_path, github_token="test_token"
         )
         migrator._github_repo = self.mock_github_repo
 
@@ -464,7 +463,7 @@ class TestGitLabToGitHubMigrator:
         mock_gitlab_client.projects.get.return_value = self.mock_gitlab_project
 
         migrator = GitLabToGitHubMigrator(
-            self.gitlab_project_path, self.github_repo_path, gitlab_token="test_gitlab_token", github_token="test_token"
+            self.gitlab_project_path, self.github_repo_path, github_token="test_token"
         )
         migrator._github_repo = self.mock_github_repo
 
@@ -491,7 +490,7 @@ class TestGitLabToGitHubMigrator:
         mock_gitlab_client.projects.get.return_value = self.mock_gitlab_project
 
         migrator = GitLabToGitHubMigrator(
-            self.gitlab_project_path, self.github_repo_path, gitlab_token="test_gitlab_token", github_token="test_token"
+            self.gitlab_project_path, self.github_repo_path, github_token="test_token"
         )
         migrator._github_repo = self.mock_github_repo
 
@@ -524,7 +523,7 @@ class TestGitLabToGitHubMigrator:
         mock_gitlab_client.projects.get.return_value = self.mock_gitlab_project
 
         migrator = GitLabToGitHubMigrator(
-            self.gitlab_project_path, self.github_repo_path, gitlab_token="test_gitlab_token", github_token="test_token"
+            self.gitlab_project_path, self.github_repo_path, github_token="test_token"
         )
         migrator._github_repo = self.mock_github_repo
 
@@ -592,7 +591,7 @@ class TestIntegration:
         # Create temporary directory for clone simulation
         with tempfile.TemporaryDirectory() as temp_dir:
             migrator = GitLabToGitHubMigrator(
-                "test/project", "org/repo", local_clone_path=temp_dir, gitlab_token="test_gitlab_token", github_token="test_token"
+                "test/project", "org/repo", local_clone_path=temp_dir, github_token="test_token"
             )
 
             # This should complete without errors for empty project
