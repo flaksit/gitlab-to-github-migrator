@@ -7,6 +7,7 @@ from unittest.mock import Mock, PropertyMock, patch
 
 import pytest
 from github import GithubException
+from gitlab.exceptions import GitlabError
 
 from gitlab_to_github_migrator import GitLabToGitHubMigrator, LabelTranslator, MigrationError
 
@@ -121,7 +122,7 @@ class TestGitLabToGitHubMigrator:
 
         # Now make the name property fail by replacing the project
         failing_project = Mock()
-        type(failing_project).name = PropertyMock(side_effect=Exception("GitLab API error"))
+        type(failing_project).name = PropertyMock(side_effect=GitlabError("GitLab API error"))
         migrator.gitlab_project = failing_project
 
         with pytest.raises(MigrationError, match="GitLab API access failed"):
