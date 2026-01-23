@@ -260,9 +260,24 @@ for repo in repos:
 
 #### Test Configuration
 
-Integration tests use:
-- **Source**: GitLab project `flaks/jk/jkx` (378 issues, 17 milestones, 31 labels)
-- **Target**: Temporary GitHub repositories in `abuflow` organization (manual cleanup required)
+Integration tests require configuration via environment variables:
+- **Source**: GitLab project (REQUIRED via `GITLAB_TEST_PROJECT` environment variable)
+- **Target**: Temporary GitHub repositories (REQUIRED via `GITHUB_TEST_ORG` environment variable)
+
+**Required Environment Variables for Testing:**
+
+```bash
+# Required: Set GitLab test project
+export GITLAB_TEST_PROJECT="your-namespace/your-project"
+
+# Required: Set GitHub organization/user for test repositories
+export GITHUB_TEST_ORG="your-org-or-username"
+
+# Run integration tests
+uv run pytest -m integration -v
+```
+
+**Note:** Test repositories require manual cleanup if the GitHub token doesn't have deletion permissions.
 
 ### Project Structure
 
@@ -330,9 +345,14 @@ All are configured in `pyproject.toml`:
 
 #### Adding New Features
 
-1. **Write Tests First**: Add unit tests in `tests/unit/` (or mark with `@pytest.mark.unit`).
-2. **Implement Feature**: Update the relevant code in `src/gitlab_to_github_migrator/`.
-3. **Integration Test**: Add integration tests in `tests/integration/` (or mark with `@pytest.mark.integration`) if needed.
+Follow full **Test-Driven Development (TDD)** red-green approach:
+
+1. **Write ALL Tests First** (Red Phase):
+   - Add **unit tests** in `tests/unit/` (or mark with `@pytest.mark.unit`)
+   - Add **integration tests** in `tests/integration/` (or mark with `@pytest.mark.integration`)
+   - Run tests to verify they fail (red)
+2. **Implement Feature** (Green Phase): Update the relevant code in `src/gitlab_to_github_migrator/` to make tests pass.
+3. **Verify Tests Pass**: Run all tests (unit and integration) to ensure they pass (green).
 4. **Documentation**: Update this README.
 
 #### Testing Strategy
@@ -385,4 +405,4 @@ tail -f migration.log
 
 ## License
 
-This project is part of the Abu trading platform ecosystem.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.

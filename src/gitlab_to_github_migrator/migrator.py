@@ -14,11 +14,13 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+import github.GitRelease
 import github.Issue
 import github.Repository
 import gitlab  # noqa: TC002 - used at runtime, not just for type hints
 import requests
 from github import Github, GithubException
+from gitlab.exceptions import GitlabAuthenticationError, GitlabError
 
 from . import github_utils as ghu
 from . import gitlab_utils as glu
@@ -60,13 +62,17 @@ class GitLabToGitHubMigrator:
         self.github_token: str = github_token
 
         # Initialize API clients with authentication. This falls back to anonymous access if no token is provided.
-        self.gitlab_client: gitlab.Gitlab = glu.get_client(gitlab_token)
+        self.gitlab_client: gitlab.Gitlab = glu.get_client(token=gitlab_token)
         self.github_client: Github = ghu.get_client(github_token)
 
         # Get project
         self.gitlab_project: Any = self.gitlab_client.projects.get(gitlab_project_path)
+        
+        # Initialize GitLab GraphQL client using the gitlab.GraphQL class
+        self.gitlab_graphql_client: gitlab.GraphQL = glu.get_graphql_client(token=gitlab_token)
 
         self._github_repo: github.Repository.Repository | None = None
+        self._attachments_release: github.GitRelease.GitRelease | None = None
 
         # Initialize label translator
         self.label_translator: LabelTranslator = LabelTranslator(label_translations)
@@ -98,7 +104,7 @@ class GitLabToGitHubMigrator:
             # Test GitLab access
             _ = self.gitlab_project.name
             logger.info("GitLab API access validated")
-        except Exception as e:
+        except (GitlabError, GitlabAuthenticationError) as e:
             msg = f"GitLab API access failed: {e}"
             raise MigrationError(msg) from e
 
@@ -106,15 +112,15 @@ class GitLabToGitHubMigrator:
             # Test GitHub access
             self.github_client.get_user()
             logger.info("GitHub API access validated")
-        except Exception as e:
+        except GithubException as e:
             msg = f"GitHub API access failed: {e}"
             raise MigrationError(msg) from e
 
     def _make_graphql_request(self, query: str, variables: dict[str, Any] | None = None) -> dict[str, Any]:
         """Make a GraphQL request to GitLab API using python-gitlab's native GraphQL support."""
         try:
-            # Use python-gitlab's native GraphQL support
-            response = self.gitlab_client.graphql(query, variables=variables or {})  # pyright: ignore[reportAttributeAccessIssue]
+            # Use python-gitlab's native GraphQL support via the dedicated GraphQL client
+            response = self.gitlab_graphql_client.execute(query, variables=variables or {})
 
             # Check for errors in the response
             if "errors" in response:
@@ -123,7 +129,7 @@ class GitLabToGitHubMigrator:
 
             return response.get("data", {})
 
-        except Exception as e:
+        except GitlabError as e:
             msg = f"GraphQL request failed: {e}"
             raise MigrationError(msg) from e
 
@@ -208,7 +214,7 @@ class GitLabToGitHubMigrator:
 
             logger.debug(f"Found {len(children)} child work items for issue #{issue_iid}")
 
-        except Exception as e:
+        except GitlabError as e:
             logger.warning(f"Failed to get work item children for issue #{issue_iid}: {e}")
             children = []
 
@@ -259,7 +265,7 @@ class GitLabToGitHubMigrator:
 
             logger.info("Repository content migrated successfully")
 
-        except Exception as e:
+        except (subprocess.CalledProcessError, OSError) as e:
             msg = f"Failed to migrate repository content: {e}"
             raise MigrationError(msg) from e
         finally:
@@ -297,7 +303,7 @@ class GitLabToGitHubMigrator:
 
             logger.info(f"Migrated {len(self.label_mapping)} labels")
 
-        except Exception as e:
+        except (GitlabError, GithubException) as e:
             msg = f"Failed to migrate labels: {e}"
             raise MigrationError(msg) from e
 
@@ -356,7 +362,7 @@ class GitLabToGitHubMigrator:
 
             logger.info(f"Migrated {len(self.milestone_mapping)} milestones")
 
-        except Exception as e:
+        except (GitlabError, GithubException) as e:
             msg = f"Failed to migrate milestones: {e}"
             raise MigrationError(msg) from e
 
@@ -373,10 +379,8 @@ class GitLabToGitHubMigrator:
                 # Build full URL
                 full_url = f"{self.gitlab_project.web_url}{attachment_url}"
 
-                # Download file
-                response = requests.get(
-                    full_url, headers={"Authorization": f"Bearer {self.gitlab_client.private_token}"}, timeout=30
-                )
+                # Download file using python-gitlab's http_get method (authenticated)
+                response = self.gitlab_client.http_get(full_url, raw=True, timeout=30)
                 response.raise_for_status()
 
                 # Extract filename
@@ -389,42 +393,79 @@ class GitLabToGitHubMigrator:
                     full_gitlab_url=full_url,
                 ))
 
-            except Exception as e:
+            except (requests.RequestException, OSError) as e:
                 logger.warning(f"Failed to download attachment {attachment_url}: {e}")
 
         return downloaded_files
 
+    @property
+    def attachments_release(self) -> github.GitRelease.GitRelease:
+        """Get or create the 'gitlab-issue-attachments' release for storing attachment files (cached)."""
+        if self._attachments_release is None:
+            release_tag = "gitlab-issue-attachments"
+            
+            try:
+                # Try to get existing release by tag
+                release = self.github_repo.get_release(release_tag)
+            except GithubException as e:
+                if e.status == 404:
+                    # Release doesn't exist, create it
+                    logger.info("Creating new 'gitlab-issue-attachments' release for storing attachment files")
+                    release = self.github_repo.create_git_release(
+                        tag=release_tag,
+                        name="GitLab issue attachments",
+                        message="Storage for migrated GitLab attachments. Do not delete.",
+                        draft=True,  # Keep it as a draft to minimize visibility
+                    )
+                    logger.info(f"Created attachments release: {release.tag_name}")
+                else:
+                    # Re-raise other GitHub exceptions
+                    raise
+            else:
+                logger.debug(f"Using existing attachments release: {release.tag_name}")
+            
+            self._attachments_release = release
+        
+        return self._attachments_release
+
     def upload_github_attachments(self, files: list[DownloadedFile], content: str) -> str:
-        """Upload files to GitHub and update content with new URLs."""
+        """Upload files to GitHub release assets and update content with new URLs."""
+        if not files:
+            return content
+        
         updated_content = content
 
+        # Get or create the attachments release (cached property)
+        release = self.attachments_release
+
         for file_info in files:
+            temp_path = None
             try:
                 # Create a temporary file for GitHub API
-                with tempfile.NamedTemporaryFile(delete=False) as temp_file:
+                # Use only the file extension for the suffix to avoid filesystem issues
+                file_ext = Path(file_info.filename).suffix if file_info.filename else ""
+                with tempfile.NamedTemporaryFile(delete=False, suffix=file_ext) as temp_file:
                     temp_path = temp_file.name
                     temp_file.write(file_info.content)
 
-                # GitHub doesn't have a direct file upload API for arbitrary files
-                # We'll create a commit with the file and reference it
-                try:
-                    # Try to upload as release asset if possible, otherwise skip file upload
-                    # and keep original reference with a note
-                    logger.warning(f"File upload not implemented for {file_info.filename}")
-                    # For now, we'll keep the original URL with a note
-                    updated_content = updated_content.replace(
-                        file_info.short_gitlab_url, f"{file_info.short_gitlab_url} (Original GitLab attachment)"
-                    )
-                except Exception as e:
-                    logger.warning(f"Failed to upload {file_info.filename}: {e}")
+                # Upload file as release asset
+                asset = release.upload_asset(path=temp_path, name=file_info.filename)
+                # Get the download URL for the asset
+                download_url = asset.browser_download_url
+                
+                # Replace the GitLab URL with the GitHub URL in content
+                updated_content = updated_content.replace(file_info.short_gitlab_url, download_url)
+                logger.debug(f"Uploaded {file_info.filename} to release assets: {download_url}")
 
+            except (GithubException, OSError):
+                logger.exception(f"Failed to process attachment {file_info.filename}")
+                raise
+            finally:
                 # Clean up temp file
-                temp_file_path = Path(temp_path)
-                if temp_file_path.exists():
-                    temp_file_path.unlink()
-
-            except Exception as e:
-                logger.warning(f"Failed to process attachment {file_info.filename}: {e}")
+                if temp_path:
+                    temp_file_path = Path(temp_path)
+                    if temp_file_path.exists():
+                        temp_file_path.unlink()
 
         return updated_content
 
@@ -446,7 +487,7 @@ class GitLabToGitHubMigrator:
 
             logger.debug(f"Created sub-issue #{sub_issue.number} under parent #{parent_github_issue.number}")
 
-        except Exception as e:
+        except GithubException as e:
             logger.warning(f"Failed to create GitHub sub-issue: {e}")
 
     def create_github_issue_dependency(self, blocked_issue_number: int, blocking_issue_id: int) -> bool:
@@ -765,7 +806,7 @@ class GitLabToGitHubMigrator:
                                 f"Parent issue #{parent_gitlab_iid} not found for parent-child relationship"
                             )
 
-                    except Exception as e:
+                    except GithubException as e:
                         logger.warning(f"Failed to create parent-child relationship: {e}")
 
             # Third pass: Create blocking relationships as GitHub issue dependencies
@@ -809,12 +850,12 @@ class GitLabToGitHubMigrator:
                                 f"Created blocking relationship: #{source_gitlab_iid} {link_type} #{target_gitlab_iid}"
                             )
 
-                    except Exception as e:
+                    except GithubException as e:
                         logger.warning(f"Failed to create blocking relationship: {e}")
 
             logger.info(f"Migrated {len(gitlab_issues)} issues")
 
-        except Exception as e:
+        except (GitlabError, GithubException) as e:
             msg = f"Failed to migrate issues: {e}"
             raise MigrationError(msg) from e
 
@@ -846,7 +887,7 @@ class GitLabToGitHubMigrator:
                 github_issue.create_comment(comment_body)
                 logger.debug(f"Migrated comment by {note.author['username']}")
 
-        except Exception as e:
+        except (GitlabError, GithubException) as e:
             logger.warning(f"Failed to migrate comments for issue #{gitlab_issue.iid}: {e}")
 
     def cleanup_placeholders(self) -> None:
@@ -868,7 +909,7 @@ class GitLabToGitHubMigrator:
 
             logger.info("Cleanup completed")
 
-        except Exception as e:
+        except GithubException as e:
             logger.warning(f"Cleanup failed: {e}")
 
     def validate_migration(self) -> dict[str, Any]:
@@ -946,7 +987,7 @@ class GitLabToGitHubMigrator:
 
             logger.info("Migration validation completed")
 
-        except Exception as e:
+        except (GitlabError, GithubException) as e:
             report["success"] = False
             errors.append(f"Validation failed: {e}")
             logger.exception("Validation failed")
@@ -980,14 +1021,14 @@ class GitLabToGitHubMigrator:
 
             logger.info("Migration completed successfully")
 
-        except Exception as e:
+        except (GitlabError, GithubException, subprocess.CalledProcessError, OSError) as e:
             logger.exception("Migration failed")
             # Optionally clean up created repository
             if self.github_repo:
                 try:
                     logger.info("Cleaning up created repository due to failure")
                     self.github_repo.delete()
-                except Exception:
+                except GithubException:
                     logger.exception("Failed to cleanup repository")
 
             msg = f"Migration failed: {e}"
