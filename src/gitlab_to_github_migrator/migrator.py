@@ -12,9 +12,8 @@ import subprocess
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
-import github.AuthenticatedUser
 import github.GitRelease
 import github.Issue
 import github.Repository
@@ -380,7 +379,8 @@ class GitLabToGitHubMigrator:
                 full_url = f"{self.gitlab_project.web_url}{attachment_url}"
 
                 # Download file using python-gitlab's http_get method (authenticated)
-                response = self.gitlab_client.http_get(full_url, raw=True, timeout=30)
+                # With raw=True, http_get returns requests.Response (type stubs are incorrect)
+                response = cast(requests.Response, self.gitlab_client.http_get(full_url, raw=True, timeout=30))
                 response.raise_for_status()
 
                 # Extract filename
