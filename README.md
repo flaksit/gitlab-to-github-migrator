@@ -28,7 +28,7 @@ A Python tool for migrating GitLab projects to GitHub with full metadata preserv
 
 ```bash
 # Clone the repository
-git clone git@github.com:abuflow/gitlab-to-github-migrator.git
+git clone git@github.com:flaksit/gitlab-to-github-migrator.git
 cd gitlab-to-github-migrator
 
 # Install dependencies
@@ -69,7 +69,7 @@ export GITHUB_TOKEN="your_github_token"
 ### Basic Migration
 
 ```bash
-uv run gitlab-to-github-migrator flaks/jk/jkx abuflow/migrated-project
+uv run gitlab-to-github-migrator source/project target/repo
 ```
 
 ### Advanced Migration with Label Translation
@@ -79,7 +79,7 @@ uv run gitlab-to-github-migrator flaks/jk/jkx abuflow/migrated-project
 uv run gitlab-to-github-migrator -h
 
 # Using short options
-uv run gitlab-to-github-migrator flaks/jk/jkx abuflow/migrated-project \
+uv run gitlab-to-github-migrator source/project target/repo \
   -l "p_*:priority: *" \
   -l "comp_*:component: *" \
   -l "t_*:type: *" \
@@ -88,8 +88,8 @@ uv run gitlab-to-github-migrator flaks/jk/jkx abuflow/migrated-project \
 
 # Using full option names
 uv run gitlab-to-github-migrator \
-  --gitlab-project "flaks/jk/jkx" \
-  --github-repo "abuflow/migrated-project" \
+  --gitlab-project "source/project" \
+  --github-repo "target/repo" \
   --label-translation "p_*:priority: *" \
   --label-translation "comp_*:component: *" \
   --label-translation "t_*:type: *" \
@@ -125,8 +125,8 @@ Label translation uses glob-style patterns:
 ==================================================
 MIGRATION REPORT
 ==================================================
-GitLab Project: flaks/jk/jkx
-GitHub Repository: abuflow/migrated-project
+GitLab Project: source/project
+GitHub Repository: target/repo
 Success: True
 
 Statistics:
@@ -156,7 +156,7 @@ Migration completed successfully!
 
 ```bash
 # Clone and setup development environment
-git clone git@github.com:abuflow/gitlab-to-github-migrator.git
+git clone git@github.com:flaksit/gitlab-to-github-migrator.git
 cd gitlab-to-github-migrator
 
 # Install development dependencies
@@ -178,7 +178,7 @@ export GITHUB_TEST_ORG="your-org-or-username"
 uv run pytest -v -n auto
 
 # If the GitHub token doesn't have repository deletion rights, run test repo cleanup script
-uv run delete_test_repos <your-org-or-username> github/admin_token
+uv run delete_test_repos github/admin_token  # Uses GITHUB_TEST_ORG env var
 
 # Run just unit tests (fast, in parallel)
 uv run pytest -m "not integration" -v -n auto
@@ -258,10 +258,12 @@ Integration tests create temporary repositories in the GitHub organization or us
 
 **Manual Cleanup:**
 ```bash
-# Using the cleanup script with admin token for organization
-uv run delete_test_repos your-org github/admin/token
+# Using the cleanup script with GITHUB_TEST_ORG environment variable
+export GITHUB_TEST_ORG="your-org-or-username"
+uv run delete_test_repos github/admin/token
 
-# Using the cleanup script for a user account
+# Or specify the owner explicitly
+uv run delete_test_repos your-org github/admin/token
 uv run delete_test_repos your-username github/admin/token
 
 # List what would be cleaned up without actually deleting
@@ -370,10 +372,10 @@ Follow full **Test-Driven Development (TDD)** red-green approach:
 ```bash
 # Verify token access
 uv run python -c "
-import gitlab, os
+import gitlab, subprocess
 token = subprocess.run(['pass', 'gitlab/api/ro_token'], capture_output=True, text=True).stdout.strip()
 gl = gitlab.Gitlab('https://gitlab.com', private_token=token)
-print('GitLab access:', gl.projects.get('flaks/jk/jkx').name)
+print('GitLab access:', gl.projects.get('your-namespace/your-project').name)
 "
 ```
 

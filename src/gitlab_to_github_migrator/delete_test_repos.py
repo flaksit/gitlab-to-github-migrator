@@ -5,16 +5,18 @@ This script identifies and deletes test repositories with names starting with
 "migration-test-" or "deletion-test-" from a specified GitHub owner (organization or user).
 
 Usage:
-    uv run delete_test_repos <github_owner> <pass_path>
+    uv run delete_test_repos [github_owner] <pass_path>
 
 Args:
-    github_owner: GitHub organization or user to search for test repositories
+    github_owner: (Optional) GitHub organization or user to search for test repositories.
+                  If not provided, uses GITHUB_TEST_ORG environment variable.
     pass_path: Path to 'pass' entry containing GitHub token with admin rights
 """
 
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 import textwrap
 from typing import TYPE_CHECKING
@@ -137,17 +139,34 @@ def main() -> None:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=textwrap.dedent("""
             Examples:
-              uv run delete_test_repos abuflow github/api/token        # Delete from organization
-              uv run delete_test_repos myuser github/admin/token       # Delete from user account
+              uv run delete_test_repos your-org github/api/token       # Delete from organization
+              uv run delete_test_repos your-user github/admin/token    # Delete from user account
+              uv run delete_test_repos github/admin/token              # Uses GITHUB_TEST_ORG env var
         """),
     )
-    parser.add_argument("github_owner", help="GitHub organization or user to search for test repositories")
+    parser.add_argument(
+        "github_owner",
+        nargs="?",
+        help="GitHub organization or user to search for test repositories. "
+        "If not provided, uses GITHUB_TEST_ORG environment variable.",
+    )
     parser.add_argument("pass_path", help="Path to 'pass' entry containing GitHub token with admin rights")
     parser.add_argument("--verbose", "-v", action="store_true", help="Enable verbose logging")
 
     args = parser.parse_args()
     setup_logging(verbose=args.verbose)
-    delete_test_repositories(args.github_owner, args.pass_path)
+
+    # Determine github_owner: use argument if provided, otherwise use env var
+    github_owner = args.github_owner
+    if not github_owner:
+        github_owner = os.environ.get("GITHUB_TEST_ORG")
+        if not github_owner:
+            parser.error(
+                "github_owner argument is required when GITHUB_TEST_ORG environment variable is not set.\n"
+                "Either provide github_owner as an argument or set GITHUB_TEST_ORG environment variable."
+            )
+    
+    delete_test_repositories(github_owner, args.pass_path)
 
 
 if __name__ == "__main__":
