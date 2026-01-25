@@ -128,22 +128,6 @@ class TestGitLabToGitHubMigrator:
         with pytest.raises(MigrationError, match="GitLab API access failed"):
             migrator.validate_api_access()
 
-    @pytest.mark.skip(reason="create_github_repository method moved to github_utils.create_repo")
-    def test_create_github_repository_success(self) -> None:
-        """Test successful GitHub repository creation."""
-
-    @pytest.mark.skip(reason="create_github_repository method moved to github_utils.create_repo")
-    def test_create_repository_for_user(self) -> None:
-        """Test creating a repository for a user (not organization)."""
-
-    @pytest.mark.skip(reason="create_github_repository method moved to github_utils.create_repo")
-    def test_create_repository_user_mismatch_error(self) -> None:
-        """Test error when github_owner doesn't match authenticated user."""
-
-    @pytest.mark.skip(reason="create_github_repository method moved to github_utils.create_repo")
-    def test_create_repository_organization_error(self) -> None:
-        """Test error handling when getting organization fails with non-404 error."""
-
     @patch("gitlab_to_github_migrator.gitlab_utils.Gitlab")
     @patch("gitlab_to_github_migrator.github_utils.Github")
     def test_handle_labels(self, mock_github_class, mock_gitlab_class) -> None:
@@ -542,65 +526,6 @@ class TestGitLabToGitHubMigrator:
         assert release1 is release2
         # API should only be called once (cached after first call)
         self.mock_github_repo.get_release.assert_called_once_with("gitlab-issue-attachments")
-
-
-@pytest.mark.unit
-class TestIntegration:
-    """Integration tests for the full migration process."""
-
-    @pytest.mark.skip(reason="Needs rework - complex mocking of github_utils.create_repo")
-    @patch("gitlab_to_github_migrator.migrator.subprocess.run")
-    @patch("gitlab_to_github_migrator.gitlab_utils.Gitlab")
-    @patch("gitlab_to_github_migrator.github_utils.Github")
-    def test_full_migration_dry_run(self, mock_github_class, mock_gitlab_class, mock_subprocess) -> None:
-        """Test a simplified full migration flow."""
-        # Setup mocks
-        mock_gitlab_client = Mock()
-        mock_github_client = Mock()
-        mock_gitlab_class.return_value = mock_gitlab_client
-        mock_github_class.return_value = mock_github_client
-
-        # Mock GitLab project
-        mock_gitlab_project = Mock()
-        mock_gitlab_project.name = "test-project"
-        mock_gitlab_project.description = "Test description"
-        mock_gitlab_project.web_url = "https://gitlab.com/test/project"
-        mock_gitlab_project.ssh_url_to_repo = "git@gitlab.com:test/project.git"
-        mock_gitlab_project.labels.list.return_value = []
-        mock_gitlab_project.milestones.list.return_value = []
-        mock_gitlab_project.issues.list.return_value = []
-        mock_gitlab_client.projects.get.return_value = mock_gitlab_project
-
-        # Mock GitHub
-        mock_org = Mock()
-        mock_github_repo = Mock()
-        mock_github_repo.html_url = "https://github.com/org/repo"
-        mock_github_repo.ssh_url = "git@github.com:org/repo.git"
-        mock_github_repo.get_labels.return_value = []
-        mock_github_repo.get_issues.return_value = []
-        mock_github_repo.get_milestones.return_value = []
-
-        mock_github_client.get_organization.return_value = mock_org
-        mock_github_client.get_repo.side_effect = GithubException(404, {}, headers={})
-        mock_github_client.get_user.return_value = Mock()
-        mock_org.create_repo.return_value = mock_github_repo
-        mock_org.get_labels.side_effect = GithubException(404, {}, headers={})
-
-        # Mock subprocess for git operations
-        mock_subprocess.return_value = Mock(returncode=0)
-
-        # Create temporary directory for clone simulation
-        with tempfile.TemporaryDirectory() as temp_dir:
-            migrator = GitLabToGitHubMigrator(
-                "test/project", "org/repo", local_clone_path=temp_dir, github_token="test_token"
-            )
-
-            # This should complete without errors for empty project
-            report = migrator.migrate()
-
-            assert report["success"] is True
-            assert report["statistics"]["gitlab_issues_total"] == 0
-            assert report["statistics"]["github_issues_total"] == 0
 
 
 if __name__ == "__main__":
