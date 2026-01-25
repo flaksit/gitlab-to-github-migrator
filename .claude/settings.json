@@ -1,0 +1,5 @@
+{
+  "enabledPlugins": {
+    "basedpyright-lsp@flaks-claude-code-plugins": true
+  }
+}
