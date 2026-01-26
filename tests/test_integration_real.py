@@ -316,7 +316,9 @@ class TestReadOnlyGitLabAccess:
 class TestFullMigration:
     """End-to-end migration test with comprehensive assertions."""
     
-    # Label translation patterns
+    # Label translation patterns and prefixes
+    PRIORITY_PREFIX = "p_"
+    TYPE_PREFIX = "t_"
     PRIORITY_PATTERN = "p_*:priority: *"
     TYPE_PATTERN = "t_*:type: *"
 
@@ -350,20 +352,20 @@ class TestFullMigration:
         for label in source_labels:
             label_name = label.name
             # Check for p_* pattern (priority labels)
-            if label_name.startswith("p_"):
+            if label_name.startswith(self.PRIORITY_PREFIX):
                 if self.PRIORITY_PATTERN not in added_patterns:
                     label_translations.append(self.PRIORITY_PATTERN)
                     added_patterns.add(self.PRIORITY_PATTERN)
                 # Track expected translation
-                suffix = label_name[2:]  # Remove "p_" prefix
+                suffix = label_name[len(self.PRIORITY_PREFIX):]
                 expected_translations[label_name] = f"priority: {suffix}"
             # Check for t_* pattern (type labels)
-            elif label_name.startswith("t_"):
+            elif label_name.startswith(self.TYPE_PREFIX):
                 if self.TYPE_PATTERN not in added_patterns:
                     label_translations.append(self.TYPE_PATTERN)
                     added_patterns.add(self.TYPE_PATTERN)
                 # Track expected translation
-                suffix = label_name[2:]  # Remove "t_" prefix
+                suffix = label_name[len(self.TYPE_PREFIX):]
                 expected_translations[label_name] = f"type: {suffix}"
 
         migrator = GitLabToGitHubMigrator(
