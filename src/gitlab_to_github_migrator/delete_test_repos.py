@@ -21,7 +21,7 @@ import sys
 import textwrap
 from typing import TYPE_CHECKING
 
-from github import Github, GithubException, UnknownObjectException
+from github import Auth, Github, GithubException, UnknownObjectException
 from github.AuthenticatedUser import AuthenticatedUser
 
 from .utils import get_pass_value, setup_logging
@@ -81,7 +81,7 @@ def get_owner_repos(client: Github, owner_name: str) -> tuple[str, list[Reposito
 def delete_test_repositories(github_owner: str, pass_path: str) -> None:
     """Find and delete test repositories for the specified GitHub owner."""
     token = _get_github_token(pass_path)
-    github_client = Github(token)
+    github_client = Github(auth=Auth.Token(token))
 
     try:
         owner_type, repos = get_owner_repos(github_client, github_owner)
