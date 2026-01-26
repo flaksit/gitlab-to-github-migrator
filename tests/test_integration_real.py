@@ -15,7 +15,7 @@ import string
 
 import gitlab
 import pytest
-from github import Github, GithubException
+from github import Auth, Github, GithubException
 
 from gitlab_to_github_migrator import GitLabToGitHubMigrator, MigrationError
 
@@ -81,7 +81,7 @@ class TestRealAPIIntegration:
                 pass  # Fall back to anonymous access
 
         if github_token:
-            cls.github_client = Github(github_token)
+            cls.github_client = Github(auth=Auth.Token(github_token))
         else:
             cls.github_client = Github()  # Anonymous access
 
