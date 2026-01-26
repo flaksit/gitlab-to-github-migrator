@@ -10,6 +10,7 @@ _build/*
 .cache/
 *.cache
 .coverage
+.env
 .venv
 /build
 /dist
