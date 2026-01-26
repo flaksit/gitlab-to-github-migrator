@@ -341,20 +341,24 @@ class TestFullMigration:
         label_translations = []
         expected_translations = {}  # Maps source label -> expected target label
         
+        # Define translation patterns
+        priority_pattern = "p_*:priority: *"
+        type_pattern = "t_*:type: *"
+        
         # Analyze labels to find patterns suitable for translation
         for label in source_labels:
             label_name = label.name
             # Check for p_* pattern (priority labels)
             if label_name.startswith("p_"):
-                if "p_*:priority: *" not in label_translations:
-                    label_translations.append("p_*:priority: *")
+                if priority_pattern not in label_translations:
+                    label_translations.append(priority_pattern)
                 # Track expected translation
                 suffix = label_name[2:]  # Remove "p_" prefix
                 expected_translations[label_name] = f"priority: {suffix}"
             # Check for t_* pattern (type labels)
             elif label_name.startswith("t_"):
-                if "t_*:type: *" not in label_translations:
-                    label_translations.append("t_*:type: *")
+                if type_pattern not in label_translations:
+                    label_translations.append(type_pattern)
                 # Track expected translation
                 suffix = label_name[2:]  # Remove "t_" prefix
                 expected_translations[label_name] = f"type: {suffix}"
