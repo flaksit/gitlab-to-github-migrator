@@ -9,6 +9,6 @@
         "ms-python.python",
         "ms-python.vscode-pylance",
         "ms-toolsai.jupyter",
-        "tamasfe.even-better-toml"
+        "tombi-toml.tombi"
     ]
 }

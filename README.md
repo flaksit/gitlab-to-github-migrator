@@ -28,7 +28,7 @@ A Python tool for migrating GitLab projects to GitHub with full metadata preserv
 
 ```bash
 # Clone the repository
-git clone git@github.com:abuflow/gitlab-to-github-migrator.git
+git clone git@github.com:flaksit/gitlab-to-github-migrator.git
 cd gitlab-to-github-migrator
 
 # Install dependencies
@@ -69,7 +69,7 @@ export GITHUB_TOKEN="your_github_token"
 ### Basic Migration
 
 ```bash
-uv run gitlab-to-github-migrator flaks/jk/jkx abuflow/migrated-project
+uv run gitlab-to-github-migrator source/project target/repo
 ```
 
 ### Advanced Migration with Label Translation
@@ -79,7 +79,7 @@ uv run gitlab-to-github-migrator flaks/jk/jkx abuflow/migrated-project
 uv run gitlab-to-github-migrator -h
 
 # Using short options
-uv run gitlab-to-github-migrator flaks/jk/jkx abuflow/migrated-project \
+uv run gitlab-to-github-migrator source/project target/repo \
   -l "p_*:priority: *" \
   -l "comp_*:component: *" \
   -l "t_*:type: *" \
@@ -88,8 +88,8 @@ uv run gitlab-to-github-migrator flaks/jk/jkx abuflow/migrated-project \
 
 # Using full option names
 uv run gitlab-to-github-migrator \
-  --gitlab-project "flaks/jk/jkx" \
-  --github-repo "abuflow/migrated-project" \
+  --gitlab-project "source/project" \
+  --github-repo "target/repo" \
   --label-translation "p_*:priority: *" \
   --label-translation "comp_*:component: *" \
   --label-translation "t_*:type: *" \
@@ -121,12 +121,12 @@ Label translation uses glob-style patterns:
 
 ## Example Migration Report
 
-```
+```text
 ==================================================
 MIGRATION REPORT
 ==================================================
-GitLab Project: flaks/jk/jkx
-GitHub Repository: abuflow/migrated-project
+GitLab Project: source/project
+GitHub Repository: target/repo
 Success: True
 
 Statistics:
@@ -156,7 +156,7 @@ Migration completed successfully!
 
 ```bash
 # Clone and setup development environment
-git clone git@github.com:abuflow/gitlab-to-github-migrator.git
+git clone git@github.com:flaksit/gitlab-to-github-migrator.git
 cd gitlab-to-github-migrator
 
 # Install development dependencies
@@ -169,12 +169,18 @@ uv sync
 ```bash
 # Before running, ensure the passphrase cache won't expire during the tests, so just run `pass` once to enter the passphrase.
 pass github/api/token > /dev/null
-# Run all tests (unit and integration) in parallel, with default tokens from `pass` (see below)
-uv run pytest -v -n auto
-# If the GitHub token doesn't have repository deletion rights, run test repo cleanup script
-uv run delete_test_repos abuflow github/admin_token
 
-# Run just unit tests (fast, in parallel)
+# Set required environment variables for integration tests
+export GITLAB_TEST_PROJECT="your-namespace/your-project"
+export GITHUB_TEST_ORG="your-org-or-username"
+
+# Run all tests (unit and integration), with default tokens from `pass` (see below)
+uv run pytest -v
+
+# If the GitHub token doesn't have repository deletion rights, run test repo cleanup script
+uv run delete_test_repos github/admin_token
+
+# Run just unit tests (fast, in parallel) - Don't run the integration tests in parallel!
 uv run pytest -m "not integration" -v -n auto
 ```
 
@@ -212,35 +218,50 @@ uv run pytest -m "not integration" --cov=src/gitlab_to_github_migrator
 #### Integration Tests (Requires Authentication)
 For authentication setup, see the [Authentication Setup](#authentication-setup) section.
 
-```bash
-# Run all integration tests (in parallel)
-uv run pytest -m integration -v -n auto
+**Test Configuration:**
 
-# Run integration tests sequentially (for debugging)
-uv run pytest -m integration -v -s
+Integration tests require configuration via environment variables to specify the source GitLab project and target GitHub organization/user:
+
+**Required Environment Variables:**
+
+```bash
+# Required: Set GitLab test project
+export GITLAB_TEST_PROJECT="your-namespace/your-project"
+
+# Required: Set GitHub organization/user for test repositories
+export GITHUB_TEST_ORG="your-org-or-username"
+```
+
+**Running Integration Tests:**
+
+```bash
+# Run all integration tests
+uv run pytest -m integration -v
 
 # Run specific integration test
-uv run pytest -m integration tests/test_integration_real_api.py::TestRealAPIIntegration::test_gitlab_source_project_access -v -s
+uv run pytest -m integration tests/test_integration_real_api.py::TestRealAPIIntegration::test_gitlab_source_project_access -v
 ```
 
 #### Cleanup of Test Repositories
 
-Integration tests create temporary repositories in the `abuflow` GitHub organization for testing. If the GitHub token doesn't have delete permissions for repositories, these repositories require manual cleanup. In that case, the tests will display instructions like:
-```
-⚠️  Cannot delete test repository abuflow/migration-test-abc123: insufficient permissions
+Integration tests create temporary repositories in the GitHub organization or user account specified by `GITHUB_TEST_ORG`. If the GitHub token doesn't have delete permissions for repositories, these repositories require manual cleanup. In that case, the tests will display instructions like:
+```text
+⚠️  Cannot delete test repository <owner>/migration-test-abc123: insufficient permissions
    To clean up test repositories, run:
    uv run delete_test_repos <github_owner> <pass_path>
-   where <github_owner> is the GitHub organization or user (e.g., 'abuflow')
+   where <github_owner> is the GitHub organization or user
    and <pass_path> is a 'pass' path containing a GitHub token with repository deletion rights.
 ```
 
 **Manual Cleanup:**
 ```bash
-# Using the cleanup script with admin token for organization
-uv run delete_test_repos abuflow github/admin/token
+# Using the cleanup script with GITHUB_TEST_ORG environment variable
+export GITHUB_TEST_ORG="your-org-or-username"
+uv run delete_test_repos github/admin/token
 
-# Using the cleanup script for a user account
-uv run delete_test_repos myusername github/admin/token
+# Or specify the owner explicitly
+uv run delete_test_repos your-org github/admin/token
+uv run delete_test_repos your-username github/admin/token
 
 # List what would be cleaned up without actually deleting
 # TODO add a dry-run option to the cleanup script
@@ -250,7 +271,7 @@ result = subprocess.run(['pass', 'github/admin/token'], capture_output=True, tex
 token = result.stdout.strip()
 from github import Github
 g = Github(token)
-org = g.get_organization('abuflow')
+org = g.get_organization('your-org')  # or g.get_user('your-username') for user account
 repos = [r for r in org.get_repos() if r.name.startswith('migration-test-') or r.name.startswith('deletion-test-')]
 print(f'Found {len(repos)} test repositories to clean up')
 for repo in repos:
@@ -258,30 +279,9 @@ for repo in repos:
 "
 ```
 
-#### Test Configuration
-
-Integration tests require configuration via environment variables:
-- **Source**: GitLab project (REQUIRED via `GITLAB_TEST_PROJECT` environment variable)
-- **Target**: Temporary GitHub repositories (REQUIRED via `GITHUB_TEST_ORG` environment variable)
-
-**Required Environment Variables for Testing:**
-
-```bash
-# Required: Set GitLab test project
-export GITLAB_TEST_PROJECT="your-namespace/your-project"
-
-# Required: Set GitHub organization/user for test repositories
-export GITHUB_TEST_ORG="your-org-or-username"
-
-# Run integration tests
-uv run pytest -m integration -v
-```
-
-**Note:** Test repositories require manual cleanup if the GitHub token doesn't have deletion permissions.
-
 ### Project Structure
 
-```
+```text
 gitlab-to-github-migrator/
 ├── src/
 │   └── gitlab_to_github_migrator/
@@ -365,24 +365,24 @@ Follow full **Test-Driven Development (TDD)** red-green approach:
 
 #### Common Issues
 
-**Authentication Errors**
+##### Authentication Errors
 ```bash
 # Verify token access
 uv run python -c "
-import gitlab, os
+import gitlab, subprocess
 token = subprocess.run(['pass', 'gitlab/api/ro_token'], capture_output=True, text=True).stdout.strip()
 gl = gitlab.Gitlab('https://gitlab.com', private_token=token)
-print('GitLab access:', gl.projects.get('flaks/jk/jkx').name)
+print('GitLab access:', gl.projects.get('your-namespace/your-project').name)
 "
 ```
 
-**Rate Limiting**
+##### Rate Limiting
 - Rate limit handling is built into the PyGithub and python-gitlab libraries and enabled by default
 - PyGithub: Uses `GithubRetry` with 10 retries, automatically waits on 403 with Retry-After header
 - python-gitlab: Uses `obey_rate_limit=True` by default with `max_retries=10`, sleeps on 429 responses
 - Note: GraphQL calls for Work Items and attachment downloads use raw `requests` without retry logic, but these are low-volume operations (one call per issue/attachment) and unlikely to hit rate limits
 
-**Target Repository Already Exists**
+##### Target Repository Already Exists
 - Tool will abort if target repository exists
 - Manually delete or choose different name
 

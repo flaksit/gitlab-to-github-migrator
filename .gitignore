@@ -9,6 +9,7 @@ __pycache__
 _build/*
 .cache/
 *.cache
+.coverage
 .venv
 /build
 /dist
