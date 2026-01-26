@@ -239,7 +239,7 @@ export GITHUB_TEST_ORG="your-org-or-username"
 uv run pytest -m integration -v
 
 # Run specific integration test
-uv run pytest -m integration tests/test_integration_real_api.py::TestRealAPIIntegration::test_gitlab_source_project_access -v
+uv run pytest -m integration tests/test_integration_real.py::TestRealAPIIntegration::test_gitlab_source_project_access -v
 ```
 
 #### Cleanup of Test Repositories
