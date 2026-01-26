@@ -64,6 +64,9 @@ class TestRealAPIIntegration:
             except (subprocess.CalledProcessError, FileNotFoundError):
                 pass  # Fall back to anonymous access
 
+        # Store tokens for use in tests
+        cls.gitlab_token = gitlab_token
+        
         if gitlab_token:
             cls.gitlab_client = gitlab.Gitlab("https://gitlab.com", private_token=gitlab_token)
         else:
@@ -80,6 +83,9 @@ class TestRealAPIIntegration:
             except (subprocess.CalledProcessError, FileNotFoundError):
                 pass  # Fall back to anonymous access
 
+        # Store tokens for use in tests
+        cls.github_token = github_token
+        
         if github_token:
             cls.github_client = Github(github_token)
         else:
@@ -117,7 +123,10 @@ class TestRealAPIIntegration:
         if not self._repository_created:
             try:
                 migrator = GitLabToGitHubMigrator(
-                    gitlab_project_path=self.source_gitlab_project, github_repo_path=self.target_github_repo
+                    gitlab_project_path=self.source_gitlab_project,
+                    github_repo_path=self.target_github_repo,
+                    gitlab_token=self.gitlab_token,
+                    github_token=self.github_token,
                 )
                 migrator.create_github_repository()
                 self.__class__.test_github_repo = migrator.github_repo  # Store for cleanup
@@ -181,6 +190,8 @@ class TestRealAPIIntegration:
                 gitlab_project_path=self.source_gitlab_project,
                 github_repo_path=self.target_github_repo,
                 label_translations=["priority::*:priority: *", "type::*:type: *"],
+                gitlab_token=self.gitlab_token,
+                github_token=self.github_token,
             )
 
             # Test API validation
@@ -198,7 +209,10 @@ class TestRealAPIIntegration:
         """Test GitHub repository creation and cleanup."""
         try:
             migrator = GitLabToGitHubMigrator(
-                gitlab_project_path=self.source_gitlab_project, github_repo_path=self.target_github_repo
+                gitlab_project_path=self.source_gitlab_project,
+                github_repo_path=self.target_github_repo,
+                gitlab_token=self.gitlab_token,
+                github_token=self.github_token,
             )
 
             # Create test repository
@@ -229,7 +243,10 @@ class TestRealAPIIntegration:
 
         try:
             migrator = GitLabToGitHubMigrator(
-                gitlab_project_path=self.source_gitlab_project, github_repo_path=deletion_test_repo_path
+                gitlab_project_path=self.source_gitlab_project,
+                github_repo_path=deletion_test_repo_path,
+                gitlab_token=self.gitlab_token,
+                github_token=self.github_token,
             )
 
             # Create repository for deletion test
@@ -270,6 +287,8 @@ class TestRealAPIIntegration:
                 gitlab_project_path=self.source_gitlab_project,
                 github_repo_path=self.target_github_repo,
                 label_translations=["p_*:priority: *", "t_*:type: *"],
+                gitlab_token=self.gitlab_token,
+                github_token=self.github_token,
             )
             migrator.github_repo = self.test_github_repo
 
@@ -314,7 +333,10 @@ class TestRealAPIIntegration:
                 pytest.skip("No milestones found in source project")
 
             migrator = GitLabToGitHubMigrator(
-                gitlab_project_path=self.source_gitlab_project, github_repo_path=self.target_github_repo
+                gitlab_project_path=self.source_gitlab_project,
+                github_repo_path=self.target_github_repo,
+                gitlab_token=self.gitlab_token,
+                github_token=self.github_token,
             )
             migrator.github_repo = self.test_github_repo
 
@@ -468,7 +490,10 @@ class TestRealAPIIntegration:
 
         try:
             migrator = GitLabToGitHubMigrator(
-                gitlab_project_path=self.source_gitlab_project, github_repo_path=self.target_github_repo
+                gitlab_project_path=self.source_gitlab_project,
+                github_repo_path=self.target_github_repo,
+                gitlab_token=self.gitlab_token,
+                github_token=self.github_token,
             )
 
             # Get an issue with cross-links for testing
@@ -655,7 +680,10 @@ Original test issue description.
 
         try:
             migrator = GitLabToGitHubMigrator(
-                gitlab_project_path=self.source_gitlab_project, github_repo_path=self.target_github_repo
+                gitlab_project_path=self.source_gitlab_project,
+                github_repo_path=self.target_github_repo,
+                gitlab_token=self.gitlab_token,
+                github_token=self.github_token,
             )
             migrator.github_repo = self.test_github_repo
 
@@ -710,6 +738,8 @@ Original test issue description.
                 gitlab_project_path=self.source_gitlab_project,
                 github_repo_path=self.target_github_repo,
                 label_translations=["priority::*:priority: *"],
+                gitlab_token=self.gitlab_token,
+                github_token=self.github_token,
             )
             migrator.github_repo = self.test_github_repo
 
@@ -737,7 +767,10 @@ Original test issue description.
         """Test the GitLab GraphQL Work Items API functionality."""
         try:
             migrator = GitLabToGitHubMigrator(
-                gitlab_project_path=self.source_gitlab_project, github_repo_path=self.target_github_repo
+                gitlab_project_path=self.source_gitlab_project,
+                github_repo_path=self.target_github_repo,
+                gitlab_token=self.gitlab_token,
+                github_token=self.github_token,
             )
 
             # Test GraphQL connection
@@ -788,7 +821,10 @@ Original test issue description.
         """Test the enhanced cross-linking functionality with task separation."""
         try:
             migrator = GitLabToGitHubMigrator(
-                gitlab_project_path=self.source_gitlab_project, github_repo_path=self.target_github_repo
+                gitlab_project_path=self.source_gitlab_project,
+                github_repo_path=self.target_github_repo,
+                gitlab_token=self.gitlab_token,
+                github_token=self.github_token,
             )
 
             # Find an issue with both tasks and regular links
@@ -902,7 +938,10 @@ Original test issue description.
 
             # Test that migrator can be initialized with the project (validates GitLab access)
             migrator = GitLabToGitHubMigrator(
-                gitlab_project_path=self.source_gitlab_project, github_repo_path=self.target_github_repo
+                gitlab_project_path=self.source_gitlab_project,
+                github_repo_path=self.target_github_repo,
+                gitlab_token=self.gitlab_token,
+                github_token=self.github_token,
             )
             
             # Verify the GitLab project was loaded correctly
