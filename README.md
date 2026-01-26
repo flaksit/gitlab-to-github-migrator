@@ -121,7 +121,7 @@ Label translation uses glob-style patterns:
 
 ## Example Migration Report
 
-```
+```text
 ==================================================
 MIGRATION REPORT
 ==================================================
@@ -180,7 +180,7 @@ uv run pytest -v
 # If the GitHub token doesn't have repository deletion rights, run test repo cleanup script
 uv run delete_test_repos github/admin_token
 
-# Run just unit tests (fast, in parallel)
+# Run just unit tests (fast, in parallel) - Don't run the integration tests in parallel!
 uv run pytest -m "not integration" -v -n auto
 ```
 
@@ -245,7 +245,7 @@ uv run pytest -m integration tests/test_integration_real_api.py::TestRealAPIInte
 #### Cleanup of Test Repositories
 
 Integration tests create temporary repositories in the GitHub organization or user account specified by `GITHUB_TEST_ORG`. If the GitHub token doesn't have delete permissions for repositories, these repositories require manual cleanup. In that case, the tests will display instructions like:
-```
+```text
 ⚠️  Cannot delete test repository <owner>/migration-test-abc123: insufficient permissions
    To clean up test repositories, run:
    uv run delete_test_repos <github_owner> <pass_path>
@@ -281,7 +281,7 @@ for repo in repos:
 
 ### Project Structure
 
-```
+```text
 gitlab-to-github-migrator/
 ├── src/
 │   └── gitlab_to_github_migrator/
@@ -365,7 +365,7 @@ Follow full **Test-Driven Development (TDD)** red-green approach:
 
 #### Common Issues
 
-**Authentication Errors**
+##### Authentication Errors
 ```bash
 # Verify token access
 uv run python -c "
@@ -376,13 +376,13 @@ print('GitLab access:', gl.projects.get('your-namespace/your-project').name)
 "
 ```
 
-**Rate Limiting**
+##### Rate Limiting
 - Rate limit handling is built into the PyGithub and python-gitlab libraries and enabled by default
 - PyGithub: Uses `GithubRetry` with 10 retries, automatically waits on 403 with Retry-After header
 - python-gitlab: Uses `obey_rate_limit=True` by default with `max_retries=10`, sleeps on 429 responses
 - Note: GraphQL calls for Work Items and attachment downloads use raw `requests` without retry logic, but these are low-volume operations (one call per issue/attachment) and unlikely to hit rate limits
 
-**Target Repository Already Exists**
+##### Target Repository Already Exists
 - Tool will abort if target repository exists
 - Manually delete or choose different name
 
