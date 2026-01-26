@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
-from github import Github, UnknownObjectException
+from github import Auth, Github, UnknownObjectException
 from github.AuthenticatedUser import AuthenticatedUser
 
 from .exceptions import MigrationError
@@ -17,7 +17,9 @@ logger: logging.Logger = logging.getLogger(__name__)
 
 def get_client(token: str | None = None) -> Github:
     """Get a GitHub client using the token."""
-    return Github(token)
+    if token:
+        return Github(auth=Auth.Token(token))
+    return Github()
 
 def get_repo(client: Github, repo_path: str) -> Repository | None:
     try:

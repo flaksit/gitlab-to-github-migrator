@@ -269,8 +269,8 @@ uv run python -c "
 import subprocess
 result = subprocess.run(['pass', 'github/admin/token'], capture_output=True, text=True)
 token = result.stdout.strip()
-from github import Github
-g = Github(token)
+from github import Auth, Github
+g = Github(auth=Auth.Token(token))
 org = g.get_organization('your-org')  # or g.get_user('your-username') for user account
 repos = [r for r in org.get_repos() if r.name.startswith('migration-test-') or r.name.startswith('deletion-test-')]
 print(f'Found {len(repos)} test repositories to clean up')
