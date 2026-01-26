@@ -224,15 +224,10 @@ packages = ["src/gitlab_to_github_migrator"]
 # ignore-words-list = "foo,bar"
 # skip = "foo.py,bar.py"
 
-[tool.pytest.ini_options]
-python_files = ["*.py"]
-python_classes = ["Test*"]
-python_functions = ["test_*"]
-testpaths = ["tests"]
-pythonpath = ["src"]
-norecursedirs = []
-filterwarnings = []
+[tool.pytest]
 markers = [
     "integration: mark test as integration test",
     "unit: mark test as unit test",
 ]
+pythonpath = ["src"]
+testpaths = ["tests"]
