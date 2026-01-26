@@ -315,6 +315,10 @@ class TestReadOnlyGitLabAccess:
 @pytest.mark.integration
 class TestFullMigration:
     """End-to-end migration test with comprehensive assertions."""
+    
+    # Label translation patterns
+    PRIORITY_PATTERN = "p_*:priority: *"
+    TYPE_PATTERN = "t_*:type: *"
 
     def test_full_migration(  # noqa: PLR0915 - intentionally comprehensive test
         self,
@@ -339,26 +343,25 @@ class TestFullMigration:
         
         # Dynamically create label translations based on actual GitLab labels
         label_translations = []
+        added_patterns = set()  # Track which patterns have been added
         expected_translations = {}  # Maps source label -> expected target label
-        
-        # Define translation patterns
-        priority_pattern = "p_*:priority: *"
-        type_pattern = "t_*:type: *"
         
         # Analyze labels to find patterns suitable for translation
         for label in source_labels:
             label_name = label.name
             # Check for p_* pattern (priority labels)
             if label_name.startswith("p_"):
-                if priority_pattern not in label_translations:
-                    label_translations.append(priority_pattern)
+                if self.PRIORITY_PATTERN not in added_patterns:
+                    label_translations.append(self.PRIORITY_PATTERN)
+                    added_patterns.add(self.PRIORITY_PATTERN)
                 # Track expected translation
                 suffix = label_name[2:]  # Remove "p_" prefix
                 expected_translations[label_name] = f"priority: {suffix}"
             # Check for t_* pattern (type labels)
             elif label_name.startswith("t_"):
-                if type_pattern not in label_translations:
-                    label_translations.append(type_pattern)
+                if self.TYPE_PATTERN not in added_patterns:
+                    label_translations.append(self.TYPE_PATTERN)
+                    added_patterns.add(self.TYPE_PATTERN)
                 # Track expected translation
                 suffix = label_name[2:]  # Remove "t_" prefix
                 expected_translations[label_name] = f"type: {suffix}"
