@@ -88,7 +88,13 @@ def delete_test_repositories(github_owner: str, pass_path: str) -> None:
         print(f"🔍 Scanning repositories for {github_owner} ({owner_type})...")
 
         test_repos = [
-            repo for repo in repos if repo.name.startswith("migration-test-") or repo.name.startswith("deletion-test-")
+            repo
+            for repo in repos
+            if repo.name.startswith("migration-test-")
+            or repo.name.startswith("deletion-test-")
+            or repo.name.startswith("full-migration-test-")
+            or repo.name.startswith("lifecycle-test-")
+            or repo.name.startswith("creation-test-")
         ]
 
         if not test_repos:
@@ -165,7 +171,7 @@ def main() -> None:
                 "github_owner argument is required when GITHUB_TEST_ORG environment variable is not set.\n"
                 "Either provide github_owner as an argument or set GITHUB_TEST_ORG environment variable."
             )
-    
+
     delete_test_repositories(github_owner, args.pass_path)
 
 

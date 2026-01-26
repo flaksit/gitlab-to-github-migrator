@@ -12,7 +12,7 @@ import subprocess
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
 
 import github.GitRelease
 import github.Issue
@@ -26,6 +26,10 @@ from . import github_utils as ghu
 from . import gitlab_utils as glu
 from .exceptions import MigrationError, NumberVerificationError
 from .label_translator import LabelTranslator
+
+if TYPE_CHECKING:
+    from gitlab.v4.objects.issues import Issue as GitlabIssue
+    from gitlab.v4.objects.projects import Project as GitlabProject
 
 # Module-wide logger
 logger: logging.Logger = logging.getLogger(__name__)
@@ -66,7 +70,7 @@ class GitLabToGitHubMigrator:
         self.github_client: Github = ghu.get_client(github_token)
 
         # Get project
-        self.gitlab_project: Any = self.gitlab_client.projects.get(gitlab_project_path)
+        self.gitlab_project: GitlabProject = self.gitlab_client.projects.get(gitlab_project_path)
         
         # Initialize GitLab GraphQL client using the gitlab.GraphQL class
         self.gitlab_graphql_client: gitlab.GraphQL = glu.get_graphql_client(token=gitlab_token)
@@ -120,7 +124,8 @@ class GitLabToGitHubMigrator:
         """Make a GraphQL request to GitLab API using python-gitlab's native GraphQL support."""
         try:
             # Use python-gitlab's native GraphQL support via the dedicated GraphQL client
-            response = self.gitlab_graphql_client.execute(query, variables=variables or {})
+            # Note: gql's HTTPXTransport expects 'variable_values' not 'variables'
+            response = self.gitlab_graphql_client.execute(query, variable_values=variables or {})
 
             # Check for errors in the response
             if "errors" in response:
@@ -146,9 +151,10 @@ class GitLabToGitHubMigrator:
         project_path = self.gitlab_project_path
 
         # GraphQL query to get work item with its children
+        # Note: workItem is under namespace, not project
         query = """
-        query GetWorkItemWithChildren($projectPath: ID!, $iid: String!) {
-            project(fullPath: $projectPath) {
+        query GetWorkItemWithChildren($fullPath: ID!, $iid: String!) {
+            namespace(fullPath: $fullPath) {
                 workItem(iid: $iid) {
                     id
                     iid
@@ -178,17 +184,17 @@ class GitLabToGitHubMigrator:
         }
         """
 
-        variables = {"projectPath": project_path, "iid": str(issue_iid)}
+        variables = {"fullPath": project_path, "iid": str(issue_iid)}
 
         try:
             data = self._make_graphql_request(query, variables)
 
-            project = data.get("project")
-            if not project:
-                logger.debug(f"Project {project_path} not found in GraphQL response")
+            namespace = data.get("namespace")
+            if not namespace:
+                logger.debug(f"Namespace {project_path} not found in GraphQL response")
                 return []
 
-            work_item = project.get("workItem")
+            work_item = namespace.get("workItem")
             if not work_item:
                 logger.debug(f"Work item {issue_iid} not found in project {project_path}")
                 return []
@@ -276,7 +282,7 @@ class GitLabToGitHubMigrator:
         """Migrate and translate labels from GitLab to GitHub."""
         try:
             # Get GitLab labels
-            gitlab_labels = self.gitlab_project.labels.list(all=True)
+            gitlab_labels = self.gitlab_project.labels.list(get_all=True)
 
             for gitlab_label in gitlab_labels:
                 # Translate label name
@@ -310,7 +316,7 @@ class GitLabToGitHubMigrator:
         """Migrate milestones while preserving GitLab milestone numbers."""
         try:
             # Get all GitLab milestones sorted by ID
-            gitlab_milestones = self.gitlab_project.milestones.list(all=True, state="all")
+            gitlab_milestones = self.gitlab_project.milestones.list(get_all=True, state="all")
             gitlab_milestones.sort(key=lambda m: m.iid)
 
             if not gitlab_milestones:
@@ -373,29 +379,30 @@ class GitLabToGitHubMigrator:
 
         downloaded_files: list[DownloadedFile] = []
 
-        for attachment_url in attachments:
-            try:
-                # Build full URL
-                full_url = f"{self.gitlab_project.web_url}{attachment_url}"
+        # TODO Fix attachment downloading: gets blocked by Cloudflare
+        # for attachment_url in attachments:
+        #     try:
+        #         # Build full URL
+        #         full_url = f"{self.gitlab_project.web_url}{attachment_url}"
 
-                # Download file using python-gitlab's http_get method (authenticated)
-                # With raw=True, http_get returns requests.Response (type stubs are incorrect)
-                response = cast(requests.Response, self.gitlab_client.http_get(full_url, raw=True, timeout=30))
-                response.raise_for_status()
+        #         # Download file using python-gitlab's http_get method (authenticated)
+        #         # With raw=True, http_get returns requests.Response (type stubs are incorrect)
+        #         response = cast(requests.Response, self.gitlab_client.http_get(full_url, raw=True, timeout=30))
+        #         response.raise_for_status()
 
-                # Extract filename
-                filename = attachment_url.split("/")[-1]
+        #         # Extract filename
+        #         filename = attachment_url.split("/")[-1]
 
-                downloaded_files.append(DownloadedFile(
-                    filename=filename,
-                    content=response.content,
-                    short_gitlab_url=attachment_url,
-                    full_gitlab_url=full_url,
-                ))
+        #         downloaded_files.append(DownloadedFile(
+        #             filename=filename,
+        #             content=response.content,
+        #             short_gitlab_url=attachment_url,
+        #             full_gitlab_url=full_url,
+        #         ))
 
-            except (requests.RequestException, OSError) as e:
-                msg = f"Failed to download attachment {attachment_url}: {e}"
-                raise MigrationError(msg) from e
+        #     except (requests.RequestException, OSError) as e:
+        #         msg = f"Failed to download attachment {attachment_url}: {e}"
+        #         raise MigrationError(msg) from e
 
         return downloaded_files
 
@@ -559,7 +566,7 @@ class GitLabToGitHubMigrator:
 
         # Step 2: Get regular issue links from REST API
         regular_links = []
-        links = gitlab_issue.links.list(all=True)
+        links = gitlab_issue.links.list(get_all=True)
 
         for link in links:
             # Determine the relationship type and target
@@ -568,11 +575,13 @@ class GitLabToGitHubMigrator:
             else:
                 link_type = "relates_to"  # Default
 
-            # Get target issue information
-            target_issue_iid = link.target_issue["iid"]
-            target_issue_title = link.target_issue.get("title", "Unknown Title")
-            target_project_path = link.target_issue.get("project_path_with_namespace")
-            target_web_url = link.target_issue.get("web_url", "")
+            # Get target issue information (data is directly on link object, not in nested dict)
+            target_issue_iid = link.iid
+            target_issue_title = getattr(link, "title", "Unknown Title")
+            # Extract project path from references or web_url
+            references = getattr(link, "references", {})
+            target_project_path = references.get("full", "").rsplit("#", 1)[0] if references else None
+            target_web_url = getattr(link, "web_url", "")
 
             # Log the link type for debugging
             logger.debug(
@@ -655,7 +664,7 @@ class GitLabToGitHubMigrator:
         """Migrate issues while preserving GitLab issue numbers."""
         try:
             # Get all GitLab issues sorted by IID
-            gitlab_issues = self.gitlab_project.issues.list(all=True, state="all")
+            gitlab_issues = self.gitlab_project.issues.list(get_all=True, state="all")
             gitlab_issues.sort(key=lambda i: i.iid)
 
             if not gitlab_issues:
@@ -847,11 +856,11 @@ class GitLabToGitHubMigrator:
             raise MigrationError(msg) from e
 
     def migrate_issue_comments(
-        self, gitlab_issue: Any, github_issue: github.Issue.Issue  # noqa: ANN401 - gitlab has no type stubs
+        self, gitlab_issue: GitlabIssue, github_issue: github.Issue.Issue
     ) -> None:
         """Migrate comments for an issue."""
         # Get all notes/comments
-        notes = gitlab_issue.notes.list(all=True)
+        notes = gitlab_issue.notes.list(get_all=True)
         notes.sort(key=lambda n: n.created_at)
 
         for note in notes:
@@ -905,15 +914,15 @@ class GitLabToGitHubMigrator:
 
         try:
             # Count GitLab items with state breakdown
-            gitlab_issues = self.gitlab_project.issues.list(all=True, state="all")
+            gitlab_issues = self.gitlab_project.issues.list(get_all=True, state="all")
             gitlab_issues_open = [i for i in gitlab_issues if i.state == "opened"]
             gitlab_issues_closed = [i for i in gitlab_issues if i.state == "closed"]
 
-            gitlab_milestones = self.gitlab_project.milestones.list(all=True, state="all")
+            gitlab_milestones = self.gitlab_project.milestones.list(get_all=True, state="all")
             gitlab_milestones_open = [m for m in gitlab_milestones if m.state == "active"]
             gitlab_milestones_closed = [m for m in gitlab_milestones if m.state == "closed"]
 
-            gitlab_labels = self.gitlab_project.labels.list(all=True)
+            gitlab_labels = self.gitlab_project.labels.list(get_all=True)
 
             # Count GitHub items (excluding placeholders) with state breakdown
             github_issues_all = list(self.github_repo.get_issues(state="all"))
@@ -973,6 +982,12 @@ class GitLabToGitHubMigrator:
 
         return report
 
+    def create_github_repo(self) -> None:
+        self._github_repo = ghu.create_repo(
+            self.github_client, self.github_repo_path, self.gitlab_project.description  # pyright: ignore[reportUnknownArgumentType]
+        )
+
+
     def migrate(self) -> dict[str, Any]:
         """Execute the complete migration process."""
         try:
@@ -982,9 +997,7 @@ class GitLabToGitHubMigrator:
             self.validate_api_access()
 
             # Repository creation and content migration
-            self.github_repo = ghu.create_repo(
-                self.github_client, self.github_repo_path, self.gitlab_project.description
-            )
+            self.create_github_repo()
             self.initial_github_labels = {label.name for label in self.github_repo.get_labels()}
 
             self.migrate_git_content()
@@ -1003,10 +1016,10 @@ class GitLabToGitHubMigrator:
         except (GitlabError, GithubException, subprocess.CalledProcessError, OSError) as e:
             logger.exception("Migration failed")
             # Optionally clean up created repository
-            if self.github_repo:
+            if self._github_repo:
                 try:
                     logger.info("Cleaning up created repository due to failure")
-                    self.github_repo.delete()
+                    self._github_repo.delete()
                 except GithubException:
                     logger.exception("Failed to cleanup repository")
 
