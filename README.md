@@ -174,11 +174,11 @@ pass github/api/token > /dev/null
 export GITLAB_TEST_PROJECT="your-namespace/your-project"
 export GITHUB_TEST_ORG="your-org-or-username"
 
-# Run all tests (unit and integration) in parallel, with default tokens from `pass` (see below)
-uv run pytest -v -n auto
+# Run all tests (unit and integration), with default tokens from `pass` (see below)
+uv run pytest -v
 
 # If the GitHub token doesn't have repository deletion rights, run test repo cleanup script
-uv run delete_test_repos github/admin_token  # Uses GITHUB_TEST_ORG env var
+uv run delete_test_repos github/admin_token
 
 # Run just unit tests (fast, in parallel)
 uv run pytest -m "not integration" -v -n auto
@@ -235,14 +235,11 @@ export GITHUB_TEST_ORG="your-org-or-username"
 **Running Integration Tests:**
 
 ```bash
-# Run all integration tests (in parallel)
-uv run pytest -m integration -v -n auto
-
-# Run integration tests sequentially (for debugging)
-uv run pytest -m integration -v -s
+# Run all integration tests
+uv run pytest -m integration -v
 
 # Run specific integration test
-uv run pytest -m integration tests/test_integration_real_api.py::TestRealAPIIntegration::test_gitlab_source_project_access -v -s
+uv run pytest -m integration tests/test_integration_real_api.py::TestRealAPIIntegration::test_gitlab_source_project_access -v
 ```
 
 #### Cleanup of Test Repositories
