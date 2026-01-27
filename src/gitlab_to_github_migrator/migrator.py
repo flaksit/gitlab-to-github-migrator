@@ -45,6 +45,40 @@ class DownloadedFile:
     full_gitlab_url: str
 
 
+@dataclass
+class WorkItemChild:
+    """Child work item from GraphQL Work Items API."""
+
+    iid: int
+    title: str
+    state: str
+    type: str
+    web_url: str
+    relationship_type: str = "child_of"
+
+
+@dataclass
+class IssueLinkInfo:
+    """Information about a linked issue (used for both parent-child and blocking relationships)."""
+
+    type: str
+    target_iid: int
+    target_title: str
+    target_project_path: str
+    target_web_url: str
+    is_same_project: bool
+    source: str = "rest_api"
+
+
+@dataclass
+class IssueCrossLinks:
+    """Cross-linked issues separated by relationship type."""
+
+    cross_links_text: str
+    parent_child_relations: list[IssueLinkInfo]
+    blocking_relations: list[IssueLinkInfo]
+
+
 class GitlabToGithubMigrator:
     """Main migration class."""
 
@@ -169,7 +203,7 @@ class GitlabToGithubMigrator:
             msg = f"GraphQL request failed: {e}"
             raise MigrationError(msg) from e
 
-    def get_work_item_children(self, issue_iid: int) -> list[dict[str, Any]]:
+    def get_work_item_children(self, issue_iid: int) -> list[WorkItemChild]:
         """Get child work items for a given issue using GraphQL Work Items API.
 
         Args:
@@ -231,7 +265,7 @@ class GitlabToGithubMigrator:
                 return []
 
             # Find the hierarchy widget to get children
-            children = []
+            children: list[WorkItemChild] = []
             widgets = work_item.get("widgets", [])
 
             for widget in widgets:
@@ -239,14 +273,13 @@ class GitlabToGithubMigrator:
                     child_nodes = widget.get("children", {}).get("nodes", [])
 
                     for child in child_nodes:
-                        child_info = {
-                            "iid": child.get("iid"),
-                            "title": child.get("title"),
-                            "state": child.get("state"),
-                            "type": child.get("workItemType", {}).get("name"),
-                            "web_url": child.get("webUrl"),
-                            "relationship_type": "child_of",  # This is a child relationship
-                        }
+                        child_info = WorkItemChild(
+                            iid=child.get("iid"),
+                            title=child.get("title"),
+                            state=child.get("state"),
+                            type=child.get("workItemType", {}).get("name"),
+                            web_url=child.get("webUrl"),
+                        )
                         children.append(child_info)
 
             logger.debug(f"Found {len(children)} child work items for issue #{issue_iid}")
@@ -651,7 +684,7 @@ class GitlabToGithubMigrator:
     def get_issue_cross_links(  # noqa: PLR0912 - complex categorization logic
         self,
         gitlab_issue: Any,  # noqa: ANN401 - gitlab has no type stubs
-    ) -> tuple[str, list[dict[str, Any]], list[dict[str, Any]]]:
+    ) -> IssueCrossLinks:
         """Get cross-linked issues and separate different relationship types.
 
         This method uses both GitLab's Work Items GraphQL API and REST API to properly
@@ -661,11 +694,10 @@ class GitlabToGithubMigrator:
         - Other relationships (relates_to) -> Text in issue description
 
         Returns:
-            tuple: (
+            IssueCrossLinks dataclass containing:
                 cross_links_text: str - For relates_to links in description,
-                parent_child_relations: list[dict] - For GitHub sub-issues,
-                blocking_relations: list[dict] - For GitHub issue dependencies
-            )
+                parent_child_relations: list[IssueLinkInfo] - For GitHub sub-issues,
+                blocking_relations: list[IssueLinkInfo] - For GitHub issue dependencies
         """
         # Step 1: Get child tasks using GraphQL Work Items API (using python-gitlab's native GraphQL support)
         child_work_items = []
@@ -697,44 +729,44 @@ class GitlabToGithubMigrator:
             )
             target_project_path = target_project_path or self.gitlab_project_path
 
-            link_info = {
-                "type": link_type,
-                "target_iid": target_issue_iid,
-                "target_title": target_issue_title,
-                "target_project_path": target_project_path,
-                "target_web_url": target_web_url,
-                "is_same_project": target_project_path == self.gitlab_project_path,
-            }
+            link_info = IssueLinkInfo(
+                type=link_type,
+                target_iid=target_issue_iid,
+                target_title=target_issue_title,
+                target_project_path=target_project_path,
+                target_web_url=target_web_url,
+                is_same_project=target_project_path == self.gitlab_project_path,
+            )
             regular_links.append(link_info)
 
         # Step 3: Categorize relationships into three groups
-        parent_child_relations = []
-        blocking_relations = []
-        relates_to_links = []
+        parent_child_relations: list[IssueLinkInfo] = []
+        blocking_relations: list[IssueLinkInfo] = []
+        relates_to_links: list[tuple[str, IssueLinkInfo]] = []
 
         # Add child work items as parent-child relationships
         parent_child_relations = [
-            {
-                "type": "child_of",
-                "target_iid": child["iid"],
-                "target_title": child["title"],
-                "target_project_path": self.gitlab_project_path,
-                "target_web_url": child["web_url"],
-                "is_same_project": True,
-                "source": "graphql_work_items",
-            }
+            IssueLinkInfo(
+                type="child_of",
+                target_iid=child.iid,
+                target_title=child.title,
+                target_project_path=self.gitlab_project_path,
+                target_web_url=child.web_url,
+                is_same_project=True,
+                source="graphql_work_items",
+            )
             for child in child_work_items
         ]
 
         # Process regular issue links (blocks, is_blocked_by, relates_to)
         for link_info in regular_links:
-            link_type = link_info["type"]
+            link_type = link_info.type
 
             # Categorize by relationship type
             if link_type in ("blocks", "is_blocked_by"):
                 # Blocking relationships - will be migrated to GitHub issue dependencies
                 # Only same-project links can be migrated natively
-                if link_info["is_same_project"]:
+                if link_info.is_same_project:
                     blocking_relations.append(link_info)
                 else:
                     # Cross-project blocking links fall back to description text
@@ -751,14 +783,14 @@ class GitlabToGithubMigrator:
             cross_links_text = "\n\n---\n\n**Cross-linked Issues:**\n\n"
 
             for relationship, link_info in relates_to_links:
-                if link_info["is_same_project"]:
+                if link_info.is_same_project:
                     # Same project - will be migrated to GitHub issue numbers
                     cross_links_text += (
-                        f"- **{relationship}**: #{link_info['target_iid']} - {link_info['target_title']}\n"
+                        f"- **{relationship}**: #{link_info.target_iid} - {link_info.target_title}\n"
                     )
                 else:
                     # External project - keep GitLab reference
-                    cross_links_text += f"- **{relationship}**: [{link_info['target_project_path']}#{link_info['target_iid']}]({link_info['target_web_url']}) - {link_info['target_title']}\n"
+                    cross_links_text += f"- **{relationship}**: [{link_info.target_project_path}#{link_info.target_iid}]({link_info.target_web_url}) - {link_info.target_title}\n"
 
         # Log summary
         logger.debug(
@@ -766,7 +798,11 @@ class GitlabToGithubMigrator:
             f"{len(blocking_relations)} blocking, {len(relates_to_links)} relates_to links"
         )
 
-        return cross_links_text, parent_child_relations, blocking_relations
+        return IssueCrossLinks(
+            cross_links_text=cross_links_text,
+            parent_child_relations=parent_child_relations,
+            blocking_relations=blocking_relations,
+        )
 
     def migrate_issues_with_number_preservation(self) -> None:  # noqa: PLR0912, PLR0915
         """Migrate issues while preserving GitLab issue numbers."""
@@ -809,24 +845,22 @@ class GitlabToGithubMigrator:
                         issue_body += updated_description
 
                     # Add cross-linked issues to the description and collect relationships
-                    cross_links_text, parent_child_relations, blocking_relations = self.get_issue_cross_links(
-                        gitlab_issue
-                    )
-                    if cross_links_text:
-                        issue_body += cross_links_text
+                    cross_links = self.get_issue_cross_links(gitlab_issue)
+                    if cross_links.cross_links_text:
+                        issue_body += cross_links.cross_links_text
 
                     # Store parent-child relations for second pass (after all issues are created)
-                    if parent_child_relations:
+                    if cross_links.parent_child_relations:
                         pending_parent_child_relations.extend(
                             {"parent_gitlab_iid": gitlab_issue.iid, "relation": relation}
-                            for relation in parent_child_relations
+                            for relation in cross_links.parent_child_relations
                         )
 
                     # Store blocking relations for second pass
-                    if blocking_relations:
+                    if cross_links.blocking_relations:
                         pending_blocking_relations.extend(
                             {"source_gitlab_iid": gitlab_issue.iid, "relation": relation}
-                            for relation in blocking_relations
+                            for relation in cross_links.blocking_relations
                         )
 
                     # Prepare labels
@@ -897,7 +931,7 @@ class GitlabToGithubMigrator:
                         parent_github_issue = github_issue_dict[parent_gitlab_iid]
 
                         # Get the child issue info
-                        child_gitlab_iid = child_relation["target_iid"]
+                        child_gitlab_iid = child_relation.target_iid
                         if child_gitlab_iid in github_issue_dict:
                             child_github_issue = github_issue_dict[child_gitlab_iid]
 
@@ -906,7 +940,7 @@ class GitlabToGithubMigrator:
                             self.create_github_sub_issue(
                                 parent_github_issue,
                                 f"Link to #{child_github_issue.number}",
-                                f"This issue is linked as a child of #{parent_github_issue.number}.\n\nOriginal GitLab relationship: {child_relation['type']}",
+                                f"This issue is linked as a child of #{parent_github_issue.number}.\n\nOriginal GitLab relationship: {child_relation.type}",
                             )
 
                             logger.debug(f"Linked issue #{child_gitlab_iid} as sub-issue of #{parent_gitlab_iid}")
@@ -922,8 +956,8 @@ class GitlabToGithubMigrator:
                 for pending_relation in pending_blocking_relations:
                     source_gitlab_iid = pending_relation["source_gitlab_iid"]
                     relation = pending_relation["relation"]
-                    link_type = relation["type"]
-                    target_gitlab_iid = relation["target_iid"]
+                    link_type = relation.type
+                    target_gitlab_iid = relation.target_iid
 
                     # Get both GitHub issues
                     if source_gitlab_iid not in github_issue_dict:
