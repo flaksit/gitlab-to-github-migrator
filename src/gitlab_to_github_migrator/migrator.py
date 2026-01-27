@@ -90,8 +90,8 @@ class GitlabToGithubMigrator:
         # From GitLab milestone ID (not iid!) to GitHub milestone number
         self.milestone_mapping: dict[int, int] = {}
 
-        # Track initial repository state for reporting
-        self.initial_github_labels: set[str] = set[str]()
+        # Track initial repository state for reporting (lowercase name -> actual name)
+        self.initial_github_labels: dict[str, str] = {}
 
         logger.info(f"Initialized migrator for {gitlab_project_path} -> {github_repo_path}")
 
@@ -309,8 +309,21 @@ class GitlabToGithubMigrator:
                 shutil.rmtree(temp_clone_path)
 
     def migrate_labels(self) -> None:
-        """Migrate and translate labels from GitLab to GitHub."""
+        """Migrate and translate labels from GitLab to GitHub.
+
+        Matching with existing GitHub labels is case-insensitive (GitHub treats
+        "Bug" and "bug" as the same label). When a translated label matches an
+        existing label, the existing label's name is used in the mapping.
+
+        Handles race condition where GitHub organization default labels may be
+        applied asynchronously after repository creation.
+        """
         try:
+            # Get existing GitHub labels (case-insensitive lookup: lowercase -> actual name)
+            self.initial_github_labels = {
+                label.name.lower(): label.name for label in self.github_repo.get_labels()
+            }
+
             # Get GitLab labels
             gitlab_labels = self.gitlab_project.labels.list(get_all=True)
 
@@ -318,9 +331,13 @@ class GitlabToGithubMigrator:
                 # Translate label name
                 translated_name = self.label_translator.translate(gitlab_label.name)
 
-                # Skip if label already exists (org default or repo)
-                if translated_name in self.initial_github_labels:
-                    self.label_mapping[gitlab_label.name] = translated_name
+                # Skip if label already exists (case-insensitive, as GitHub labels are)
+                existing_label = self.initial_github_labels.get(translated_name.lower())
+                if existing_label is not None:
+                    self.label_mapping[gitlab_label.name] = existing_label
+                    logger.debug(
+                        f"Using existing label: {gitlab_label.name} -> {existing_label}"
+                    )
                     continue
 
                 # Create new label
@@ -470,26 +487,26 @@ class GitlabToGithubMigrator:
         """Get or create the 'gitlab-issue-attachments' release for storing attachment files (cached)."""
         if self._attachments_release is None:
             release_tag = "gitlab-issue-attachments"
+            release_name = "GitLab issue attachments"
 
-            try:
-                # Try to get existing release by tag
-                release = self.github_repo.get_release(release_tag)
-            except GithubException as e:
-                if e.status == 404:
-                    # Release doesn't exist, create it
-                    logger.info("Creating new 'gitlab-issue-attachments' release for storing attachment files")
-                    release = self.github_repo.create_git_release(
-                        tag=release_tag,
-                        name="GitLab issue attachments",
-                        message="Storage for migrated GitLab attachments. Do not delete.",
-                        draft=True,  # Keep it as a draft to minimize visibility
-                    )
-                    logger.info(f"Created attachments release: {release.tag_name}")
-                else:
-                    # Re-raise other GitHub exceptions
-                    raise
-            else:
-                logger.debug(f"Using existing attachments release: {release.tag_name}")
+            # Draft releases can't be found by tag, so list all releases and find by name
+            release = None
+            for r in self.github_repo.get_releases():
+                if r.name == release_name:
+                    release = r
+                    logger.debug(f"Using existing attachments release: {release.name}")
+                    break
+
+            if release is None:
+                # Release doesn't exist, create it
+                logger.info(f"Creating new '{release_name}' release for storing attachment files")
+                release = self.github_repo.create_git_release(
+                    tag=release_tag,
+                    name=release_name,
+                    message="Storage for migrated GitLab attachments. Do not delete.",
+                    draft=True,  # Keep it as a draft to minimize visibility
+                )
+                logger.info(f"Created attachments release: {release.name}")
 
             self._attachments_release = release
 
@@ -1088,8 +1105,6 @@ class GitlabToGithubMigrator:
 
             # Repository creation and content migration
             self.create_github_repo()
-            self.initial_github_labels = {label.name for label in self.github_repo.get_labels()}
-
             self.migrate_git_content()
 
             # Metadata migration
