@@ -259,21 +259,20 @@ class TestReadOnlyGitLabAccess:
         source_project = gitlab_client.projects.get(source_gitlab_project)
         issues = source_project.issues.list(per_page=50, state="all", get_all=False)
 
+        # Find an issue that actually has work items by querying GraphQL API
         test_issue = None
+        child_work_items = []
         for issue in issues:
-            if (
-                issue.description
-                and ("- [ ]" in issue.description or "- [x]" in issue.description)
-                and "#" in issue.description
-            ):
+            work_items = migrator.get_work_item_children(issue.iid)
+            if work_items:
                 test_issue = issue
+                child_work_items = work_items
                 break
 
         if not test_issue:
-            pytest.skip("No issues with task references found for GraphQL testing")
+            pytest.skip("No issues with work items found for GraphQL testing")
 
         # Test GraphQL Work Items API
-        child_work_items = migrator.get_work_item_children(test_issue.iid)
         assert isinstance(child_work_items, list)
 
         for child in child_work_items:
