@@ -244,7 +244,7 @@ uv run pytest -m integration tests/test_integration_real.py::TestRealAPIIntegrat
 
 #### Creating a GitLab Test Project
 
-The `scripts/create_gitlab_test_project.py` script creates a GitLab project with test data covering all migration edge cases: labels, milestones (with gaps in numbering), issues (with gaps), issue relationships (parent-child, blocking, related), comments, attachments, branches, and tags.
+The `create-gitlab-test-project` command creates a GitLab project with test data covering all migration edge cases: labels, milestones (with gaps in numbering), issues (with gaps), issue relationships (parent-child, blocking, related), comments, attachments, branches, and tags.
 
 **Prerequisites:**
 - GitLab token with write access: set `GITLAB_TOKEN` env var or store in `pass` at `gitlab/api/rw_token`
@@ -253,10 +253,10 @@ The `scripts/create_gitlab_test_project.py` script creates a GitLab project with
 **Usage:**
 ```bash
 # Run the script with the project path
-uv run python scripts/create_gitlab_test_project.py namespace/project-name
+uv run create-gitlab-test-project namespace/project-name
 
 # For nested groups
-uv run python scripts/create_gitlab_test_project.py group/subgroup/project-name
+uv run create-gitlab-test-project group/subgroup/project-name
 
 # Then follow the manual instructions printed at the end for adding attachments
 # (attachments cannot be uploaded via API)
@@ -312,17 +312,17 @@ for repo in repos:
 gitlab-to-github-migrator/
 ├── src/
 │   └── gitlab_to_github_migrator/
-│       ├── __init__.py           # Package marker
-│       ├── cli.py                # Command-line interface
-│       ├── exceptions.py         # Custom exception classes
-│       ├── migrator.py           # Main module: migration logic and orchestration
-│       ├── translator.py         # Label and metadata translation logic
-│       └── utils.py              # Utility/helper functions
+│       ├── __init__.py                      # Package marker
+│       ├── cli.py                           # Command-line interface
+│       ├── create_gitlab_test_project.py    # Creates GitLab test project for integration tests
+│       ├── delete_test_repos.py             # Cleanup script for orphaned test repositories
+│       ├── exceptions.py                    # Custom exception classes
+│       ├── migrator.py                      # Main module: migration logic and orchestration
+│       ├── translator.py                    # Label and metadata translation logic
+│       └── utils.py                         # Utility/helper functions
 ├── tests/
 │   ├── test_gitlab_to_github_migrator.py # Unit tests (mocked)
 │   └── test_integration_real.py          # Integration tests (real APIs)
-├── scripts/
-│   └── create_gitlab_test_project.py    # Creates GitLab test project for integration tests
 ├── uv.lock                # Dependency lock file
 ├── pyproject.toml         # Project configuration and dependencies
 └── README.md              # This file

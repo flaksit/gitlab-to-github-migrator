@@ -346,7 +346,7 @@ def setup_issue_relationships(project: Project) -> None:
                     "target_issue_iid": target_iid,
                     "link_type": "relates_to",
                 })
-                print(f"    Created link: #7 relates to #8 (fallback)")
+                print("    Created link: #7 relates to #8 (fallback)")
             else:
                 raise
 
