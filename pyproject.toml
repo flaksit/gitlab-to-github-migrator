@@ -33,6 +33,7 @@ classifiers = [
 [project.scripts]
 gitlab-to-github-migrator = "gitlab_to_github_migrator:main"
 delete-test-repos = "gitlab_to_github_migrator.delete_test_repos:main"
+create-gitlab-test-project = "gitlab_to_github_migrator.create_gitlab_test_project:main"
 
 [dependency-groups]
 dev = [
@@ -142,6 +143,11 @@ ignore = [
 [tool.ruff.lint.per-file-ignores]
 "src/gitlab_to_github_migrator/delete_test_repos.py" = [
     "T201", # Allow print()
+]
+"src/gitlab_to_github_migrator/create_gitlab_test_project.py" = [
+    "T201",    # Allow print()
+    "S603",    # Allow subprocess calls with user input
+    "PLR0912", # Allow many branches in scripts
 ]
 "*.ipynb" = [
     "T201",  # Allow print()
