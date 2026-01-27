@@ -114,7 +114,7 @@ class GitLabToGitHubMigrator:
             iso_timestamp: ISO 8601 formatted timestamp string (e.g., "2024-01-15T10:30:45.123Z")
 
         Returns:
-            Formatted timestamp string (e.g., "2024-01-15 10:30:45+00:00")
+            Formatted timestamp string (e.g., "2024-01-15 10:30:45Z" for UTC, "2024-01-15 10:30:45+05:30" for other timezones)
 
         Raises:
             MigrationError: If the timestamp cannot be parsed
@@ -130,7 +130,9 @@ class GitLabToGitHubMigrator:
             # Parse the ISO format string to datetime
             timestamp_dt = dt.datetime.fromisoformat(normalized_timestamp)
             # Format with space separator and seconds precision
-            return timestamp_dt.isoformat(sep=" ", timespec="seconds")
+            formatted = timestamp_dt.isoformat(sep=" ", timespec="seconds")
+            # Replace +00:00 with Z for cleaner UTC representation
+            return formatted.replace("+00:00", "Z")
         except (ValueError, AttributeError) as e:
             msg = f"Failed to parse timestamp '{iso_timestamp}': {e}"
             raise MigrationError(msg) from e

@@ -49,21 +49,21 @@ class TestTimestampFormatting:
         from gitlab_to_github_migrator.migrator import GitLabToGitHubMigrator
 
         result = GitLabToGitHubMigrator._format_timestamp("2024-01-15T10:30:45.123Z")
-        assert result == "2024-01-15 10:30:45+00:00"
+        assert result == "2024-01-15 10:30:45Z"
 
     def test_format_timestamp_with_timezone(self) -> None:
         """Test formatting timestamp with explicit timezone."""
         from gitlab_to_github_migrator.migrator import GitLabToGitHubMigrator
 
         result = GitLabToGitHubMigrator._format_timestamp("2024-01-15T10:30:45.123456+00:00")
-        assert result == "2024-01-15 10:30:45+00:00"
+        assert result == "2024-01-15 10:30:45Z"
 
     def test_format_timestamp_without_microseconds(self) -> None:
         """Test formatting timestamp without microseconds."""
         from gitlab_to_github_migrator.migrator import GitLabToGitHubMigrator
 
         result = GitLabToGitHubMigrator._format_timestamp("2024-01-15T10:30:45Z")
-        assert result == "2024-01-15 10:30:45+00:00"
+        assert result == "2024-01-15 10:30:45Z"
 
     def test_format_timestamp_with_different_timezone(self) -> None:
         """Test formatting timestamp with non-UTC timezone."""
