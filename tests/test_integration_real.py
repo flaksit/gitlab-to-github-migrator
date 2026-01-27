@@ -328,23 +328,67 @@ class TestFullMigration:
         repo_name = _generate_repo_name("full-migration-test")
         repo_path = f"{target_github_org}/{repo_name}"
 
+        # Get source data for comparison before migration
+        source_project = gitlab_client.projects.get(source_gitlab_project)
+        source_labels = source_project.labels.list(get_all=True)
+        source_milestones = source_project.milestones.list(get_all=True, state="all")
+        source_issues = source_project.issues.list(get_all=True, state="all")
+        source_branches = source_project.branches.list(get_all=True)
+        source_tags = source_project.tags.list(get_all=True)
+        source_commits = source_project.commits.list(get_all=True)
+        
+        # Dynamically discover label patterns and create translations
+        # Find common prefixes among labels without assuming any specific format
+        label_translations = []
+        expected_translations = {}  # Maps source label -> expected target label
+        max_patterns = 3  # Limit patterns to keep test manageable
+        
+        label_names = [label.name for label in source_labels]
+        
+        # Strategy 1: Find common prefixes that match 2+ labels
+        # Use first letter as prefix for simplicity and better coverage
+        prefix_matches = {}
+        for label_name in label_names:
+            if label_name:  # Skip empty labels
+                prefix = label_name[0]  # First letter as prefix
+                if prefix not in prefix_matches:
+                    prefix_matches[prefix] = set()
+                prefix_matches[prefix].add(label_name)
+        
+        # Find a prefix that matches multiple labels (indicating a pattern)
+        for prefix, matching_labels in prefix_matches.items():
+            if len(matching_labels) >= 2 and len(label_translations) < max_patterns:
+                # Create wildcard pattern: "prefix*:prefix-*"
+                pattern = f"{prefix}*:{prefix}-*"
+                label_translations.append(pattern)
+                
+                # Track expected translations for verification
+                for label_name in matching_labels:
+                    suffix = label_name[1:] if len(label_name) > 1 else ""  # Get part after first letter
+                    expected_translations[label_name] = f"{prefix}-{suffix}"
+                
+                break  # Use first pattern found
+        
+        # Strategy 2: Add a non-wildcard translation for a single label
+        # Pick a label that wasn't already matched by wildcard patterns
+        for label_name in label_names:
+            if label_name not in expected_translations and len(label_translations) < max_patterns:
+                # Create exact translation: "original:translated"
+                translated_name = f"renamed-{label_name}"
+                pattern = f"{label_name}:{translated_name}"
+                label_translations.append(pattern)
+                expected_translations[label_name] = translated_name
+                break
+
         migrator = GitLabToGitHubMigrator(
             gitlab_project_path=source_gitlab_project,
             github_repo_path=repo_path,
-            label_translations=["p_*:priority: *", "t_*:type: *"],
+            label_translations=label_translations,
             gitlab_token=gitlab_token,
             github_token=github_token,
         )
 
         try:
-            # Get source data for comparison before migration
-            source_project = gitlab_client.projects.get(source_gitlab_project)
-            source_labels = source_project.labels.list(get_all=True)
-            source_milestones = source_project.milestones.list(get_all=True, state="all")
-            source_issues = source_project.issues.list(get_all=True, state="all")
-            source_branches = source_project.branches.list(get_all=True)
-            source_tags = source_project.tags.list(get_all=True)
-            source_commits = source_project.commits.list(get_all=True)
 
             # Run the full migration
             report = migrator.migrate()
@@ -396,13 +440,20 @@ class TestFullMigration:
             assert len(migrator.label_mapping) > 0, "No labels were mapped"
             print(f"✓ Verified {len(migrator.label_mapping)} labels")
 
-            # Check label translations were applied
-            translated_labels = [
-                label.name for label in github_labels if "priority: " in label.name or "type: " in label.name
-            ]
-            if any(label.name.startswith("p_") or label.name.startswith("t_") for label in source_labels):
-                assert len(translated_labels) > 0, "Label translations should have been applied"
-                print(f"✓ Label translations applied ({len(translated_labels)} translated)")
+            # Check label translations were applied correctly
+            if expected_translations:
+                # Verify that the expected translations were created
+                github_label_names = {label.name for label in github_labels}
+                for source_label, expected_target_label in expected_translations.items():
+                    assert expected_target_label in github_label_names, (
+                        f"Expected translated label '{expected_target_label}' (from '{source_label}') not found in GitHub"
+                    )
+                    # Verify the mapping was recorded correctly
+                    assert migrator.label_mapping.get(source_label) == expected_target_label, (
+                        f"Label mapping incorrect: {source_label} -> {migrator.label_mapping.get(source_label)} "
+                        f"(expected {expected_target_label})"
+                    )
+                print(f"✓ Label translations applied and verified ({len(expected_translations)} translated)")
 
             # Verify milestones
             if source_milestones:
