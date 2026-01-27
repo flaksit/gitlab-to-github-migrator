@@ -2,14 +2,13 @@
 Tests for GitLab to GitHub Migration Tool
 """
 
-import tempfile
 from unittest.mock import Mock, PropertyMock, patch
 
 import pytest
 from github import GithubException
 from gitlab.exceptions import GitlabError
 
-from gitlab_to_github_migrator import GitLabToGitHubMigrator, LabelTranslator, MigrationError
+from gitlab_to_github_migrator import GitlabToGithubMigrator, LabelTranslator, MigrationError
 
 
 @pytest.mark.unit
@@ -41,7 +40,7 @@ class TestLabelTranslator:
 
 
 @pytest.mark.unit
-class TestGitLabToGitHubMigrator:
+class TestGitlabToGithubMigrator:
     """Test main migration functionality."""
 
     def setup_method(self) -> None:
@@ -73,7 +72,7 @@ class TestGitLabToGitHubMigrator:
 
         mock_gitlab_client.projects.get.return_value = self.mock_gitlab_project
 
-        migrator = GitLabToGitHubMigrator(
+        migrator = GitlabToGithubMigrator(
             self.gitlab_project_path,
             self.github_repo_path,
             label_translations=["p_*:priority: *"],
@@ -96,7 +95,7 @@ class TestGitLabToGitHubMigrator:
         mock_gitlab_client.projects.get.return_value = self.mock_gitlab_project
         mock_github_client.get_user.return_value = Mock()
 
-        migrator = GitLabToGitHubMigrator(
+        migrator = GitlabToGithubMigrator(
             self.gitlab_project_path, self.github_repo_path, github_token="test_token"
         )
 
@@ -117,7 +116,7 @@ class TestGitLabToGitHubMigrator:
         mock_gitlab_project.name = "test-project"  # Works during init
         mock_gitlab_client.projects.get.return_value = mock_gitlab_project
 
-        migrator = GitLabToGitHubMigrator(
+        migrator = GitlabToGithubMigrator(
             self.gitlab_project_path, self.github_repo_path, github_token="test_token"
         )
 
@@ -168,7 +167,7 @@ class TestGitLabToGitHubMigrator:
 
         self.mock_github_repo.create_label.side_effect = create_label_side_effect
 
-        migrator = GitLabToGitHubMigrator(
+        migrator = GitlabToGithubMigrator(
             self.gitlab_project_path,
             self.github_repo_path,
             label_translations=["p_*:priority: *"],
@@ -235,7 +234,7 @@ class TestGitLabToGitHubMigrator:
 
         self.mock_github_repo.create_milestone.side_effect = create_milestone_side_effect
 
-        migrator = GitLabToGitHubMigrator(
+        migrator = GitlabToGithubMigrator(
             self.gitlab_project_path, self.github_repo_path, github_token="test_token"
         )
         migrator.github_repo = self.mock_github_repo
@@ -273,7 +272,7 @@ class TestGitLabToGitHubMigrator:
         # Mock the http_get method
         mock_gitlab_client.http_get.return_value = mock_response
 
-        migrator = GitLabToGitHubMigrator(
+        migrator = GitlabToGithubMigrator(
             self.gitlab_project_path, self.github_repo_path, github_token="test_token"
         )
 
@@ -304,7 +303,7 @@ class TestGitLabToGitHubMigrator:
         mock_github_class.return_value = mock_github_client
         mock_gitlab_client.projects.get.return_value = self.mock_gitlab_project
 
-        migrator = GitLabToGitHubMigrator(
+        migrator = GitlabToGithubMigrator(
             self.gitlab_project_path, self.github_repo_path, github_token="test_token"
         )
 
@@ -334,7 +333,7 @@ class TestGitLabToGitHubMigrator:
         mock_github_class.return_value = mock_github_client
         mock_gitlab_client.projects.get.return_value = self.mock_gitlab_project
 
-        migrator = GitLabToGitHubMigrator(
+        migrator = GitlabToGithubMigrator(
             self.gitlab_project_path, self.github_repo_path, github_token="test_token"
         )
         migrator.gitlab_project = self.mock_gitlab_project
@@ -380,7 +379,7 @@ class TestGitLabToGitHubMigrator:
         mock_github_class.return_value = mock_github_client
         mock_gitlab_client.projects.get.return_value = self.mock_gitlab_project
 
-        migrator = GitLabToGitHubMigrator(
+        migrator = GitlabToGithubMigrator(
             self.gitlab_project_path, self.github_repo_path, github_token="test_token"
         )
         migrator.gitlab_project = self.mock_gitlab_project
@@ -426,7 +425,7 @@ class TestGitLabToGitHubMigrator:
 
         mock_gitlab_client.projects.get.return_value = self.mock_gitlab_project
 
-        migrator = GitLabToGitHubMigrator(
+        migrator = GitlabToGithubMigrator(
             self.gitlab_project_path, self.github_repo_path, github_token="test_token"
         )
         migrator._github_repo = self.mock_github_repo
@@ -466,7 +465,7 @@ class TestGitLabToGitHubMigrator:
 
         mock_gitlab_client.projects.get.return_value = self.mock_gitlab_project
 
-        migrator = GitLabToGitHubMigrator(
+        migrator = GitlabToGithubMigrator(
             self.gitlab_project_path, self.github_repo_path, github_token="test_token"
         )
         migrator._github_repo = self.mock_github_repo
@@ -487,7 +486,7 @@ class TestGitLabToGitHubMigrator:
 
         mock_gitlab_client.projects.get.return_value = self.mock_gitlab_project
 
-        migrator = GitLabToGitHubMigrator(
+        migrator = GitlabToGithubMigrator(
             self.gitlab_project_path, self.github_repo_path, github_token="test_token"
         )
         migrator._github_repo = self.mock_github_repo
@@ -514,7 +513,7 @@ class TestGitLabToGitHubMigrator:
 
         mock_gitlab_client.projects.get.return_value = self.mock_gitlab_project
 
-        migrator = GitLabToGitHubMigrator(
+        migrator = GitlabToGithubMigrator(
             self.gitlab_project_path, self.github_repo_path, github_token="test_token"
         )
         migrator._github_repo = self.mock_github_repo
@@ -547,7 +546,7 @@ class TestGitLabToGitHubMigrator:
 
         mock_gitlab_client.projects.get.return_value = self.mock_gitlab_project
 
-        migrator = GitLabToGitHubMigrator(
+        migrator = GitlabToGithubMigrator(
             self.gitlab_project_path, self.github_repo_path, github_token="test_token"
         )
         migrator._github_repo = self.mock_github_repo

@@ -24,7 +24,7 @@ import pytest
 from github import Auth, Github, GithubException
 from gitlab.exceptions import GitlabError
 
-from gitlab_to_github_migrator import GitLabToGitHubMigrator
+from gitlab_to_github_migrator import GitlabToGithubMigrator
 from gitlab_to_github_migrator.exceptions import MigrationError
 
 
@@ -115,7 +115,7 @@ def github_client(github_token: str) -> Github:
 
 
 @pytest.mark.integration
-class TestReadOnlyGitLabAccess:
+class TestReadOnlyGitlabAccess:
     """Tests that only read from GitLab - no GitHub repository needed."""
 
     def test_gitlab_source_project_access(
@@ -251,7 +251,7 @@ class TestReadOnlyGitLabAccess:
             pytest.skip("GitLab token required for GraphQL API testing")
 
         # Create migrator just for GraphQL testing (doesn't need GitHub repo)
-        migrator = GitLabToGitHubMigrator(
+        migrator = GitlabToGithubMigrator(
             gitlab_project_path=source_gitlab_project,
             github_repo_path="dummy/repo",  # Not used
             gitlab_token=gitlab_token,
@@ -386,7 +386,7 @@ class TestFullMigration:
                 expected_translations[label_name] = translated_name
                 break
 
-        migrator = GitLabToGitHubMigrator(
+        migrator = GitlabToGithubMigrator(
             gitlab_project_path=source_gitlab_project,
             github_repo_path=repo_path,
             label_translations=label_translations,
