@@ -118,8 +118,8 @@ Format: `"source_pattern:target_pattern"`
 ### 5. File and Attachment Handling
 
 #### `download_gitlab_attachments(gitlab_issue_or_comment)`
-- Parse GitLab content for attachment URLs (format: `/uploads/...`)
-- Download each file using GitLab API or direct HTTP requests
+- Parse GitLab content for attachment URLs (format: `/uploads/<secret>/<filename>`)
+- Download each file using GitLab REST API (`GET /projects/:id/uploads/:secret/:filename`, requires GitLab 17.4+)
 - Return list of downloaded files with metadata
 
 #### `upload_github_attachments(github_repo, files)`

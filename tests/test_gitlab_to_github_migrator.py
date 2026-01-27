@@ -51,6 +51,7 @@ class TestGitLabToGitHubMigrator:
 
         # Mock GitLab project
         self.mock_gitlab_project = Mock()
+        self.mock_gitlab_project.id = 12345
         self.mock_gitlab_project.name = "test-project"
         self.mock_gitlab_project.description = "Test project description"
         self.mock_gitlab_project.web_url = "https://gitlab.com/test-org/test-project"
@@ -283,6 +284,13 @@ class TestGitLabToGitHubMigrator:
         assert files[0].filename == "file.pdf"
         assert files[0].content == b"file content"
         assert files[0].short_gitlab_url == "/uploads/abcdef0123456789abcdef0123456789/file.pdf"
+
+        # Verify API path is used instead of web URL
+        mock_gitlab_client.http_get.assert_called_once_with(
+            "/projects/12345/uploads/abcdef0123456789abcdef0123456789/file.pdf",
+            raw=True,
+            timeout=30,
+        )
 
     @patch("gitlab_to_github_migrator.gitlab_utils.Gitlab")
     @patch("gitlab_to_github_migrator.github_utils.Github")

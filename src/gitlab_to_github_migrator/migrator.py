@@ -372,37 +372,44 @@ class GitLabToGitHubMigrator:
             raise MigrationError(msg) from e
 
     def download_gitlab_attachments(self, content: str) -> list[DownloadedFile]:
-        """Download GitLab attachments and return updated content with file info."""
-        # Find attachment URLs in content
-        attachment_pattern = r"/uploads/[a-f0-9]{32}/[^)\s]+"
+        """Download GitLab attachments and return updated content with file info.
+
+        Uses the GitLab REST API endpoint (GitLab 17.4+) to download uploads
+        by secret and filename, avoiding Cloudflare blocks on web URLs.
+        """
+        # Find attachment URLs in content: /uploads/<secret>/<filename>
+        attachment_pattern = r"/uploads/([a-f0-9]{32})/([^)\s]+)"
         attachments = re.findall(attachment_pattern, content)
 
         downloaded_files: list[DownloadedFile] = []
 
-        # TODO Fix attachment downloading: gets blocked by Cloudflare
-        # for attachment_url in attachments:
-        #     try:
-        #         # Build full URL
-        #         full_url = f"{self.gitlab_project.web_url}{attachment_url}"
+        for secret, filename in attachments:
+            short_url = f"/uploads/{secret}/{filename}"
+            full_url = f"{self.gitlab_project.web_url}{short_url}"
+            try:
+                # Use GitLab REST API endpoint instead of web URL to avoid Cloudflare
+                # API: GET /projects/:id/uploads/:secret/:filename (GitLab 17.4+)
+                api_path = f"/projects/{self.gitlab_project.id}/uploads/{secret}/{filename}"
 
-        #         # Download file using python-gitlab's http_get method (authenticated)
-        #         # With raw=True, http_get returns requests.Response (type stubs are incorrect)
-        #         response = cast(requests.Response, self.gitlab_client.http_get(full_url, raw=True, timeout=30))
-        #         response.raise_for_status()
+                # http_get with raw=True returns requests.Response (type stubs are incorrect)
+                response = cast(
+                    requests.Response,
+                    self.gitlab_client.http_get(api_path, raw=True, timeout=30),
+                )
+                response.raise_for_status()
 
-        #         # Extract filename
-        #         filename = attachment_url.split("/")[-1]
+                downloaded_files.append(
+                    DownloadedFile(
+                        filename=filename,
+                        content=response.content,
+                        short_gitlab_url=short_url,
+                        full_gitlab_url=full_url,
+                    )
+                )
 
-        #         downloaded_files.append(DownloadedFile(
-        #             filename=filename,
-        #             content=response.content,
-        #             short_gitlab_url=attachment_url,
-        #             full_gitlab_url=full_url,
-        #         ))
-
-        #     except (requests.RequestException, OSError) as e:
-        #         msg = f"Failed to download attachment {attachment_url}: {e}"
-        #         raise MigrationError(msg) from e
+            except (requests.RequestException, OSError) as e:
+                msg = f"Failed to download attachment {short_url}: {e}"
+                raise MigrationError(msg) from e
 
         return downloaded_files
 
