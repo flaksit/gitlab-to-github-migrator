@@ -44,6 +44,7 @@ class DownloadedFile:
     short_gitlab_url: str
     full_gitlab_url: str
 
+
 class GitlabToGithubMigrator:
     """Main migration class."""
 
@@ -71,7 +72,7 @@ class GitlabToGithubMigrator:
 
         # Get project
         self.gitlab_project: GitlabProject = self.gitlab_client.projects.get(gitlab_project_path)
-        
+
         # Initialize GitLab GraphQL client using the gitlab.GraphQL class
         self.gitlab_graphql_client: gitlab.GraphQL = glu.get_graphql_client(token=gitlab_token)
 
@@ -104,6 +105,32 @@ class GitlabToGithubMigrator:
     @github_repo.setter
     def github_repo(self, value: github.Repository.Repository) -> None:
         self._github_repo = value
+
+    @staticmethod
+    def _format_timestamp(iso_timestamp: str) -> str:
+        """Format ISO 8601 timestamp to a human-readable format.
+
+        Args:
+            iso_timestamp: ISO 8601 formatted timestamp string (e.g., "2024-01-15T10:30:45.123Z")
+
+        Returns:
+            Formatted timestamp string (e.g., "2024-01-15 10:30:45Z" for UTC, "2024-01-15 10:30:45+05:30" for other timezones).
+            If the timestamp cannot be parsed, returns the original value unchanged.
+        """
+        if not iso_timestamp:
+            # Return empty string as-is if provided
+            return iso_timestamp
+
+        try:
+            # Parse the ISO format string to datetime
+            timestamp_dt = dt.datetime.fromisoformat(iso_timestamp)
+            # Format with space separator and seconds precision
+            formatted = timestamp_dt.isoformat(sep=" ", timespec="seconds")
+            # Replace +00:00 with Z for cleaner UTC representation
+            return formatted.replace("+00:00", "Z")
+        except (ValueError, AttributeError):
+            # If parsing fails, return the original timestamp unchanged
+            return iso_timestamp
 
     def validate_api_access(self) -> None:
         """Validate GitLab and GitHub API access."""
@@ -222,13 +249,12 @@ class GitlabToGithubMigrator:
                         children.append(child_info)
 
             logger.debug(f"Found {len(children)} child work items for issue #{issue_iid}")
-            return children
 
         except GitlabError as e:
             msg = f"Failed to get work item children for issue #{issue_iid}: {e}"
             raise MigrationError(msg) from e
-
-
+        else:
+            return children
 
     def migrate_git_content(self) -> None:
         """Migrate git repository content from GitLab to GitHub."""
@@ -415,9 +441,7 @@ class GitlabToGithubMigrator:
 
                 attachment_content = response.content
                 content_type = response.headers.get("Content-Type", "unknown")
-                logger.debug(
-                    f"Downloaded {filename}: {len(attachment_content)} bytes, Content-Type: {content_type}"
-                )
+                logger.debug(f"Downloaded {filename}: {len(attachment_content)} bytes, Content-Type: {content_type}")
 
                 if attachment_content:
                     downloaded_files.append(
@@ -445,7 +469,7 @@ class GitlabToGithubMigrator:
         """Get or create the 'gitlab-issue-attachments' release for storing attachment files (cached)."""
         if self._attachments_release is None:
             release_tag = "gitlab-issue-attachments"
-            
+
             try:
                 # Try to get existing release by tag
                 release = self.github_repo.get_release(release_tag)
@@ -465,9 +489,9 @@ class GitlabToGithubMigrator:
                     raise
             else:
                 logger.debug(f"Using existing attachments release: {release.tag_name}")
-            
+
             self._attachments_release = release
-        
+
         return self._attachments_release
 
     def upload_github_attachments(self, files: list[DownloadedFile], content: str, context: str = "") -> str:
@@ -588,15 +612,11 @@ class GitlabToGithubMigrator:
 
         try:
             # Use PyGithub's requester for consistent auth and rate limiting
-            status, _, data = self.github_client.requester.requestJson(
-                "POST", endpoint, input=payload
-            )
+            status, _, data = self.github_client.requester.requestJson("POST", endpoint, input=payload)
         except GithubException as e:
             if e.status == 422:
                 # Dependency may already exist or be invalid
-                logger.debug(
-                    f"Could not create dependency (may already exist): {e.status} - {e.data}"
-                )
+                logger.debug(f"Could not create dependency (may already exist): {e.status} - {e.data}")
                 return False
             # Re-raise other GitHub exceptions as they represent real errors
             raise
@@ -611,7 +631,8 @@ class GitlabToGithubMigrator:
         raise MigrationError(msg)
 
     def get_issue_cross_links(  # noqa: PLR0912 - complex categorization logic
-        self, gitlab_issue: Any  # noqa: ANN401 - gitlab has no type stubs
+        self,
+        gitlab_issue: Any,  # noqa: ANN401 - gitlab has no type stubs
     ) -> tuple[str, list[dict[str, Any]], list[dict[str, Any]]]:
         """Get cross-linked issues and separate different relationship types.
 
@@ -757,15 +778,13 @@ class GitlabToGithubMigrator:
                     issue_body += (
                         f"**Original Author:** {gitlab_issue.author['name']} (@{gitlab_issue.author['username']})\n"
                     )
-                    issue_body += f"**Created:** {gitlab_issue.created_at}\n"
+                    issue_body += f"**Created:** {self._format_timestamp(gitlab_issue.created_at)}\n"
                     issue_body += f"**GitLab URL:** {gitlab_issue.web_url}\n\n"
                     issue_body += "---\n\n"
 
                     if gitlab_issue.description:
                         # Download and process attachments (cached URLs already replaced)
-                        files, description_with_cached = self.download_gitlab_attachments(
-                            gitlab_issue.description
-                        )
+                        files, description_with_cached = self.download_gitlab_attachments(gitlab_issue.description)
                         updated_description = self.upload_github_attachments(
                             files, description_with_cached, context=f"issue #{gitlab_issue.iid}"
                         )
@@ -874,13 +893,9 @@ class GitlabToGithubMigrator:
 
                             logger.debug(f"Linked issue #{child_gitlab_iid} as sub-issue of #{parent_gitlab_iid}")
                         else:
-                            logger.warning(
-                                f"Child issue #{child_gitlab_iid} not found for parent-child relationship"
-                            )
+                            logger.warning(f"Child issue #{child_gitlab_iid} not found for parent-child relationship")
                     else:
-                        logger.warning(
-                            f"Parent issue #{parent_gitlab_iid} not found for parent-child relationship"
-                        )
+                        logger.warning(f"Parent issue #{parent_gitlab_iid} not found for parent-child relationship")
 
             # Third pass: Create blocking relationships as GitHub issue dependencies
             if pending_blocking_relations:
@@ -928,9 +943,7 @@ class GitlabToGithubMigrator:
             msg = f"Failed to migrate issues: {e}"
             raise MigrationError(msg) from e
 
-    def migrate_issue_comments(
-        self, gitlab_issue: GitlabProjectIssue, github_issue: github.Issue.Issue
-    ) -> None:
+    def migrate_issue_comments(self, gitlab_issue: GitlabProjectIssue, github_issue: github.Issue.Issue) -> None:
         """Migrate comments for an issue."""
         # Get all notes/comments
         notes = gitlab_issue.notes.list(get_all=True)
@@ -942,7 +955,7 @@ class GitlabToGithubMigrator:
                 comment_body = f"**System note:** {note.body}"
             else:
                 # Regular comment
-                comment_body = f"**Comment by** {note.author['name']} (@{note.author['username']}) **on** {note.created_at}\n\n"
+                comment_body = f"**Comment by** {note.author['name']} (@{note.author['username']}) **on** {self._format_timestamp(note.created_at)}\n\n"
                 comment_body += "---\n\n"
 
                 if note.body:
@@ -1016,30 +1029,30 @@ class GitlabToGithubMigrator:
             # Use the initial label count we captured at repository creation
             labels_created = len(github_labels_all) - len(self.initial_github_labels)
 
-            statistics.update({
-                "gitlab_issues_total": len(gitlab_issues),
-                "gitlab_issues_open": len(gitlab_issues_open),
-                "gitlab_issues_closed": len(gitlab_issues_closed),
-                "github_issues_total": len(github_issues),
-                "github_issues_open": len(github_issues_open),
-                "github_issues_closed": len(github_issues_closed),
-                "gitlab_milestones_total": len(gitlab_milestones),
-                "gitlab_milestones_open": len(gitlab_milestones_open),
-                "gitlab_milestones_closed": len(gitlab_milestones_closed),
-                "github_milestones_total": len(github_milestones),
-                "github_milestones_open": len(github_milestones_open),
-                "github_milestones_closed": len(github_milestones_closed),
-                "gitlab_labels_total": len(gitlab_labels),
-                "github_labels_existing": len(self.initial_github_labels),
-                "github_labels_created": max(0, labels_created),
-                "labels_translated": len(self.label_mapping),
-            })
+            statistics.update(
+                {
+                    "gitlab_issues_total": len(gitlab_issues),
+                    "gitlab_issues_open": len(gitlab_issues_open),
+                    "gitlab_issues_closed": len(gitlab_issues_closed),
+                    "github_issues_total": len(github_issues),
+                    "github_issues_open": len(github_issues_open),
+                    "github_issues_closed": len(github_issues_closed),
+                    "gitlab_milestones_total": len(gitlab_milestones),
+                    "gitlab_milestones_open": len(gitlab_milestones_open),
+                    "gitlab_milestones_closed": len(gitlab_milestones_closed),
+                    "github_milestones_total": len(github_milestones),
+                    "github_milestones_open": len(github_milestones_open),
+                    "github_milestones_closed": len(github_milestones_closed),
+                    "gitlab_labels_total": len(gitlab_labels),
+                    "github_labels_existing": len(self.initial_github_labels),
+                    "github_labels_created": max(0, labels_created),
+                    "labels_translated": len(self.label_mapping),
+                }
+            )
 
             # Validate counts
             if len(gitlab_issues) != len(github_issues):
-                errors.append(
-                    f"Issue count mismatch: GitLab {len(gitlab_issues)}, GitHub {len(github_issues)}"
-                )
+                errors.append(f"Issue count mismatch: GitLab {len(gitlab_issues)}, GitHub {len(github_issues)}")
                 report["success"] = False
 
             if len(gitlab_milestones) != len(github_milestones):
@@ -1059,9 +1072,10 @@ class GitlabToGithubMigrator:
 
     def create_github_repo(self) -> None:
         self._github_repo = ghu.create_repo(
-            self.github_client, self.github_repo_path, self.gitlab_project.description  # pyright: ignore[reportUnknownArgumentType]
+            self.github_client,
+            self.github_repo_path,
+            self.gitlab_project.description,  # pyright: ignore[reportUnknownArgumentType]
         )
-
 
     def migrate(self) -> dict[str, Any]:
         """Execute the complete migration process."""

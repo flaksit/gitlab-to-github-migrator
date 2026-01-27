@@ -40,6 +40,41 @@ class TestLabelTranslator:
 
 
 @pytest.mark.unit
+class TestTimestampFormatting:
+    """Test timestamp formatting functionality."""
+
+    def test_format_timestamp_with_z_suffix(self) -> None:
+        """Test formatting timestamp with Z suffix."""
+        result = GitlabToGithubMigrator._format_timestamp("2024-01-15T10:30:45.123Z")
+        assert result == "2024-01-15 10:30:45Z"
+
+    def test_format_timestamp_with_timezone(self) -> None:
+        """Test formatting timestamp with explicit timezone."""
+        result = GitlabToGithubMigrator._format_timestamp("2024-01-15T10:30:45.123456+00:00")
+        assert result == "2024-01-15 10:30:45Z"
+
+    def test_format_timestamp_without_microseconds(self) -> None:
+        """Test formatting timestamp without microseconds."""
+        result = GitlabToGithubMigrator._format_timestamp("2024-01-15T10:30:45Z")
+        assert result == "2024-01-15 10:30:45Z"
+
+    def test_format_timestamp_with_different_timezone(self) -> None:
+        """Test formatting timestamp with non-UTC timezone."""
+        result = GitlabToGithubMigrator._format_timestamp("2024-01-15T10:30:45+05:30")
+        assert result == "2024-01-15 10:30:45+05:30"
+
+    def test_format_timestamp_with_empty_string(self) -> None:
+        """Test handling for empty string - returns as-is."""
+        result = GitlabToGithubMigrator._format_timestamp("")
+        assert result == ""
+
+    def test_format_timestamp_with_invalid_format(self) -> None:
+        """Test handling for invalid timestamp format - returns original."""
+        result = GitlabToGithubMigrator._format_timestamp("invalid-timestamp")
+        assert result == "invalid-timestamp"
+
+
+@pytest.mark.unit
 class TestGitlabToGithubMigrator:
     """Test main migration functionality."""
 
@@ -95,9 +130,7 @@ class TestGitlabToGithubMigrator:
         mock_gitlab_client.projects.get.return_value = self.mock_gitlab_project
         mock_github_client.get_user.return_value = Mock()
 
-        migrator = GitlabToGithubMigrator(
-            self.gitlab_project_path, self.github_repo_path, github_token="test_token"
-        )
+        migrator = GitlabToGithubMigrator(self.gitlab_project_path, self.github_repo_path, github_token="test_token")
 
         # Should not raise an exception
         migrator.validate_api_access()
@@ -116,9 +149,7 @@ class TestGitlabToGithubMigrator:
         mock_gitlab_project.name = "test-project"  # Works during init
         mock_gitlab_client.projects.get.return_value = mock_gitlab_project
 
-        migrator = GitlabToGithubMigrator(
-            self.gitlab_project_path, self.github_repo_path, github_token="test_token"
-        )
+        migrator = GitlabToGithubMigrator(self.gitlab_project_path, self.github_repo_path, github_token="test_token")
 
         # Now make the name property fail by replacing the project
         failing_project = Mock()
@@ -234,9 +265,7 @@ class TestGitlabToGithubMigrator:
 
         self.mock_github_repo.create_milestone.side_effect = create_milestone_side_effect
 
-        migrator = GitlabToGithubMigrator(
-            self.gitlab_project_path, self.github_repo_path, github_token="test_token"
-        )
+        migrator = GitlabToGithubMigrator(self.gitlab_project_path, self.github_repo_path, github_token="test_token")
         migrator.github_repo = self.mock_github_repo
 
         migrator.migrate_milestones_with_number_preservation()
@@ -268,13 +297,11 @@ class TestGitlabToGithubMigrator:
         mock_gitlab_class.return_value = mock_gitlab_client
         mock_github_class.return_value = mock_github_client
         mock_gitlab_client.projects.get.return_value = self.mock_gitlab_project
-        
+
         # Mock the http_get method
         mock_gitlab_client.http_get.return_value = mock_response
 
-        migrator = GitlabToGithubMigrator(
-            self.gitlab_project_path, self.github_repo_path, github_token="test_token"
-        )
+        migrator = GitlabToGithubMigrator(self.gitlab_project_path, self.github_repo_path, github_token="test_token")
 
         content = "Here is an attachment: /uploads/abcdef0123456789abcdef0123456789/file.pdf"
         files, updated_content = migrator.download_gitlab_attachments(content)
@@ -303,9 +330,7 @@ class TestGitlabToGithubMigrator:
         mock_github_class.return_value = mock_github_client
         mock_gitlab_client.projects.get.return_value = self.mock_gitlab_project
 
-        migrator = GitlabToGithubMigrator(
-            self.gitlab_project_path, self.github_repo_path, github_token="test_token"
-        )
+        migrator = GitlabToGithubMigrator(self.gitlab_project_path, self.github_repo_path, github_token="test_token")
 
         # Pre-populate the cache with an already-uploaded attachment
         cached_url = "/uploads/abcdef0123456789abcdef0123456789/cached.pdf"
@@ -333,9 +358,7 @@ class TestGitlabToGithubMigrator:
         mock_github_class.return_value = mock_github_client
         mock_gitlab_client.projects.get.return_value = self.mock_gitlab_project
 
-        migrator = GitlabToGithubMigrator(
-            self.gitlab_project_path, self.github_repo_path, github_token="test_token"
-        )
+        migrator = GitlabToGithubMigrator(self.gitlab_project_path, self.github_repo_path, github_token="test_token")
         migrator.gitlab_project = self.mock_gitlab_project
         migrator.github_repo = self.mock_github_repo
         migrator.label_mapping = {"label1": "label1", "label2": "label2"}
@@ -379,9 +402,7 @@ class TestGitlabToGithubMigrator:
         mock_github_class.return_value = mock_github_client
         mock_gitlab_client.projects.get.return_value = self.mock_gitlab_project
 
-        migrator = GitlabToGithubMigrator(
-            self.gitlab_project_path, self.github_repo_path, github_token="test_token"
-        )
+        migrator = GitlabToGithubMigrator(self.gitlab_project_path, self.github_repo_path, github_token="test_token")
         migrator.gitlab_project = self.mock_gitlab_project
         migrator.github_repo = self.mock_github_repo
         migrator.label_mapping = {}
@@ -417,7 +438,7 @@ class TestGitlabToGithubMigrator:
     def test_upload_github_attachments_success(self, mock_github_class, mock_gitlab_class) -> None:
         """Test successful attachment upload to GitHub release."""
         from gitlab_to_github_migrator.migrator import DownloadedFile
-        
+
         mock_gitlab_client = Mock()
         mock_github_client = Mock()
         mock_gitlab_class.return_value = mock_gitlab_client
@@ -425,9 +446,7 @@ class TestGitlabToGithubMigrator:
 
         mock_gitlab_client.projects.get.return_value = self.mock_gitlab_project
 
-        migrator = GitlabToGithubMigrator(
-            self.gitlab_project_path, self.github_repo_path, github_token="test_token"
-        )
+        migrator = GitlabToGithubMigrator(self.gitlab_project_path, self.github_repo_path, github_token="test_token")
         migrator._github_repo = self.mock_github_repo
 
         # Mock the release
@@ -465,9 +484,7 @@ class TestGitlabToGithubMigrator:
 
         mock_gitlab_client.projects.get.return_value = self.mock_gitlab_project
 
-        migrator = GitlabToGithubMigrator(
-            self.gitlab_project_path, self.github_repo_path, github_token="test_token"
-        )
+        migrator = GitlabToGithubMigrator(self.gitlab_project_path, self.github_repo_path, github_token="test_token")
         migrator._github_repo = self.mock_github_repo
 
         content = "No attachments here"
@@ -486,9 +503,7 @@ class TestGitlabToGithubMigrator:
 
         mock_gitlab_client.projects.get.return_value = self.mock_gitlab_project
 
-        migrator = GitlabToGithubMigrator(
-            self.gitlab_project_path, self.github_repo_path, github_token="test_token"
-        )
+        migrator = GitlabToGithubMigrator(self.gitlab_project_path, self.github_repo_path, github_token="test_token")
         migrator._github_repo = self.mock_github_repo
 
         # Mock existing release
@@ -513,9 +528,7 @@ class TestGitlabToGithubMigrator:
 
         mock_gitlab_client.projects.get.return_value = self.mock_gitlab_project
 
-        migrator = GitlabToGithubMigrator(
-            self.gitlab_project_path, self.github_repo_path, github_token="test_token"
-        )
+        migrator = GitlabToGithubMigrator(self.gitlab_project_path, self.github_repo_path, github_token="test_token")
         migrator._github_repo = self.mock_github_repo
 
         # Mock 404 error when getting release
@@ -546,9 +559,7 @@ class TestGitlabToGithubMigrator:
 
         mock_gitlab_client.projects.get.return_value = self.mock_gitlab_project
 
-        migrator = GitlabToGithubMigrator(
-            self.gitlab_project_path, self.github_repo_path, github_token="test_token"
-        )
+        migrator = GitlabToGithubMigrator(self.gitlab_project_path, self.github_repo_path, github_token="test_token")
         migrator._github_repo = self.mock_github_repo
 
         # Mock existing release
