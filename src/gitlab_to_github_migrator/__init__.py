@@ -8,6 +8,7 @@ exact issue/milestone numbers, comments, attachments, and relationships.
 
 from __future__ import annotations
 
+from .cli import main
 from .exceptions import MigrationError, NumberVerificationError
 from .label_translator import LabelTranslator
 from .migrator import GitlabToGithubMigrator
@@ -20,5 +21,6 @@ __all__ = [
     "LabelTranslator",
     "MigrationError",
     "NumberVerificationError",
+    "main",
     "setup_logging",
 ]
