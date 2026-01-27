@@ -338,38 +338,48 @@ class TestFullMigration:
         source_commits = source_project.commits.list(get_all=True)
         
         # Dynamically discover label patterns and create translations
-        # Analyze labels to find common patterns with underscores
+        # Find common prefixes among labels without assuming any specific format
         label_translations = []
         expected_translations = {}  # Maps source label -> expected target label
         max_patterns = 3  # Limit patterns to keep test manageable
         
-        # Group labels by their prefix (part before first underscore)
-        prefix_groups = {}
-        for label in source_labels:
-            label_name = label.name
-            if "_" in label_name:
-                prefix = label_name.split("_", 1)[0]
-                if prefix not in prefix_groups:
-                    prefix_groups[prefix] = []
-                prefix_groups[prefix].append(label_name)
+        label_names = [label.name for label in source_labels]
         
-        # Create translation patterns for prefixes that have multiple labels
-        # This makes the test work with any labeling scheme
-        for prefix, labels in prefix_groups.items():
-            if len(labels) >= 2:  # Only create patterns for prefixes with at least 2 labels
-                # Create pattern: "prefix_*:prefix-expanded: *"
-                # Example: "p_*:p: *" or "t_*:t: *" or "status_*:status: *"
-                pattern = f"{prefix}_*:{prefix}: *"
+        # Strategy 1: Find common prefixes that match 2+ labels
+        # Try different prefix lengths to find patterns
+        prefix_matches = {}
+        for label_name in label_names:
+            # Try prefixes of different lengths (2-10 characters)
+            for prefix_len in range(2, min(11, len(label_name))):
+                prefix = label_name[:prefix_len]
+                if prefix not in prefix_matches:
+                    prefix_matches[prefix] = []
+                prefix_matches[prefix].append(label_name)
+        
+        # Find prefixes that match multiple labels (indicating a pattern)
+        for prefix, matching_labels in prefix_matches.items():
+            if len(matching_labels) >= 2 and len(label_translations) < max_patterns:
+                # Create wildcard pattern: "prefix*:prefix-*"
+                pattern = f"{prefix}*:{prefix}-*"
                 label_translations.append(pattern)
                 
                 # Track expected translations for verification
-                for label_name in labels:
-                    suffix = label_name.split("_", 1)[1]  # Get part after first underscore
-                    expected_translations[label_name] = f"{prefix}: {suffix}"
+                for label_name in matching_labels:
+                    suffix = label_name[len(prefix):]  # Get part after prefix
+                    expected_translations[label_name] = f"{prefix}-{suffix}"
                 
-                # Limit to avoid overwhelming the test with too many patterns
-                if len(label_translations) >= max_patterns:
-                    break
+                break  # Use first pattern found
+        
+        # Strategy 2: Add a non-wildcard translation for a single label
+        # Pick a label that wasn't already matched by wildcard patterns
+        for label_name in label_names:
+            if label_name not in expected_translations and len(label_translations) < max_patterns:
+                # Create exact translation: "original:translated"
+                translated_name = f"renamed-{label_name}"
+                pattern = f"{label_name}:{translated_name}"
+                label_translations.append(pattern)
+                expected_translations[label_name] = translated_name
+                break
 
         migrator = GitLabToGitHubMigrator(
             gitlab_project_path=source_gitlab_project,
