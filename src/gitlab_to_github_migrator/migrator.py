@@ -122,11 +122,8 @@ class GitLabToGitHubMigrator:
             return iso_timestamp
 
         try:
-            # GitLab API returns timestamps in ISO 8601 format, sometimes with 'Z' suffix
-            # Convert 'Z' to '+00:00' for proper parsing
-            normalized_timestamp = iso_timestamp.replace("Z", "+00:00")
             # Parse the ISO format string to datetime
-            timestamp_dt = dt.datetime.fromisoformat(normalized_timestamp)
+            timestamp_dt = dt.datetime.fromisoformat(iso_timestamp)
             # Format with space separator and seconds precision
             formatted = timestamp_dt.isoformat(sep=" ", timespec="seconds")
             # Replace +00:00 with Z for cleaner UTC representation
