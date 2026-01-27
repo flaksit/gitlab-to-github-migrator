@@ -114,14 +114,12 @@ class GitLabToGitHubMigrator:
             iso_timestamp: ISO 8601 formatted timestamp string (e.g., "2024-01-15T10:30:45.123Z")
 
         Returns:
-            Formatted timestamp string (e.g., "2024-01-15 10:30:45Z" for UTC, "2024-01-15 10:30:45+05:30" for other timezones)
-
-        Raises:
-            MigrationError: If the timestamp cannot be parsed
+            Formatted timestamp string (e.g., "2024-01-15 10:30:45Z" for UTC, "2024-01-15 10:30:45+05:30" for other timezones).
+            If the timestamp cannot be parsed, returns the original value unchanged.
         """
         if not iso_timestamp:
-            msg = "Timestamp cannot be empty or None"
-            raise MigrationError(msg)
+            # Return empty string as-is if provided
+            return iso_timestamp
 
         try:
             # GitLab API returns timestamps in ISO 8601 format, sometimes with 'Z' suffix
@@ -133,9 +131,9 @@ class GitLabToGitHubMigrator:
             formatted = timestamp_dt.isoformat(sep=" ", timespec="seconds")
             # Replace +00:00 with Z for cleaner UTC representation
             return formatted.replace("+00:00", "Z")
-        except (ValueError, AttributeError) as e:
-            msg = f"Failed to parse timestamp '{iso_timestamp}': {e}"
-            raise MigrationError(msg) from e
+        except (ValueError, AttributeError):
+            # If parsing fails, return the original timestamp unchanged
+            return iso_timestamp
 
     def validate_api_access(self) -> None:
         """Validate GitLab and GitHub API access."""
