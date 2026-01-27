@@ -46,43 +46,31 @@ class TestTimestampFormatting:
 
     def test_format_timestamp_with_z_suffix(self) -> None:
         """Test formatting timestamp with Z suffix."""
-        from gitlab_to_github_migrator.migrator import GitLabToGitHubMigrator
-
         result = GitLabToGitHubMigrator._format_timestamp("2024-01-15T10:30:45.123Z")
         assert result == "2024-01-15 10:30:45Z"
 
     def test_format_timestamp_with_timezone(self) -> None:
         """Test formatting timestamp with explicit timezone."""
-        from gitlab_to_github_migrator.migrator import GitLabToGitHubMigrator
-
         result = GitLabToGitHubMigrator._format_timestamp("2024-01-15T10:30:45.123456+00:00")
         assert result == "2024-01-15 10:30:45Z"
 
     def test_format_timestamp_without_microseconds(self) -> None:
         """Test formatting timestamp without microseconds."""
-        from gitlab_to_github_migrator.migrator import GitLabToGitHubMigrator
-
         result = GitLabToGitHubMigrator._format_timestamp("2024-01-15T10:30:45Z")
         assert result == "2024-01-15 10:30:45Z"
 
     def test_format_timestamp_with_different_timezone(self) -> None:
         """Test formatting timestamp with non-UTC timezone."""
-        from gitlab_to_github_migrator.migrator import GitLabToGitHubMigrator
-
         result = GitLabToGitHubMigrator._format_timestamp("2024-01-15T10:30:45+05:30")
         assert result == "2024-01-15 10:30:45+05:30"
 
     def test_format_timestamp_with_empty_string(self) -> None:
         """Test handling for empty string - returns as-is."""
-        from gitlab_to_github_migrator.migrator import GitLabToGitHubMigrator
-
         result = GitLabToGitHubMigrator._format_timestamp("")
         assert result == ""
 
     def test_format_timestamp_with_invalid_format(self) -> None:
         """Test handling for invalid timestamp format - returns original."""
-        from gitlab_to_github_migrator.migrator import GitLabToGitHubMigrator
-
         result = GitLabToGitHubMigrator._format_timestamp("invalid-timestamp")
         assert result == "invalid-timestamp"
 
