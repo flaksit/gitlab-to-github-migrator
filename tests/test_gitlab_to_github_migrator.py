@@ -72,6 +72,22 @@ class TestTimestampFormatting:
         result = GitLabToGitHubMigrator._format_timestamp("2024-01-15T10:30:45+05:30")
         assert result == "2024-01-15 10:30:45+05:30"
 
+    def test_format_timestamp_with_empty_string(self) -> None:
+        """Test error handling for empty string."""
+        from gitlab_to_github_migrator import MigrationError
+        from gitlab_to_github_migrator.migrator import GitLabToGitHubMigrator
+
+        with pytest.raises(MigrationError, match="Timestamp cannot be empty or None"):
+            GitLabToGitHubMigrator._format_timestamp("")
+
+    def test_format_timestamp_with_invalid_format(self) -> None:
+        """Test error handling for invalid timestamp format."""
+        from gitlab_to_github_migrator import MigrationError
+        from gitlab_to_github_migrator.migrator import GitLabToGitHubMigrator
+
+        with pytest.raises(MigrationError, match="Failed to parse timestamp"):
+            GitLabToGitHubMigrator._format_timestamp("invalid-timestamp")
+
 
 @pytest.mark.unit
 class TestGitLabToGitHubMigrator:
