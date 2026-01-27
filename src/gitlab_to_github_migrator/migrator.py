@@ -162,7 +162,8 @@ class GitlabToGithubMigrator:
                 msg = f"GraphQL errors: {response['errors']}"
                 raise MigrationError(msg)
 
-            return response.get("data", {})
+            # gitlab.GraphQL.execute() returns the data directly, not wrapped in {"data": ...}
+            return response
 
         except GitlabError as e:
             msg = f"GraphQL request failed: {e}"

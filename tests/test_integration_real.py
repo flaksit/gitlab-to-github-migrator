@@ -244,7 +244,6 @@ class TestReadOnlyGitlabAccess:
         source_gitlab_project: str,
         gitlab_token: str | None,
         github_token: str,
-        gitlab_client: gitlab.Gitlab,
     ) -> None:
         """Test the GitLab GraphQL Work Items API functionality."""
         if not gitlab_token:
@@ -258,8 +257,7 @@ class TestReadOnlyGitlabAccess:
             github_token=github_token,
         )
 
-        source_project = gitlab_client.projects.get(source_gitlab_project)
-        issues = source_project.issues.list(per_page=50, state="all", get_all=False)
+        issues = migrator.gitlab_project.issues.list(iterator=True, state="all")
 
         # Find an issue that actually has work items by querying GraphQL API
         # Limit to first 20 issues to avoid excessive API calls
