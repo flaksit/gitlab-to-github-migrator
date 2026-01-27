@@ -449,12 +449,13 @@ class TestGitlabToGithubMigrator:
         migrator = GitlabToGithubMigrator(self.gitlab_project_path, self.github_repo_path, github_token="test_token")
         migrator._github_repo = self.mock_github_repo
 
-        # Mock the release
+        # Mock the release (found by listing all releases)
         mock_release = Mock()
+        mock_release.name = "GitLab issue attachments"
         mock_asset = Mock()
         mock_asset.browser_download_url = "https://github.com/org/repo/releases/download/attachments/test.png"
         mock_release.upload_asset.return_value = mock_asset
-        self.mock_github_repo.get_release.return_value = mock_release
+        self.mock_github_repo.get_releases.return_value = [mock_release]
 
         # Create test file
         test_file = DownloadedFile(
@@ -506,15 +507,15 @@ class TestGitlabToGithubMigrator:
         migrator = GitlabToGithubMigrator(self.gitlab_project_path, self.github_repo_path, github_token="test_token")
         migrator._github_repo = self.mock_github_repo
 
-        # Mock existing release
+        # Mock existing release found by listing all releases
         mock_release = Mock()
-        mock_release.tag_name = "gitlab-issue-attachments"
-        self.mock_github_repo.get_release.return_value = mock_release
+        mock_release.name = "GitLab issue attachments"
+        self.mock_github_repo.get_releases.return_value = [mock_release]
 
         release = migrator.attachments_release
 
         assert release == mock_release
-        self.mock_github_repo.get_release.assert_called_once_with("gitlab-issue-attachments")
+        self.mock_github_repo.get_releases.assert_called_once()
         self.mock_github_repo.create_git_release.assert_not_called()
 
     @patch("gitlab_to_github_migrator.gitlab_utils.Gitlab")
@@ -531,13 +532,12 @@ class TestGitlabToGithubMigrator:
         migrator = GitlabToGithubMigrator(self.gitlab_project_path, self.github_repo_path, github_token="test_token")
         migrator._github_repo = self.mock_github_repo
 
-        # Mock 404 error when getting release
-        mock_error = GithubException(404, "Not Found", headers={})
-        self.mock_github_repo.get_release.side_effect = mock_error
+        # Mock no releases found (empty list)
+        self.mock_github_repo.get_releases.return_value = []
 
         # Mock create release
         mock_release = Mock()
-        mock_release.tag_name = "gitlab-issue-attachments"
+        mock_release.name = "GitLab issue attachments"
         self.mock_github_repo.create_git_release.return_value = mock_release
 
         release = migrator.attachments_release
@@ -562,10 +562,10 @@ class TestGitlabToGithubMigrator:
         migrator = GitlabToGithubMigrator(self.gitlab_project_path, self.github_repo_path, github_token="test_token")
         migrator._github_repo = self.mock_github_repo
 
-        # Mock existing release
+        # Mock existing release found by listing all releases
         mock_release = Mock()
-        mock_release.tag_name = "gitlab-issue-attachments"
-        self.mock_github_repo.get_release.return_value = mock_release
+        mock_release.name = "GitLab issue attachments"
+        self.mock_github_repo.get_releases.return_value = [mock_release]
 
         # Access the property twice
         release1 = migrator.attachments_release
@@ -575,7 +575,7 @@ class TestGitlabToGithubMigrator:
         assert release1 == release2
         assert release1 is release2
         # API should only be called once (cached after first call)
-        self.mock_github_repo.get_release.assert_called_once_with("gitlab-issue-attachments")
+        self.mock_github_repo.get_releases.assert_called_once()
 
 
 if __name__ == "__main__":

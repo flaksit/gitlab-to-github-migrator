@@ -486,26 +486,26 @@ class GitlabToGithubMigrator:
         """Get or create the 'gitlab-issue-attachments' release for storing attachment files (cached)."""
         if self._attachments_release is None:
             release_tag = "gitlab-issue-attachments"
+            release_name = "GitLab issue attachments"
 
-            try:
-                # Try to get existing release by tag
-                release = self.github_repo.get_release(release_tag)
-            except GithubException as e:
-                if e.status == 404:
-                    # Release doesn't exist, create it
-                    logger.info("Creating new 'gitlab-issue-attachments' release for storing attachment files")
-                    release = self.github_repo.create_git_release(
-                        tag=release_tag,
-                        name="GitLab issue attachments",
-                        message="Storage for migrated GitLab attachments. Do not delete.",
-                        draft=True,  # Keep it as a draft to minimize visibility
-                    )
-                    logger.info(f"Created attachments release: {release.tag_name}")
-                else:
-                    # Re-raise other GitHub exceptions
-                    raise
-            else:
-                logger.debug(f"Using existing attachments release: {release.tag_name}")
+            # Draft releases can't be found by tag, so list all releases and find by name
+            release = None
+            for r in self.github_repo.get_releases():
+                if r.name == release_name:
+                    release = r
+                    logger.debug(f"Using existing attachments release: {release.name}")
+                    break
+
+            if release is None:
+                # Release doesn't exist, create it
+                logger.info(f"Creating new '{release_name}' release for storing attachment files")
+                release = self.github_repo.create_git_release(
+                    tag=release_tag,
+                    name=release_name,
+                    message="Storage for migrated GitLab attachments. Do not delete.",
+                    draft=True,  # Keep it as a draft to minimize visibility
+                )
+                logger.info(f"Created attachments release: {release.name}")
 
             self._attachments_release = release
 

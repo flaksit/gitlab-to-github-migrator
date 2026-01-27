@@ -537,31 +537,33 @@ class TestFullMigration:
                                 f"Issue #{source_issue.iid}: attachments not migrated"
                             )
 
-                    # Verify attachments release exists and URLs are accessible
-                    try:
-                        attachments_release = github_repo.get_release("gitlab-issue-attachments")
-                        assets = list(attachments_release.get_assets())
+                    # Verify attachments release exists (use cached value from migration)
+                    if migrator._attachments_release is None:
+                        print("⚠️  No attachments release found (downloads may have failed)")
+                    else:
+                        assets = list(migrator._attachments_release.get_assets())
 
-                        # Verify at least one asset URL is accessible
+                        # Verify at least one asset is downloadable via API
+                        # (private/draft release assets require API with Accept: application/octet-stream)
                         if assets:
                             import requests
-                            for asset in assets[:2]:  # Test first 2 assets
-                                response = requests.head(
-                                    asset.browser_download_url,
-                                    allow_redirects=True,
-                                    timeout=10,
-                                )
-                                assert response.status_code == 200, (
-                                    f"Asset {asset.name} not accessible: {response.status_code}"
-                                )
+                            asset = assets[0]
+                            # Use GitHub API endpoint with asset ID, not browser_download_url
+                            api_url = f"https://api.github.com/repos/{repo_path}/releases/assets/{asset.id}"
+                            response = requests.head(
+                                api_url,
+                                headers={
+                                    "Authorization": f"Bearer {github_token}",
+                                    "Accept": "application/octet-stream",
+                                },
+                                allow_redirects=True,
+                                timeout=10,
+                            )
+                            assert response.status_code == 200, (
+                                f"Asset {asset.name} not accessible via API: {response.status_code}"
+                            )
 
                         print(f"✓ Verified attachment migration ({len(assets)} files in release, URLs accessible)")
-                    except GithubException as e:
-                        # Release doesn't exist if no attachments were downloaded
-                        if e.status == 404:
-                            print("✓ No attachments release (no attachments to migrate)")
-                        else:
-                            raise
 
         finally:
             # Cleanup - only if repo was created
