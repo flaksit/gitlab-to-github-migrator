@@ -180,8 +180,8 @@ uv run pytest -v
 # If the GitHub token doesn't have repository deletion rights, run test repo cleanup script
 uv run delete_test_repos github/admin_token
 
-# Run just unit tests (fast, in parallel) - Don't run the integration tests in parallel!
-uv run pytest -m "not integration" -v -n auto
+# Run just unit tests
+uv run pytest -m "not integration" -v
 ```
 
 #### Test Structure
