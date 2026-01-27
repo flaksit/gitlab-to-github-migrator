@@ -249,11 +249,12 @@ class GitLabToGitHubMigrator:
                         children.append(child_info)
 
             logger.debug(f"Found {len(children)} child work items for issue #{issue_iid}")
-            return children
 
         except GitlabError as e:
             msg = f"Failed to get work item children for issue #{issue_iid}: {e}"
             raise MigrationError(msg) from e
+        else:
+            return children
 
     def migrate_git_content(self) -> None:
         """Migrate git repository content from GitLab to GitHub."""

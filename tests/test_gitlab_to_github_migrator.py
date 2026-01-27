@@ -2,7 +2,6 @@
 Tests for GitLab to GitHub Migration Tool
 """
 
-import tempfile
 from unittest.mock import Mock, PropertyMock, patch
 
 import pytest
