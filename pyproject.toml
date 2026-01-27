@@ -8,7 +8,7 @@ name = "gitlab-to-github-migrator"
 version = "0.1.0"
 description = "Python tool for migrating GitLab projects to GitHub with full metadata preservation"
 readme = "README.md"
-requires-python = ">=3.13"
+requires-python = ">=3.14"
 dependencies = [
     "PyGithub>=2.8.1",
     "python-gitlab[graphql]>=7.1.0"
@@ -24,6 +24,7 @@ classifiers = [
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Typing :: Typed",
     # Include this to avoid accidentally publishing to PyPI:
     "Private :: Do Not Upload",

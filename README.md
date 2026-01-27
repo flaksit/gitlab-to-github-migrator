@@ -19,7 +19,7 @@ A Python tool for migrating GitLab projects to GitHub with full metadata preserv
 
 ### Prerequisites
 
-- Python 3.13+
+- Python 3.14+
 - [uv](https://docs.astral.sh/uv/) package manager
 - Git
 - Access to both GitLab and GitHub APIs
