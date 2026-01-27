@@ -346,20 +346,17 @@ class TestFullMigration:
         label_names = [label.name for label in source_labels]
         
         # Strategy 1: Find common prefixes that match 2+ labels
-        # Try different prefix lengths to find patterns
+        # Use first letter as prefix for simplicity and better coverage
         prefix_matches = {}
         for label_name in label_names:
-            # Try prefixes of different lengths (2-10 characters)
-            for prefix_len in range(2, min(11, len(label_name))):
-                prefix = label_name[:prefix_len]
+            if len(label_name) >= 1:
+                prefix = label_name[0]  # First letter as prefix
                 if prefix not in prefix_matches:
                     prefix_matches[prefix] = set()
                 prefix_matches[prefix].add(label_name)
         
-        # Find prefixes that match multiple labels (indicating a pattern)
-        # Sort by prefix length to get shortest (most general) patterns first
-        sorted_prefixes = sorted(prefix_matches.items(), key=lambda x: len(x[0]))
-        for prefix, matching_labels in sorted_prefixes:
+        # Find a prefix that matches multiple labels (indicating a pattern)
+        for prefix, matching_labels in prefix_matches.items():
             if len(matching_labels) >= 2 and len(label_translations) < max_patterns:
                 # Create wildcard pattern: "prefix*:prefix-*"
                 pattern = f"{prefix}*:{prefix}-*"
