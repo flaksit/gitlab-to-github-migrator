@@ -242,6 +242,33 @@ uv run pytest -m integration -v
 uv run pytest -m integration tests/test_integration_real.py::TestRealAPIIntegration::test_gitlab_source_project_access -v
 ```
 
+#### Creating a GitLab Test Project
+
+The `scripts/create_gitlab_test_project.py` script creates a GitLab project with test data covering all migration edge cases: labels, milestones (with gaps in numbering), issues (with gaps), issue relationships (parent-child, blocking, related), comments, attachments, branches, and tags.
+
+**Prerequisites:**
+- GitLab token with write access: set `GITLAB_TOKEN` env var or store in `pass` at `gitlab/api/rw_token`
+- Git configured for SSH access to GitLab
+
+**Usage:**
+```bash
+# Run the script with the project path
+uv run python scripts/create_gitlab_test_project.py namespace/project-name
+
+# For nested groups
+uv run python scripts/create_gitlab_test_project.py group/subgroup/project-name
+
+# Then follow the manual instructions printed at the end for adding attachments
+# (attachments cannot be uploaded via API)
+
+# Verify with integration tests
+export GITLAB_TEST_PROJECT=namespace/project-name
+export GITHUB_TEST_ORG=your-org-or-username
+uv run pytest tests/test_integration_real.py -v -m integration
+```
+
+The script is idempotent - it can be run multiple times and will skip resources that already exist.
+
 #### Cleanup of Test Repositories
 
 Integration tests create temporary repositories in the GitHub organization or user account specified by `GITHUB_TEST_ORG`. If the GitHub token doesn't have delete permissions for repositories, these repositories require manual cleanup. In that case, the tests will display instructions like:
@@ -294,6 +321,8 @@ gitlab-to-github-migrator/
 ├── tests/
 │   ├── test_gitlab_to_github_migrator.py # Unit tests (mocked)
 │   └── test_integration_real.py          # Integration tests (real APIs)
+├── scripts/
+│   └── create_gitlab_test_project.py    # Creates GitLab test project for integration tests
 ├── uv.lock                # Dependency lock file
 ├── pyproject.toml         # Project configuration and dependencies
 └── README.md              # This file

@@ -160,6 +160,12 @@ ignore = [
     "EM102",  # Allow f-string exceptions in tests
     "SLF001", # Allow private member access in tests
 ]
+"scripts/**/*.py" = [
+    "T201",    # Allow print() in scripts
+    "INP001",  # Scripts don't need __init__.py
+    "S603",    # Allow subprocess calls with user input
+    "PLR0912", # Allow many branches in scripts
+]
 
 [tool.basedpyright]
 # BasedPyright currently seems like the best type checker option, much faster
