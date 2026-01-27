@@ -265,7 +265,7 @@ class GitlabToGithubMigrator:
                 return []
 
             # Find the hierarchy widget to get children
-            children = []
+            children: list[WorkItemChild] = []
             widgets = work_item.get("widgets", [])
 
             for widget in widgets:
