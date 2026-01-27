@@ -556,9 +556,12 @@ class TestFullMigration:
                                 )
 
                         print(f"✓ Verified attachment migration ({len(assets)} files in release, URLs accessible)")
-                    except Exception:
-                        # Release might not exist if no attachments were downloaded
-                        print("✓ No attachments release (no attachments to migrate)")
+                    except GithubException as e:
+                        # Release doesn't exist if no attachments were downloaded
+                        if e.status == 404:
+                            print("✓ No attachments release (no attachments to migrate)")
+                        else:
+                            raise
 
         finally:
             # Cleanup - only if repo was created
