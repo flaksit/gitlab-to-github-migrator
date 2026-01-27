@@ -54,7 +54,6 @@ class WorkItemChild:
     state: str
     type: str
     web_url: str
-    relationship_type: str = "child_of"
 
 
 @dataclass
@@ -196,12 +195,12 @@ class GitlabToGithubMigrator:
                 msg = f"GraphQL errors: {response['errors']}"
                 raise MigrationError(msg)
 
-            # gitlab.GraphQL.execute() returns the data directly, not wrapped in {"data": ...}
-            return response
-
         except GitlabError as e:
             msg = f"GraphQL request failed: {e}"
             raise MigrationError(msg) from e
+
+        # gitlab.GraphQL.execute() returns the data directly, not wrapped in {"data": ...}
+        return response
 
     def get_work_item_children(self, issue_iid: int) -> list[WorkItemChild]:
         """Get child work items for a given issue using GraphQL Work Items API.

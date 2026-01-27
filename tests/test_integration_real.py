@@ -277,14 +277,15 @@ class TestReadOnlyGitlabAccess:
         if not test_issue:
             pytest.skip("No issues with work items found for GraphQL testing")
 
-        # Test GraphQL Work Items API
-        assert isinstance(child_work_items, list)
+        # Test GraphQL Work Items API returns valid values
+        assert len(child_work_items) > 0, "Expected at least one child work item"
 
         for child in child_work_items:
-            assert "iid" in child
-            assert "title" in child
-            assert "relationship_type" in child
-            assert child["relationship_type"] == "child_of"
+            assert child.iid > 0
+            assert len(child.title) > 0
+            assert child.state in ("OPEN", "CLOSED")
+            assert len(child.type) > 0
+            assert "gitlab" in child.web_url.lower()
 
     def test_closed_issues_and_milestones_retrieval(
         self,
