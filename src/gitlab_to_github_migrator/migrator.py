@@ -413,14 +413,26 @@ class GitLabToGitHubMigrator:
                 )
                 response.raise_for_status()
 
-                downloaded_files.append(
-                    DownloadedFile(
-                        filename=filename,
-                        content=response.content,
-                        short_gitlab_url=short_url,
-                        full_gitlab_url=full_url,
-                    )
+                attachment_content = response.content
+                content_type = response.headers.get("Content-Type", "unknown")
+                logger.debug(
+                    f"Downloaded {filename}: {len(attachment_content)} bytes, Content-Type: {content_type}"
                 )
+
+                if attachment_content:
+                    downloaded_files.append(
+                        DownloadedFile(
+                            filename=filename,
+                            content=attachment_content,
+                            short_gitlab_url=short_url,
+                            full_gitlab_url=full_url,
+                        )
+                    )
+                else:
+                    logger.warning(
+                        f"GitLab returned empty content for attachment {short_url} "
+                        f"(status: {response.status_code}, Content-Type: {content_type})"
+                    )
 
             except (requests.RequestException, OSError) as e:
                 msg = f"Failed to download attachment {short_url}: {e}"
@@ -458,8 +470,13 @@ class GitLabToGitHubMigrator:
         
         return self._attachments_release
 
-    def upload_github_attachments(self, files: list[DownloadedFile], content: str) -> str:
+    def upload_github_attachments(self, files: list[DownloadedFile], content: str, context: str = "") -> str:
         """Upload files to GitHub release assets and update content with new URLs.
+
+        Args:
+            files: List of downloaded files to upload.
+            content: The content containing attachment URLs to replace.
+            context: Context string for log messages (e.g., "issue #5" or "issue #5 note 123").
 
         Files are cached by their GitLab URL to avoid duplicate uploads when the
         same attachment appears in multiple issues or comments.
@@ -478,6 +495,15 @@ class GitLabToGitHubMigrator:
                 download_url = self._uploaded_attachments[file_info.short_gitlab_url]
                 updated_content = updated_content.replace(file_info.short_gitlab_url, download_url)
                 logger.debug(f"Reusing cached attachment {file_info.filename}: {download_url}")
+                continue
+
+            # Skip empty files - GitHub rejects uploads with 0 bytes (Bad Content-Length error)
+            if not file_info.content:
+                ctx = f" in {context}" if context else ""
+                logger.warning(
+                    f"Skipping empty attachment {file_info.filename} (0 bytes){ctx} - "
+                    f"GitLab URL: {file_info.full_gitlab_url}"
+                )
                 continue
 
             temp_path = None
@@ -740,7 +766,9 @@ class GitLabToGitHubMigrator:
                         files, description_with_cached = self.download_gitlab_attachments(
                             gitlab_issue.description
                         )
-                        updated_description = self.upload_github_attachments(files, description_with_cached)
+                        updated_description = self.upload_github_attachments(
+                            files, description_with_cached, context=f"issue #{gitlab_issue.iid}"
+                        )
                         issue_body += updated_description
 
                     # Add cross-linked issues to the description and collect relationships
@@ -920,7 +948,9 @@ class GitLabToGitHubMigrator:
                 if note.body:
                     # Process attachments in comment (cached URLs already replaced)
                     files, body_with_cached = self.download_gitlab_attachments(note.body)
-                    updated_body = self.upload_github_attachments(files, body_with_cached)
+                    updated_body = self.upload_github_attachments(
+                        files, body_with_cached, context=f"issue #{gitlab_issue.iid} note {note.id}"
+                    )
                     comment_body += updated_body
 
             # Create GitHub comment
