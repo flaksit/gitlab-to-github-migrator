@@ -349,7 +349,7 @@ class TestFullMigration:
         # Use first letter as prefix for simplicity and better coverage
         prefix_matches = {}
         for label_name in label_names:
-            if len(label_name) >= 1:
+            if label_name:  # Skip empty labels
                 prefix = label_name[0]  # First letter as prefix
                 if prefix not in prefix_matches:
                     prefix_matches[prefix] = set()
@@ -364,7 +364,7 @@ class TestFullMigration:
                 
                 # Track expected translations for verification
                 for label_name in matching_labels:
-                    suffix = label_name[len(prefix):]  # Get part after prefix
+                    suffix = label_name[1:] if len(label_name) > 1 else ""  # Get part after first letter
                     expected_translations[label_name] = f"{prefix}-{suffix}"
                 
                 break  # Use first pattern found
