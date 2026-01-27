@@ -45,7 +45,7 @@ class DownloadedFile:
     full_gitlab_url: str
 
 
-class GitLabToGitHubMigrator:
+class GitlabToGithubMigrator:
     """Main migration class."""
 
     def __init__(

@@ -12,7 +12,7 @@ from logging import Logger
 from typing import Any, Final
 
 from .exceptions import MigrationError
-from .migrator import GitLabToGitHubMigrator
+from .migrator import GitlabToGithubMigrator
 from .utils import PassError, get_pass_value, setup_logging
 
 logger: Logger = logging.getLogger(__name__)
@@ -175,7 +175,7 @@ def main() -> None:
     gitlab_token_pass_path: str | None = getattr(args, "gitlab_token_pass_path", None)
     github_token_pass_path: str | None = getattr(args, "github_token_pass_path", None)
 
-    migrator = GitLabToGitHubMigrator(
+    migrator = GitlabToGithubMigrator(
         args.gitlab_project,
         args.github_repo,
         label_translations=label_translation,
