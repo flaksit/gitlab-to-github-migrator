@@ -341,6 +341,7 @@ class TestFullMigration:
         # Analyze labels to find common patterns with underscores
         label_translations = []
         expected_translations = {}  # Maps source label -> expected target label
+        max_patterns = 3  # Limit patterns to keep test manageable
         
         # Group labels by their prefix (part before first underscore)
         prefix_groups = {}
@@ -357,7 +358,7 @@ class TestFullMigration:
         for prefix, labels in prefix_groups.items():
             if len(labels) >= 2:  # Only create patterns for prefixes with at least 2 labels
                 # Create pattern: "prefix_*:prefix-expanded: *"
-                # Example: "p_*:priority: *" or "t_*:type: *" or "status_*:status: *"
+                # Example: "p_*:p: *" or "t_*:t: *" or "status_*:status: *"
                 pattern = f"{prefix}_*:{prefix}: *"
                 label_translations.append(pattern)
                 
@@ -366,8 +367,8 @@ class TestFullMigration:
                     suffix = label_name.split("_", 1)[1]  # Get part after first underscore
                     expected_translations[label_name] = f"{prefix}: {suffix}"
                 
-                # Limit to first 3 patterns to keep test manageable
-                if len(label_translations) >= 3:
+                # Limit to avoid overwhelming the test with too many patterns
+                if len(label_translations) >= max_patterns:
                     break
 
         migrator = GitLabToGitHubMigrator(
