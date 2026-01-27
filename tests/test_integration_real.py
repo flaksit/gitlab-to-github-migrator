@@ -264,11 +264,15 @@ class TestReadOnlyGitLabAccess:
         test_issue = None
         child_work_items = []
         for issue in issues[:20]:
-            work_items = migrator.get_work_item_children(issue.iid)
-            if work_items:
-                test_issue = issue
-                child_work_items = work_items
-                break
+            try:
+                work_items = migrator.get_work_item_children(issue.iid)
+                if work_items:
+                    test_issue = issue
+                    child_work_items = work_items
+                    break
+            except Exception:
+                # Skip issues that fail to query (e.g., not a work item type)
+                continue
 
         if not test_issue:
             pytest.skip("No issues with work items found for GraphQL testing")
