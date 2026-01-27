@@ -303,7 +303,7 @@ gitlab-to-github-migrator/
 
 #### Core Components
 
-- **`GitLabToGitHubMigrator`**: Main migration class
+- **`GitlabToGithubMigrator`**: Main migration class
 - **`LabelTranslator`**: Handles label pattern translation
 - **Error Classes**: `MigrationError`, `NumberVerificationError`
 
