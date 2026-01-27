@@ -106,6 +106,9 @@ Label translation uses glob-style patterns:
 - `"p_high:priority: high"` - Literal replacement
 - `"p_*:priority: *"` - Wildcard transformation (p_high → priority: high)
 
+#### Case-Insensitive Label Matching
+
+GitHub treats labels as case-insensitive ("Bug" and "bug" are the same label). When a translated GitLab label matches an existing GitHub label (including organization defaults), the migrator uses the existing label's name rather than creating a duplicate. For example, if GitLab has a "documentation" label and GitHub has "Documentation", the existing "Documentation" label will be used.
 
 ## Migration Process
 
@@ -242,6 +245,33 @@ uv run pytest -m integration -v
 uv run pytest -m integration tests/test_integration_real.py::TestRealAPIIntegration::test_gitlab_source_project_access -v
 ```
 
+#### Creating a GitLab Test Project
+
+The `create-gitlab-test-project` command creates a GitLab project with test data covering all migration edge cases: labels, milestones (with gaps in numbering), issues (with gaps), issue relationships (parent-child, blocking, related), comments, attachments, branches, and tags.
+
+**Prerequisites:**
+- GitLab token with write access: set `GITLAB_TOKEN` env var or store in `pass` at `gitlab/api/rw_token`
+- Git configured for SSH access to GitLab
+
+**Usage:**
+```bash
+# Run the script with the project path
+uv run create-gitlab-test-project namespace/project-name
+
+# For nested groups
+uv run create-gitlab-test-project group/subgroup/project-name
+
+# Then follow the manual instructions printed at the end for adding attachments
+# (attachments cannot be uploaded via API)
+
+# Verify with integration tests
+export GITLAB_TEST_PROJECT=namespace/project-name
+export GITHUB_TEST_ORG=your-org-or-username
+uv run pytest tests/test_integration_real.py -v -m integration
+```
+
+The script is idempotent - it can be run multiple times and will skip resources that already exist.
+
 #### Cleanup of Test Repositories
 
 Integration tests create temporary repositories in the GitHub organization or user account specified by `GITHUB_TEST_ORG`. If the GitHub token doesn't have delete permissions for repositories, these repositories require manual cleanup. In that case, the tests will display instructions like:
@@ -285,12 +315,14 @@ for repo in repos:
 gitlab-to-github-migrator/
 ├── src/
 │   └── gitlab_to_github_migrator/
-│       ├── __init__.py           # Package marker
-│       ├── cli.py                # Command-line interface
-│       ├── exceptions.py         # Custom exception classes
-│       ├── migrator.py           # Main module: migration logic and orchestration
-│       ├── translator.py         # Label and metadata translation logic
-│       └── utils.py              # Utility/helper functions
+│       ├── __init__.py                      # Package marker
+│       ├── cli.py                           # Command-line interface
+│       ├── create_gitlab_test_project.py    # Creates GitLab test project for integration tests
+│       ├── delete_test_repos.py             # Cleanup script for orphaned test repositories
+│       ├── exceptions.py                    # Custom exception classes
+│       ├── migrator.py                      # Main module: migration logic and orchestration
+│       ├── translator.py                    # Label and metadata translation logic
+│       └── utils.py                         # Utility/helper functions
 ├── tests/
 │   ├── test_gitlab_to_github_migrator.py # Unit tests (mocked)
 │   └── test_integration_real.py          # Integration tests (real APIs)

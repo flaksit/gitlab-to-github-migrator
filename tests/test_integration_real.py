@@ -244,7 +244,6 @@ class TestReadOnlyGitlabAccess:
         source_gitlab_project: str,
         gitlab_token: str | None,
         github_token: str,
-        gitlab_client: gitlab.Gitlab,
     ) -> None:
         """Test the GitLab GraphQL Work Items API functionality."""
         if not gitlab_token:
@@ -258,8 +257,7 @@ class TestReadOnlyGitlabAccess:
             github_token=github_token,
         )
 
-        source_project = gitlab_client.projects.get(source_gitlab_project)
-        issues = source_project.issues.list(per_page=50, state="all", get_all=False)
+        issues = migrator.gitlab_project.issues.list(iterator=True, state="all")
 
         # Find an issue that actually has work items by querying GraphQL API
         # Limit to first 20 issues to avoid excessive API calls
@@ -537,28 +535,33 @@ class TestFullMigration:
                                 f"Issue #{source_issue.iid}: attachments not migrated"
                             )
 
-                    # Verify attachments release exists and URLs are accessible
-                    try:
-                        attachments_release = github_repo.get_release("gitlab-issue-attachments")
-                        assets = list(attachments_release.get_assets())
+                    # Verify attachments release exists (use cached value from migration)
+                    if migrator._attachments_release is None:
+                        print("⚠️  No attachments release found (downloads may have failed)")
+                    else:
+                        assets = list(migrator._attachments_release.get_assets())
 
-                        # Verify at least one asset URL is accessible
+                        # Verify at least one asset is downloadable via API
+                        # (private/draft release assets require API with Accept: application/octet-stream)
                         if assets:
                             import requests
-                            for asset in assets[:2]:  # Test first 2 assets
-                                response = requests.head(
-                                    asset.browser_download_url,
-                                    allow_redirects=True,
-                                    timeout=10,
-                                )
-                                assert response.status_code == 200, (
-                                    f"Asset {asset.name} not accessible: {response.status_code}"
-                                )
+                            asset = assets[0]
+                            # Use GitHub API endpoint with asset ID, not browser_download_url
+                            api_url = f"https://api.github.com/repos/{repo_path}/releases/assets/{asset.id}"
+                            response = requests.head(
+                                api_url,
+                                headers={
+                                    "Authorization": f"Bearer {github_token}",
+                                    "Accept": "application/octet-stream",
+                                },
+                                allow_redirects=True,
+                                timeout=10,
+                            )
+                            assert response.status_code == 200, (
+                                f"Asset {asset.name} not accessible via API: {response.status_code}"
+                            )
 
                         print(f"✓ Verified attachment migration ({len(assets)} files in release, URLs accessible)")
-                    except Exception:
-                        # Release might not exist if no attachments were downloaded
-                        print("✓ No attachments release (no attachments to migrate)")
 
         finally:
             # Cleanup - only if repo was created
