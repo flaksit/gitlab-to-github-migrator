@@ -260,9 +260,10 @@ class TestReadOnlyGitLabAccess:
         issues = source_project.issues.list(per_page=50, state="all", get_all=False)
 
         # Find an issue that actually has work items by querying GraphQL API
+        # Limit to first 20 issues to avoid excessive API calls
         test_issue = None
         child_work_items = []
-        for issue in issues:
+        for issue in issues[:20]:
             work_items = migrator.get_work_item_children(issue.iid)
             if work_items:
                 test_issue = issue
