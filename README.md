@@ -106,6 +106,9 @@ Label translation uses glob-style patterns:
 - `"p_high:priority: high"` - Literal replacement
 - `"p_*:priority: *"` - Wildcard transformation (p_high → priority: high)
 
+#### Case-Insensitive Label Matching
+
+GitHub treats labels as case-insensitive ("Bug" and "bug" are the same label). When a translated GitLab label matches an existing GitHub label (including organization defaults), the migrator uses the existing label's name rather than creating a duplicate. For example, if GitLab has a "documentation" label and GitHub has "Documentation", the existing "Documentation" label will be used.
 
 ## Migration Process
 

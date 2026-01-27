@@ -90,8 +90,8 @@ class GitlabToGithubMigrator:
         # From GitLab milestone ID (not iid!) to GitHub milestone number
         self.milestone_mapping: dict[int, int] = {}
 
-        # Track initial repository state for reporting
-        self.initial_github_labels: set[str] = set[str]()
+        # Track initial repository state for reporting (lowercase name -> actual name)
+        self.initial_github_labels: dict[str, str] = {}
 
         logger.info(f"Initialized migrator for {gitlab_project_path} -> {github_repo_path}")
 
@@ -308,8 +308,21 @@ class GitlabToGithubMigrator:
                 shutil.rmtree(temp_clone_path)
 
     def migrate_labels(self) -> None:
-        """Migrate and translate labels from GitLab to GitHub."""
+        """Migrate and translate labels from GitLab to GitHub.
+
+        Matching with existing GitHub labels is case-insensitive (GitHub treats
+        "Bug" and "bug" as the same label). When a translated label matches an
+        existing label, the existing label's name is used in the mapping.
+
+        Handles race condition where GitHub organization default labels may be
+        applied asynchronously after repository creation.
+        """
         try:
+            # Get existing GitHub labels (case-insensitive lookup: lowercase -> actual name)
+            self.initial_github_labels = {
+                label.name.lower(): label.name for label in self.github_repo.get_labels()
+            }
+
             # Get GitLab labels
             gitlab_labels = self.gitlab_project.labels.list(get_all=True)
 
@@ -317,9 +330,13 @@ class GitlabToGithubMigrator:
                 # Translate label name
                 translated_name = self.label_translator.translate(gitlab_label.name)
 
-                # Skip if label already exists (org default or repo)
-                if translated_name in self.initial_github_labels:
-                    self.label_mapping[gitlab_label.name] = translated_name
+                # Skip if label already exists (case-insensitive, as GitHub labels are)
+                existing_label = self.initial_github_labels.get(translated_name.lower())
+                if existing_label is not None:
+                    self.label_mapping[gitlab_label.name] = existing_label
+                    logger.debug(
+                        f"Using existing label: {gitlab_label.name} -> {existing_label}"
+                    )
                     continue
 
                 # Create new label
@@ -1087,8 +1104,6 @@ class GitlabToGithubMigrator:
 
             # Repository creation and content migration
             self.create_github_repo()
-            self.initial_github_labels = {label.name for label in self.github_repo.get_labels()}
-
             self.migrate_git_content()
 
             # Metadata migration
