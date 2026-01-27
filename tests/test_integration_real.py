@@ -22,8 +22,10 @@ import subprocess
 import gitlab
 import pytest
 from github import Auth, Github, GithubException
+from gitlab.exceptions import GitlabError
 
 from gitlab_to_github_migrator import GitLabToGitHubMigrator
+from gitlab_to_github_migrator.exceptions import MigrationError
 
 
 def _get_gitlab_token() -> str | None:
@@ -270,7 +272,7 @@ class TestReadOnlyGitLabAccess:
                     test_issue = issue
                     child_work_items = work_items
                     break
-            except Exception:
+            except (GitlabError, MigrationError):
                 # Skip issues that fail to query (e.g., not a work item type)
                 continue
 
