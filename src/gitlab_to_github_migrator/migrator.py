@@ -28,7 +28,7 @@ from .exceptions import MigrationError, NumberVerificationError
 from .label_translator import LabelTranslator
 
 if TYPE_CHECKING:
-    from gitlab.v4.objects.issues import Issue as GitlabIssue
+    from gitlab.v4.objects import ProjectIssue as GitlabProjectIssue
     from gitlab.v4.objects.projects import Project as GitlabProject
 
 # Module-wide logger
@@ -741,10 +741,10 @@ class GitLabToGitHubMigrator:
                 return
 
             max_issue_number = max(i.iid for i in gitlab_issues)
-            gitlab_issue_dict = {i.iid: i for i in gitlab_issues}
-            github_issue_dict = {}  # Maps GitLab IID to GitHub issue
+            gitlab_issue_dict: dict[int, GitlabProjectIssue] = {i.iid: i for i in gitlab_issues}
+            github_issue_dict: dict[int, github.Issue.Issue] = {}  # Maps GitLab IID to GitHub issue
             pending_parent_child_relations = []  # Store parent-child relations for second pass
-            pending_blocking_relations = []  # Store blocking relations for second pass
+            pending_blocking_relations: list[dict[str, Any]] = []  # Store blocking relations for second pass
 
             # First pass: Create issues maintaining number sequence
             for issue_number in range(1, max_issue_number + 1):
@@ -929,7 +929,7 @@ class GitLabToGitHubMigrator:
             raise MigrationError(msg) from e
 
     def migrate_issue_comments(
-        self, gitlab_issue: GitlabIssue, github_issue: github.Issue.Issue
+        self, gitlab_issue: GitlabProjectIssue, github_issue: github.Issue.Issue
     ) -> None:
         """Migrate comments for an issue."""
         # Get all notes/comments
