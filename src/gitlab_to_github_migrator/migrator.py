@@ -939,7 +939,7 @@ class GitLabToGitHubMigrator:
         for note in notes:
             if note.system:
                 # System note - convert to regular comment
-                comment_body = f"**System note:** {note.body}\n\n"
+                comment_body = f"**System note:** {note.body}"
             else:
                 # Regular comment
                 comment_body = f"**Comment by** {note.author['name']} (@{note.author['username']}) **on** {note.created_at}\n\n"
