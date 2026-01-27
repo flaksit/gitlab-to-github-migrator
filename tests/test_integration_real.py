@@ -265,7 +265,7 @@ class TestReadOnlyGitLabAccess:
         # Limit to first 20 issues to avoid excessive API calls
         test_issue = None
         child_work_items = []
-        for issue in issues[:20]:
+        for issue in issues:
             try:
                 work_items = migrator.get_work_item_children(issue.iid)
                 if work_items:
