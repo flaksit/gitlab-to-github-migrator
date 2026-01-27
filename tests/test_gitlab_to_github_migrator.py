@@ -578,5 +578,101 @@ class TestGitlabToGithubMigrator:
         self.mock_github_repo.get_release.assert_called_once_with("gitlab-issue-attachments")
 
 
+@pytest.mark.unit
+class TestDataclasses:
+    """Test dataclass structures for return values."""
+
+    def test_work_item_child_creation(self) -> None:
+        """Test creating WorkItemChild dataclass."""
+        from gitlab_to_github_migrator.migrator import WorkItemChild
+
+        child = WorkItemChild(
+            iid=123,
+            title="Test Child",
+            state="opened",
+            type="Task",
+            web_url="https://gitlab.com/project/issues/123",
+        )
+
+        assert child.iid == 123
+        assert child.title == "Test Child"
+        assert child.state == "opened"
+        assert child.type == "Task"
+        assert child.web_url == "https://gitlab.com/project/issues/123"
+        assert child.relationship_type == "child_of"  # Default value
+
+    def test_issue_link_info_creation(self) -> None:
+        """Test creating IssueLinkInfo dataclass."""
+        from gitlab_to_github_migrator.migrator import IssueLinkInfo
+
+        link = IssueLinkInfo(
+            type="blocks",
+            target_iid=456,
+            target_title="Blocked Issue",
+            target_project_path="org/project",
+            target_web_url="https://gitlab.com/org/project/issues/456",
+            is_same_project=True,
+        )
+
+        assert link.type == "blocks"
+        assert link.target_iid == 456
+        assert link.target_title == "Blocked Issue"
+        assert link.target_project_path == "org/project"
+        assert link.target_web_url == "https://gitlab.com/org/project/issues/456"
+        assert link.is_same_project is True
+        assert link.source == "rest_api"  # Default value
+
+    def test_issue_link_info_with_custom_source(self) -> None:
+        """Test creating IssueLinkInfo with custom source."""
+        from gitlab_to_github_migrator.migrator import IssueLinkInfo
+
+        link = IssueLinkInfo(
+            type="child_of",
+            target_iid=789,
+            target_title="Child Task",
+            target_project_path="org/project",
+            target_web_url="https://gitlab.com/org/project/issues/789",
+            is_same_project=True,
+            source="graphql_work_items",
+        )
+
+        assert link.source == "graphql_work_items"
+
+    def test_issue_cross_links_creation(self) -> None:
+        """Test creating IssueCrossLinks dataclass."""
+        from gitlab_to_github_migrator.migrator import IssueCrossLinks, IssueLinkInfo
+
+        parent_child = IssueLinkInfo(
+            type="child_of",
+            target_iid=100,
+            target_title="Child",
+            target_project_path="org/project",
+            target_web_url="https://gitlab.com/org/project/issues/100",
+            is_same_project=True,
+            source="graphql_work_items",
+        )
+
+        blocking = IssueLinkInfo(
+            type="blocks",
+            target_iid=200,
+            target_title="Blocked",
+            target_project_path="org/project",
+            target_web_url="https://gitlab.com/org/project/issues/200",
+            is_same_project=True,
+        )
+
+        cross_links = IssueCrossLinks(
+            cross_links_text="Related to #300",
+            parent_child_relations=[parent_child],
+            blocking_relations=[blocking],
+        )
+
+        assert cross_links.cross_links_text == "Related to #300"
+        assert len(cross_links.parent_child_relations) == 1
+        assert cross_links.parent_child_relations[0].target_iid == 100
+        assert len(cross_links.blocking_relations) == 1
+        assert cross_links.blocking_relations[0].target_iid == 200
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
