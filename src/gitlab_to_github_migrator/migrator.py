@@ -78,6 +78,9 @@ class GitLabToGitHubMigrator:
         self._github_repo: github.Repository.Repository | None = None
         self._attachments_release: github.GitRelease.GitRelease | None = None
 
+        # Cache for uploaded attachments: GitLab short URL -> GitHub download URL
+        self._uploaded_attachments: dict[str, str] = {}
+
         # Initialize label translator
         self.label_translator: LabelTranslator = LabelTranslator(label_translations)
 
@@ -371,20 +374,32 @@ class GitLabToGitHubMigrator:
             msg = f"Failed to migrate milestones: {e}"
             raise MigrationError(msg) from e
 
-    def download_gitlab_attachments(self, content: str) -> list[DownloadedFile]:
-        """Download GitLab attachments and return updated content with file info.
+    def download_gitlab_attachments(self, content: str) -> tuple[list[DownloadedFile], str]:
+        """Download GitLab attachments and return files plus content with cached URLs replaced.
 
         Uses the GitLab REST API endpoint (GitLab 17.4+) to download uploads
         by secret and filename, avoiding Cloudflare blocks on web URLs.
+
+        Returns:
+            Tuple of (list of newly downloaded files, content with cached URLs replaced)
         """
         # Find attachment URLs in content: /uploads/<secret>/<filename>
         attachment_pattern = r"/uploads/([a-f0-9]{32})/([^)\s]+)"
         attachments = re.findall(attachment_pattern, content)
 
         downloaded_files: list[DownloadedFile] = []
+        updated_content = content
 
         for secret, filename in attachments:
             short_url = f"/uploads/{secret}/{filename}"
+
+            # If already uploaded, just replace the URL in content (skip download)
+            if short_url in self._uploaded_attachments:
+                github_url = self._uploaded_attachments[short_url]
+                updated_content = updated_content.replace(short_url, github_url)
+                logger.debug(f"Reusing cached attachment {filename}: {github_url}")
+                continue
+
             full_url = f"{self.gitlab_project.web_url}{short_url}"
             try:
                 # Use GitLab REST API endpoint instead of web URL to avoid Cloudflare
@@ -411,7 +426,7 @@ class GitLabToGitHubMigrator:
                 msg = f"Failed to download attachment {short_url}: {e}"
                 raise MigrationError(msg) from e
 
-        return downloaded_files
+        return downloaded_files, updated_content
 
     @property
     def attachments_release(self) -> github.GitRelease.GitRelease:
@@ -444,16 +459,27 @@ class GitLabToGitHubMigrator:
         return self._attachments_release
 
     def upload_github_attachments(self, files: list[DownloadedFile], content: str) -> str:
-        """Upload files to GitHub release assets and update content with new URLs."""
+        """Upload files to GitHub release assets and update content with new URLs.
+
+        Files are cached by their GitLab URL to avoid duplicate uploads when the
+        same attachment appears in multiple issues or comments.
+        """
         if not files:
             return content
-        
+
         updated_content = content
 
         # Get or create the attachments release (cached property)
         release = self.attachments_release
 
         for file_info in files:
+            # Check if this file was already uploaded (same GitLab URL)
+            if file_info.short_gitlab_url in self._uploaded_attachments:
+                download_url = self._uploaded_attachments[file_info.short_gitlab_url]
+                updated_content = updated_content.replace(file_info.short_gitlab_url, download_url)
+                logger.debug(f"Reusing cached attachment {file_info.filename}: {download_url}")
+                continue
+
             temp_path = None
             try:
                 # Create a temporary file for GitHub API
@@ -463,11 +489,21 @@ class GitLabToGitHubMigrator:
                     temp_path = temp_file.name
                     temp_file.write(file_info.content)
 
+                # Make filename unique by prepending the GitLab secret hash
+                # This handles different files with the same filename
+                # Extract secret from short_gitlab_url: /uploads/<secret>/<filename>
+                url_parts = file_info.short_gitlab_url.split("/")
+                secret = url_parts[2] if len(url_parts) >= 3 else ""
+                unique_filename = f"{secret[:8]}_{file_info.filename}" if secret else file_info.filename
+
                 # Upload file as release asset
-                asset = release.upload_asset(path=temp_path, name=file_info.filename)
+                asset = release.upload_asset(path=temp_path, name=unique_filename)
                 # Get the download URL for the asset
                 download_url = asset.browser_download_url
-                
+
+                # Cache the URL for future references to the same file
+                self._uploaded_attachments[file_info.short_gitlab_url] = download_url
+
                 # Replace the GitLab URL with the GitHub URL in content
                 updated_content = updated_content.replace(file_info.short_gitlab_url, download_url)
                 logger.debug(f"Uploaded {file_info.filename} to release assets: {download_url}")
@@ -700,9 +736,11 @@ class GitLabToGitHubMigrator:
                     issue_body += "---\n\n"
 
                     if gitlab_issue.description:
-                        # Download and process attachments
-                        files = self.download_gitlab_attachments(gitlab_issue.description)
-                        updated_description = self.upload_github_attachments(files, gitlab_issue.description)
+                        # Download and process attachments (cached URLs already replaced)
+                        files, description_with_cached = self.download_gitlab_attachments(
+                            gitlab_issue.description
+                        )
+                        updated_description = self.upload_github_attachments(files, description_with_cached)
                         issue_body += updated_description
 
                     # Add cross-linked issues to the description and collect relationships
@@ -880,9 +918,9 @@ class GitLabToGitHubMigrator:
                 comment_body += "---\n\n"
 
                 if note.body:
-                    # Process attachments in comment
-                    files = self.download_gitlab_attachments(note.body)
-                    updated_body = self.upload_github_attachments(files, note.body)
+                    # Process attachments in comment (cached URLs already replaced)
+                    files, body_with_cached = self.download_gitlab_attachments(note.body)
+                    updated_body = self.upload_github_attachments(files, body_with_cached)
                     comment_body += updated_body
 
             # Create GitHub comment

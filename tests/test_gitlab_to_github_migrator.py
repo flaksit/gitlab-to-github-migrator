@@ -278,12 +278,14 @@ class TestGitLabToGitHubMigrator:
         )
 
         content = "Here is an attachment: /uploads/abcdef0123456789abcdef0123456789/file.pdf"
-        files = migrator.download_gitlab_attachments(content)
+        files, updated_content = migrator.download_gitlab_attachments(content)
 
         assert len(files) == 1
         assert files[0].filename == "file.pdf"
         assert files[0].content == b"file content"
         assert files[0].short_gitlab_url == "/uploads/abcdef0123456789abcdef0123456789/file.pdf"
+        # Content unchanged since no cached URLs
+        assert updated_content == content
 
         # Verify API path is used instead of web URL
         mock_gitlab_client.http_get.assert_called_once_with(
@@ -291,6 +293,36 @@ class TestGitLabToGitHubMigrator:
             raw=True,
             timeout=30,
         )
+
+    @patch("gitlab_to_github_migrator.gitlab_utils.Gitlab")
+    @patch("gitlab_to_github_migrator.github_utils.Github")
+    def test_download_gitlab_attachments_cached(self, mock_github_class, mock_gitlab_class) -> None:
+        """Test that cached attachments skip download and replace URLs."""
+        mock_gitlab_client = Mock()
+        mock_github_client = Mock()
+        mock_gitlab_class.return_value = mock_gitlab_client
+        mock_github_class.return_value = mock_github_client
+        mock_gitlab_client.projects.get.return_value = self.mock_gitlab_project
+
+        migrator = GitLabToGitHubMigrator(
+            self.gitlab_project_path, self.github_repo_path, github_token="test_token"
+        )
+
+        # Pre-populate the cache with an already-uploaded attachment
+        cached_url = "/uploads/abcdef0123456789abcdef0123456789/cached.pdf"
+        github_url = "https://github.com/releases/download/cached.pdf"
+        migrator._uploaded_attachments[cached_url] = github_url
+
+        content = f"Here is a cached attachment: {cached_url}"
+        files, updated_content = migrator.download_gitlab_attachments(content)
+
+        # No files should be downloaded (already cached)
+        assert len(files) == 0
+        # URL should be replaced with GitHub URL
+        assert cached_url not in updated_content
+        assert github_url in updated_content
+        # http_get should NOT be called (skipped download)
+        mock_gitlab_client.http_get.assert_not_called()
 
     @patch("gitlab_to_github_migrator.gitlab_utils.Gitlab")
     @patch("gitlab_to_github_migrator.github_utils.Github")

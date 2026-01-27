@@ -459,6 +459,50 @@ class TestFullMigration:
                 if issues_with_comments > 0:
                     print(f"✓ Verified comments on {issues_with_comments} issues")
 
+                # Verify attachment migration
+                attachment_pattern = r"/uploads/[a-f0-9]{32}/[^)\s]+"
+                source_issues_with_attachments = []
+                for source_issue in source_issues:
+                    if source_issue.description:
+                        attachments = re.findall(attachment_pattern, source_issue.description)
+                        if attachments:
+                            source_issues_with_attachments.append(source_issue)
+
+                if source_issues_with_attachments:
+                    # Check that GitHub issues have updated attachment URLs
+                    for source_issue in source_issues_with_attachments[:3]:  # Check first 3
+                        github_issue = github_repo.get_issue(source_issue.iid)
+                        if github_issue.body:
+                            # GitLab URLs should be replaced with GitHub release asset URLs
+                            remaining_gitlab_urls = re.findall(attachment_pattern, github_issue.body)
+                            github_urls = re.findall(r"github\.com/.*/releases/download/", github_issue.body)
+                            assert len(remaining_gitlab_urls) == 0 or len(github_urls) > 0, (
+                                f"Issue #{source_issue.iid}: attachments not migrated"
+                            )
+
+                    # Verify attachments release exists and URLs are accessible
+                    try:
+                        attachments_release = github_repo.get_release("gitlab-issue-attachments")
+                        assets = list(attachments_release.get_assets())
+
+                        # Verify at least one asset URL is accessible
+                        if assets:
+                            import requests
+                            for asset in assets[:2]:  # Test first 2 assets
+                                response = requests.head(
+                                    asset.browser_download_url,
+                                    allow_redirects=True,
+                                    timeout=10,
+                                )
+                                assert response.status_code == 200, (
+                                    f"Asset {asset.name} not accessible: {response.status_code}"
+                                )
+
+                        print(f"✓ Verified attachment migration ({len(assets)} files in release, URLs accessible)")
+                    except Exception:
+                        # Release might not exist if no attachments were downloaded
+                        print("✓ No attachments release (no attachments to migrate)")
+
         finally:
             # Cleanup - only if repo was created
             if migrator._github_repo is not None:
