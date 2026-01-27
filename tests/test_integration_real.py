@@ -315,12 +315,6 @@ class TestReadOnlyGitLabAccess:
 @pytest.mark.integration
 class TestFullMigration:
     """End-to-end migration test with comprehensive assertions."""
-    
-    # Label translation patterns and prefixes
-    PRIORITY_PREFIX = "p_"
-    TYPE_PREFIX = "t_"
-    PRIORITY_PATTERN = "p_*:priority: *"
-    TYPE_PATTERN = "t_*:type: *"
 
     def test_full_migration(  # noqa: PLR0915 - intentionally comprehensive test
         self,
@@ -343,30 +337,38 @@ class TestFullMigration:
         source_tags = source_project.tags.list(get_all=True)
         source_commits = source_project.commits.list(get_all=True)
         
-        # Dynamically create label translations based on actual GitLab labels
+        # Dynamically discover label patterns and create translations
+        # Analyze labels to find common patterns with underscores
         label_translations = []
-        added_patterns = set()  # Track which patterns have been added
         expected_translations = {}  # Maps source label -> expected target label
         
-        # Analyze labels to find patterns suitable for translation
+        # Group labels by their prefix (part before first underscore)
+        prefix_groups = {}
         for label in source_labels:
             label_name = label.name
-            # Check for p_* pattern (priority labels)
-            if label_name.startswith(self.PRIORITY_PREFIX):
-                if self.PRIORITY_PATTERN not in added_patterns:
-                    label_translations.append(self.PRIORITY_PATTERN)
-                    added_patterns.add(self.PRIORITY_PATTERN)
-                # Track expected translation
-                suffix = label_name[len(self.PRIORITY_PREFIX):]
-                expected_translations[label_name] = f"priority: {suffix}"
-            # Check for t_* pattern (type labels)
-            elif label_name.startswith(self.TYPE_PREFIX):
-                if self.TYPE_PATTERN not in added_patterns:
-                    label_translations.append(self.TYPE_PATTERN)
-                    added_patterns.add(self.TYPE_PATTERN)
-                # Track expected translation
-                suffix = label_name[len(self.TYPE_PREFIX):]
-                expected_translations[label_name] = f"type: {suffix}"
+            if "_" in label_name:
+                prefix = label_name.split("_", 1)[0]
+                if prefix not in prefix_groups:
+                    prefix_groups[prefix] = []
+                prefix_groups[prefix].append(label_name)
+        
+        # Create translation patterns for prefixes that have multiple labels
+        # This makes the test work with any labeling scheme
+        for prefix, labels in prefix_groups.items():
+            if len(labels) >= 2:  # Only create patterns for prefixes with at least 2 labels
+                # Create pattern: "prefix_*:prefix-expanded: *"
+                # Example: "p_*:priority: *" or "t_*:type: *" or "status_*:status: *"
+                pattern = f"{prefix}_*:{prefix}: *"
+                label_translations.append(pattern)
+                
+                # Track expected translations for verification
+                for label_name in labels:
+                    suffix = label_name.split("_", 1)[1]  # Get part after first underscore
+                    expected_translations[label_name] = f"{prefix}: {suffix}"
+                
+                # Limit to first 3 patterns to keep test manageable
+                if len(label_translations) >= 3:
+                    break
 
         migrator = GitLabToGitHubMigrator(
             gitlab_project_path=source_gitlab_project,
