@@ -492,7 +492,7 @@ class TestFullMigration:
                     print(f"✓ Verified comments on {issues_with_comments} issues")
 
                 # Verify parent-child relationships (sub-issues)
-                # Test project has issue #3 as parent with children #5 and #6
+                # Test project has issue #3 as parent with child tasks #5 and #6
                 try:
                     parent_issue = github_repo.get_issue(3)
                     # Get sub-issues using PyGithub's sub_issues property
