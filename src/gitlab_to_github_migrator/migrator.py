@@ -934,11 +934,16 @@ class GitlabToGithubMigrator:
                         if child_gitlab_iid in github_issue_dict:
                             child_github_issue = github_issue_dict[child_gitlab_iid]
 
-                            # Link existing child issue to parent using GitHub's sub-issues API
-                            # Note: PyGithub requires the issue ID (not number) for sub-issue operations
-                            parent_github_issue.add_sub_issue(child_github_issue.id)
-
-                            logger.debug(f"Linked issue #{child_gitlab_iid} as sub-issue of #{parent_gitlab_iid}")
+                            try:
+                                # Link existing child issue to parent using GitHub's sub-issues API
+                                # Note: PyGithub requires the issue ID (not number) for sub-issue operations
+                                parent_github_issue.add_sub_issue(child_github_issue.id)
+                                logger.debug(f"Linked issue #{child_gitlab_iid} as sub-issue of #{parent_gitlab_iid}")
+                            except GithubException as e:
+                                # Log warning but continue migration - sub-issue relationship is non-critical
+                                logger.warning(
+                                    f"Failed to create sub-issue relationship: #{child_gitlab_iid} -> #{parent_gitlab_iid}: {e}"
+                                )
                         else:
                             logger.warning(f"Child issue #{child_gitlab_iid} not found for parent-child relationship")
                     else:
