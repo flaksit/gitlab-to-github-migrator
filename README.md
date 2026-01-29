@@ -42,8 +42,11 @@ uv run gitlab-to-github-migrator --help
 
 ### Token Requirements
 
-- **GitLab Token**: Read access to source project, issues, milestones, and labels
-- **GitHub Token**: Full repository access for target user/organization. Optional delete_repo permission for cleanup script.
+- **GitLab Token**: Read access to source project, issues, milestones, and labels. The token should have at least `read_api` and `read_repository` scope.
+- **GitHub Token**: Repository access for target user/organization: Finegrained token with:
+  - Owner: the target user/org
+  - Repository permissions: Read and Write for `Administration`, `Contents`, `Issues`
+  Alas, this gives immediately delete rights for repositories.
 
 ### Token Resolution Order
 
