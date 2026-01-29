@@ -223,11 +223,11 @@ def get_parent_child_relationships(
             variables = {"fullPath": project_path, "iid": str(issue.iid)}
 
             try:
-                response = graphql_client.execute(query, variables=variables)
+                response = graphql_client.execute(query, variable_values=variables)
 
-                # Parse response
-                data = response.get("data", {})
-                namespace = data.get("namespace")
+                # Parse response - note that GitLab GraphQL client returns data directly,
+                # not wrapped in a "data" key
+                namespace = response.get("namespace")
                 if not namespace:
                     continue
 
