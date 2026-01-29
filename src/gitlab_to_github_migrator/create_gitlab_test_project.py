@@ -316,7 +316,7 @@ def setup_issue_relationships(project: Project) -> None:
     """Set up issue links (blocking, related). Parent-child is set during Task creation."""
     logger.info("\n[5/8] Setting up issue relationships...")
 
-    project_id = project.id
+    project_id = int(project.id)  # pyright: ignore[reportUnknownArgumentType]
     issue1 = project.issues.get(1)
     issue2 = project.issues.get(2)
     issue7 = project.issues.get(7)
