@@ -16,17 +16,19 @@ GITLAB_TOKEN_ENV_VAR: Final[str] = "SOURCE_GITLAB_TOKEN"  # noqa: S105
 DEFAULT_GITLAB_RO_TOKEN_PASS_PATH: Final[str] = "gitlab/api/ro_token"  # noqa: S105
 DEFAULT_GITLAB_RW_TOKEN_PASS_PATH: Final[str] = "gitlab/api/rw_token"  # noqa: S105
 
+
 def get_client(url: str = "https://gitlab.com", token: str | None = None) -> Gitlab:
     """Get a GitLab client using the token.
-    
+
     Args:
         url: GitLab instance URL (defaults to gitlab.com)
         token: Private access token for authentication
-        
+
     Returns:
         Gitlab client instance
     """
     return Gitlab(url=url, private_token=token)
+
 
 def get_graphql_client(url: str = "https://gitlab.com", token: str | None = None) -> GraphQL:
     """Get a GitLab GraphQL client using the token.

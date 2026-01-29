@@ -108,6 +108,7 @@ def get_client(token: str | None = None) -> Github:
         return Github(auth=Auth.Token(token))
     return Github()
 
+
 def get_repo(client: Github, repo_path: str) -> Repository | None:
     try:
         return client.get_repo(repo_path)
@@ -116,6 +117,7 @@ def get_repo(client: Github, repo_path: str) -> Repository | None:
             return None
         msg = f"Error checking repository existence: {e}"
         raise MigrationError(msg) from e
+
 
 def create_repo(client: Github, repo_path: str, description: str | None) -> Repository:
     """Create GitHub repository with GitLab project metadata."""

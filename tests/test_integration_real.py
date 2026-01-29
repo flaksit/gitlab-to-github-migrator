@@ -57,8 +57,7 @@ def target_github_org() -> str:
     org = os.environ.get("GITHUB_TEST_ORG")
     if not org:
         msg = (
-            "GITHUB_TEST_ORG environment variable is required. "
-            "Example: export GITHUB_TEST_ORG='your-org-or-username'"
+            "GITHUB_TEST_ORG environment variable is required. Example: export GITHUB_TEST_ORG='your-org-or-username'"
         )
         raise ValueError(msg)
     return org
@@ -317,15 +316,15 @@ class TestFullMigration:
         source_branches = source_project.branches.list(get_all=True)
         source_tags = source_project.tags.list(get_all=True)
         source_commits = source_project.commits.list(get_all=True)
-        
+
         # Dynamically discover label patterns and create translations
         # Find common prefixes among labels without assuming any specific format
         label_translations = []
         expected_translations = {}  # Maps source label -> expected target label
         max_patterns = 3  # Limit patterns to keep test manageable
-        
+
         label_names = [label.name for label in source_labels]
-        
+
         # Strategy 1: Find common prefixes that match 2+ labels
         # Use first letter as prefix for simplicity and better coverage
         prefix_matches = {}
@@ -335,21 +334,21 @@ class TestFullMigration:
                 if prefix not in prefix_matches:
                     prefix_matches[prefix] = set()
                 prefix_matches[prefix].add(label_name)
-        
+
         # Find a prefix that matches multiple labels (indicating a pattern)
         for prefix, matching_labels in prefix_matches.items():
             if len(matching_labels) >= 2 and len(label_translations) < max_patterns:
                 # Create wildcard pattern: "prefix*:prefix-*"
                 pattern = f"{prefix}*:{prefix}-*"
                 label_translations.append(pattern)
-                
+
                 # Track expected translations for verification
                 for label_name in matching_labels:
                     suffix = label_name[1:] if len(label_name) > 1 else ""  # Get part after first letter
                     expected_translations[label_name] = f"{prefix}-{suffix}"
-                
+
                 break  # Use first pattern found
-        
+
         # Strategy 2: Add a non-wildcard translation for a single label
         # Pick a label that wasn't already matched by wildcard patterns
         for label_name in label_names:
@@ -370,7 +369,6 @@ class TestFullMigration:
         )
 
         try:
-
             # Run the full migration
             report = migrator.migrate()
             github_repo = migrator.github_repo
@@ -386,7 +384,7 @@ class TestFullMigration:
             assert stats["gitlab_issues_total"] == len(source_issues)
             assert stats["gitlab_milestones_total"] == len(source_milestones)
             assert stats["gitlab_labels_total"] == len(source_labels)
-            
+
             # Verify GitHub counts match GitLab counts
             assert stats["github_issues_total"] == stats["gitlab_issues_total"], (
                 f"Issue count mismatch in report: {stats['github_issues_total']} != {stats['gitlab_issues_total']}"
@@ -414,7 +412,9 @@ class TestFullMigration:
             assert len(github_commits) == len(source_commits), (
                 f"Commit count mismatch: {len(github_commits)} != {len(source_commits)}"
             )
-            print(f"✓ Git content migrated ({len(github_branches)} branches, {len(github_tags)} tags, {len(github_commits)} commits)")
+            print(
+                f"✓ Git content migrated ({len(github_branches)} branches, {len(github_tags)} tags, {len(github_commits)} commits)"
+            )
 
             # Verify labels
             github_labels = list(github_repo.get_labels())
@@ -522,6 +522,7 @@ class TestFullMigration:
                         # (private/draft release assets require API with Accept: application/octet-stream)
                         if assets:
                             import requests
+
                             asset = assets[0]
                             # Use GitHub API endpoint with asset ID, not browser_download_url
                             api_url = f"https://api.github.com/repos/{repo_path}/releases/assets/{asset.id}"
