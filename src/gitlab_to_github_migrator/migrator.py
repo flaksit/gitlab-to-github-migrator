@@ -273,7 +273,7 @@ class GitlabToGithubMigrator:
 
                     for child in child_nodes:
                         child_info = WorkItemChild(
-                            iid=int(child.get("iid")) if child.get("iid") else 0,  # Convert IID to int
+                            iid=int(child.get("iid")),
                             title=child.get("title"),
                             state=child.get("state"),
                             type=child.get("workItemType", {}).get("name"),
@@ -307,7 +307,7 @@ class GitlabToGithubMigrator:
                 # Clone from GitLab using HTTPS with authentication token
                 gitlab_http_url = str(self.gitlab_project.http_url_to_repo)  # pyright: ignore[reportUnknownArgumentType]
                 # Inject GitLab token into URL for authentication: https://oauth2:TOKEN@gitlab.com/...
-                if self.gitlab_token and "https://" in gitlab_http_url:
+                if self.gitlab_token and gitlab_http_url.startswith("https://"):
                     gitlab_url = gitlab_http_url.replace("https://", f"https://oauth2:{self.gitlab_token}@")
                 else:
                     gitlab_url = gitlab_http_url
@@ -336,7 +336,7 @@ class GitlabToGithubMigrator:
             # Add GitHub remote using HTTPS with authentication token
             github_clone_url = self.github_repo.clone_url
             # Inject GitHub token into URL for authentication: https://TOKEN@github.com/...
-            if self.github_token and "https://" in github_clone_url:
+            if self.github_token and github_clone_url.startswith("https://"):
                 github_url = github_clone_url.replace("https://", f"https://{self.github_token}@")
             else:
                 github_url = github_clone_url

@@ -56,7 +56,7 @@ def get_readonly_token(
     env_var: str | None = None,
     pass_path: str | None = None,
 ) -> str | None:
-    """Get GitLab read-only token from pass path, environment variable, or default location.
+    """Get GitLab read-only token from pass path or environment variable.
 
     Only one of env_var or pass_path is allowed to be set to a non-empty string.
 
@@ -121,7 +121,7 @@ def get_readwrite_token(
     env_var: str | None = None,
     pass_path: str | None = None,
 ) -> str | None:
-    """Get GitLab read-write token from pass path, environment variable, or default location.
+    """Get GitLab read-write token from pass path or environment variable.
 
     Only one of env_var or pass_path is allowed to be set to a non-empty string.
 
