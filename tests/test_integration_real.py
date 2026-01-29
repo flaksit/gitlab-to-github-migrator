@@ -486,9 +486,9 @@ class TestFullMigration:
                     events = list(parent_issue.get_events())
                     sub_issue_events = [e for e in events if e.event == "sub_issue_added"]
                     
-                    # Expected child issues are #5 and #6 
+                    # Expected child issues are #5 and #6
                     expected_children = [5, 6]
-                    assert len(sub_issue_events) >= len(expected_children), (
+                    assert len(sub_issue_events) == len(expected_children), (
                         f"Expected {len(expected_children)} sub_issue_added events for issue #{parent_issue.number}, "
                         f"but found {len(sub_issue_events)}"
                     )

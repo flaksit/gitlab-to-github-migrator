@@ -273,7 +273,7 @@ class GitlabToGithubMigrator:
 
                     for child in child_nodes:
                         child_info = WorkItemChild(
-                            iid=child.get("iid"),
+                            iid=int(child.get("iid")) if child.get("iid") else 0,  # Convert IID to int
                             title=child.get("title"),
                             state=child.get("state"),
                             type=child.get("workItemType", {}).get("name"),
@@ -289,8 +289,8 @@ class GitlabToGithubMigrator:
         else:
             return children
 
-    def migrate_git_content(self) -> None:
-        """Migrate git repository content from GitLab to GitHub."""
+    def migrate_git_content(self) -> None:  # noqa: PLR0912, PLR0915
+        """Migrate git repository content from GitLab to GitHub using HTTPS with token authentication."""
         temp_clone_path: str | None = None
         try:
             if self.local_clone_path:
@@ -326,7 +326,11 @@ class GitlabToGithubMigrator:
                 )
 
                 if result.returncode != 0:
-                    msg = f"Failed to clone GitLab repository: {result.stderr}"
+                    # Sanitize error message to remove potential token exposure
+                    error_msg = result.stderr
+                    if self.gitlab_token:
+                        error_msg = error_msg.replace(self.gitlab_token, "***TOKEN***")
+                    msg = f"Failed to clone GitLab repository: {error_msg}"
                     raise MigrationError(msg)
 
             # Add GitHub remote using HTTPS with authentication token
@@ -337,17 +341,38 @@ class GitlabToGithubMigrator:
             else:
                 github_url = github_clone_url
             
-            _ = subprocess.run(  # noqa: S603
-                ["git", "remote", "add", "github", github_url], cwd=clone_path, check=True
-            )
+            try:
+                _ = subprocess.run(  # noqa: S603
+                    ["git", "remote", "add", "github", github_url], cwd=clone_path, check=True, capture_output=True, text=True
+                )
+            except subprocess.CalledProcessError as e:
+                # Sanitize error to prevent token leakage
+                error_msg = str(e)
+                if self.github_token:
+                    error_msg = error_msg.replace(self.github_token, "***TOKEN***")
+                msg = f"Failed to add GitHub remote: {error_msg}"
+                raise MigrationError(msg) from e
 
             # Push all branches and tags
             _ = subprocess.run(["git", "push", "--mirror", "github"], cwd=clone_path, check=True)
 
+            # Clean up the github remote to avoid leaving tokens in git config
+            try:
+                subprocess.run(["git", "remote", "remove", "github"], cwd=clone_path, check=True, capture_output=True)
+            except subprocess.CalledProcessError:
+                # Ignore errors during cleanup
+                pass
+
             logger.info("Repository content migrated successfully")
 
         except (subprocess.CalledProcessError, OSError) as e:
-            msg = f"Failed to migrate repository content: {e}"
+            # Sanitize error message to remove potential token exposure
+            error_msg = str(e)
+            if self.gitlab_token:
+                error_msg = error_msg.replace(self.gitlab_token, "***GITLAB_TOKEN***")
+            if self.github_token:
+                error_msg = error_msg.replace(self.github_token, "***GITHUB_TOKEN***")
+            msg = f"Failed to migrate repository content: {error_msg}"
             raise MigrationError(msg) from e
         finally:
             # Cleanup temporary clone if created
@@ -923,7 +948,7 @@ class GitlabToGithubMigrator:
 
                     for child_relation in child_relations:
                         # Get the child issue info
-                        # Note: target_iid from GraphQL is a string, but github_issue_dict keys are ints
+                        # GraphQL API may return IID as string; ensure it's int to match dictionary keys
                         child_gitlab_iid = int(child_relation.target_iid)
                         logger.debug(f"Looking for child issue #{child_gitlab_iid}")
                         if child_gitlab_iid in github_issue_dict:
@@ -952,7 +977,7 @@ class GitlabToGithubMigrator:
                     source_gitlab_iid = pending_relation["source_gitlab_iid"]
                     relation = pending_relation["relation"]
                     link_type = relation.type
-                    # Note: target_iid from GraphQL is a string, but github_issue_dict keys are ints
+                    # Ensure IID is int to match dictionary keys
                     target_gitlab_iid = int(relation.target_iid)
 
                     # Get both GitHub issues
