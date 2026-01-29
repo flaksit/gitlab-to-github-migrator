@@ -1,8 +1,8 @@
 """
 Cleanup script for orphaned test repositories.
 
-This script identifies and deletes test repositories with names starting with
-"migration-test-" or "deletion-test-" from a specified GitHub owner (organization or user).
+This script identifies and deletes test repositories matching the pattern
+"gl2ghmigr-(.+-)?test" from a specified GitHub owner (organization or user).
 
 Usage:
     uv run delete_test_repos [github_owner] <pass_path>
@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import argparse
 import os
+import re
 import sys
 import textwrap
 from typing import TYPE_CHECKING
@@ -87,15 +88,8 @@ def delete_test_repositories(github_owner: str, pass_path: str) -> None:
         owner_type, repos = get_owner_repos(github_client, github_owner)
         print(f"🔍 Scanning repositories for {github_owner} ({owner_type})...")
 
-        test_repos = [
-            repo
-            for repo in repos
-            if repo.name.startswith("migration-test-")
-            or repo.name.startswith("deletion-test-")
-            or repo.name.startswith("full-migration-test-")
-            or repo.name.startswith("lifecycle-test-")
-            or repo.name.startswith("creation-test-")
-        ]
+        test_repo_pattern = re.compile(r"gl2ghmigr-(.+-)?test\b")
+        test_repos = [repo for repo in repos if test_repo_pattern.match(repo.name)]
 
         if not test_repos:
             print("✅ No test repositories found to cleanup")

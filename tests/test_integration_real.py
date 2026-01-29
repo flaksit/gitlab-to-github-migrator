@@ -29,10 +29,13 @@ from gitlab_to_github_migrator import gitlab_utils as glu
 from gitlab_to_github_migrator.exceptions import MigrationError
 
 
-def _generate_repo_name(prefix: str = "migration-test") -> str:
-    """Generate a unique test repository name."""
+def _generate_repo_name(test_type: str = "generic") -> str:
+    """Generate a unique test repository name.
+
+    Format: gl2ghmigr-<test_type>-test-<hash>
+    """
     random_suffix = "".join(random.choices(string.ascii_lowercase + string.digits, k=8))
-    return f"{prefix}-{random_suffix}"
+    return f"gl2ghmigr-{test_type}-test-{random_suffix}"
 
 
 @pytest.fixture(scope="module")
@@ -303,7 +306,7 @@ class TestFullMigration:
         gitlab_client: gitlab.Gitlab,
     ) -> None:
         """Test complete migration workflow using the main migrate() method."""
-        repo_name = _generate_repo_name("full-migration-test")
+        repo_name = _generate_repo_name("full-migration")
         repo_path = f"{target_github_org}/{repo_name}"
 
         # Get source data for comparison before migration

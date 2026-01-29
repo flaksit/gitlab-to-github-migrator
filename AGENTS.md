@@ -77,4 +77,4 @@ Tokens stored in env vars SOURCE_GITLAB_TOKEN and TARGET_GITHUB_TOKEN, or retrie
 
 - TDD approach: write tests first (red), then implement (green)
 - Integration tests use real APIs - they create/delete real resources
-- Test repos prefixed with `migration-test-` for easy cleanup
+- Test repos prefixed with `gl2ghmigr-` for easy cleanup (format: `gl2ghmigr-<test-type>-test-<hash>`)
