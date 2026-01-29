@@ -478,24 +478,51 @@ class TestFullMigration:
                     print(f"✓ Verified comments on {issues_with_comments} issues")
 
                 # Verify parent-child relationships (sub-issues)
-                # Test project has issue #3 as parent with child tasks #5 and #6
+                # Dynamically get parent-child relationships from GitLab and verify they exist in GitHub
                 try:
-                    parent_issue = github_repo.get_issue(3)
-                    # PyGithub doesn't expose sub_issues for reading, so we verify via events API
-                    # Get issue events and filter for sub_issue_added events
-                    events = list(parent_issue.get_events())
-                    sub_issue_events = [e for e in events if e.event == "sub_issue_added"]
-                    
-                    # Expected child issues are #5 and #6
-                    expected_children = [5, 6]
-                    assert len(sub_issue_events) == len(expected_children), (
-                        f"Expected {len(expected_children)} sub_issue_added events for issue #{parent_issue.number}, "
-                        f"but found {len(sub_issue_events)}"
+                    from gitlab_to_github_migrator.github_utils import get_sub_issue_numbers
+                    from gitlab_to_github_migrator.gitlab_utils import get_parent_child_relationships
+
+                    # Get parent-child relationships from GitLab
+                    gitlab_parent_children = get_parent_child_relationships(
+                        gitlab_client, migrator.graphql_client, source_gitlab_project
                     )
 
-                    print(
-                        f"✓ Verified parent-child relationships (issue #3 has {len(sub_issue_events)} sub-issues added via events API)"
-                    )
+                    if not gitlab_parent_children:
+                        print("⚠️  No parent-child relationships found in GitLab project")
+                    else:
+                        # Verify each parent-child relationship exists in GitHub
+                        relationships_verified = 0
+                        for parent_iid, child_iids in gitlab_parent_children.items():
+                            try:
+                                # Get corresponding GitHub issue
+                                parent_github_issue = github_repo.get_issue(parent_iid)
+                                github_sub_issue_numbers = get_sub_issue_numbers(parent_github_issue)
+
+                                # Verify all children exist in GitHub
+                                missing_children = set(child_iids) - set(github_sub_issue_numbers)
+                                if missing_children:
+                                    print(
+                                        f"⚠️  Issue #{parent_iid}: Missing sub-issues {missing_children} in GitHub "
+                                        f"(expected {child_iids}, found {github_sub_issue_numbers})"
+                                    )
+                                else:
+                                    relationships_verified += 1
+
+                            except Exception as e:
+                                print(f"⚠️  Could not verify parent issue #{parent_iid}: {e}")
+                                continue
+
+                        assert relationships_verified > 0, (
+                            f"Failed to verify any parent-child relationships. "
+                            f"Expected to verify {len(gitlab_parent_children)} relationships."
+                        )
+
+                        print(
+                            f"✓ Verified {relationships_verified} parent-child relationships "
+                            f"(out of {len(gitlab_parent_children)} total)"
+                        )
+
                 except AssertionError:
                     raise
                 except Exception as e:

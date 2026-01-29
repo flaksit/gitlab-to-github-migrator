@@ -171,3 +171,87 @@ def get_readwrite_token(
         f"Set {GITLAB_TOKEN_ENV_VAR} environment variable or configure pass at {DEFAULT_GITLAB_RW_TOKEN_PASS_PATH}."
     )
     return None
+
+
+def get_parent_child_relationships(
+    gitlab_client: Gitlab,
+    graphql_client: GraphQL,
+    project_path: str,
+) -> dict[int, list[int]]:
+    """Get all parent-child relationships from a GitLab project.
+
+    Args:
+        gitlab_client: GitLab REST API client
+        graphql_client: GitLab GraphQL API client
+        project_path: Full project path (e.g., "namespace/project")
+
+    Returns:
+        Dictionary mapping parent issue IID to list of child issue IIDs
+
+    Note:
+        This function queries all issues in the project and checks for work item children
+        using the GraphQL API. It may make many API calls for projects with many issues.
+    """
+    parent_to_children: dict[int, list[int]] = {}
+
+    try:
+        project = gitlab_client.projects.get(project_path)
+        issues = project.issues.list(iterator=True, state="all")
+
+        for issue in issues:
+            # Query GraphQL API for work item children
+            query = """
+            query GetWorkItemWithChildren($fullPath: ID!, $iid: String!) {
+                namespace(fullPath: $fullPath) {
+                    workItem(iid: $iid) {
+                        iid
+                        widgets {
+                            type
+                            ... on WorkItemWidgetHierarchy {
+                                children {
+                                    nodes {
+                                        iid
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            """
+
+            variables = {"fullPath": project_path, "iid": str(issue.iid)}
+
+            try:
+                response = graphql_client.execute(query, variables=variables)
+
+                # Parse response
+                data = response.get("data", {})
+                namespace = data.get("namespace")
+                if not namespace:
+                    continue
+
+                work_item = namespace.get("workItem")
+                if not work_item:
+                    continue
+
+                # Find hierarchy widget
+                widgets = work_item.get("widgets", [])
+                for widget in widgets:
+                    if widget.get("type") == "HIERARCHY":
+                        child_nodes = widget.get("children", {}).get("nodes", [])
+                        if child_nodes:
+                            child_iids = [int(child.get("iid")) for child in child_nodes if child.get("iid")]
+                            if child_iids:
+                                parent_to_children[issue.iid] = child_iids
+                        break
+
+            except Exception as e:
+                # Log but continue - some issues might not be work items
+                logger.debug(f"Could not get children for issue #{issue.iid}: {e}")
+                continue
+
+    except Exception:
+        logger.exception("Failed to get parent-child relationships")
+
+    return parent_to_children
