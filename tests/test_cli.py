@@ -45,11 +45,11 @@ class TestPrintValidationReport:
 
             # Verify that logger.info and logger.error were called
             assert mock_logger.info.called
-            
+
             # Check key outputs
             calls = [str(c) for c in mock_logger.info.call_args_list]
             output = " ".join(calls)
-            
+
             assert "test-org/test-project" in output
             assert "github-org/test-repo" in output
             assert "PASSED" in output
@@ -90,11 +90,11 @@ class TestPrintValidationReport:
 
             # Verify that errors are printed
             assert mock_logger.error.called
-            
+
             # Check that error messages are included
             error_calls = [str(c) for c in mock_logger.error.call_args_list]
             error_output = " ".join(error_calls)
-            
+
             assert "FAILED" in error_output
             assert "Issue count mismatch" in error_output
             assert "Milestone count mismatch" in error_output

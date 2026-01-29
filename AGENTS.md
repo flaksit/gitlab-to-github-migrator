@@ -57,8 +57,8 @@ uv run delete-test-repos github/admin_token               # Cleanup test repos
 
 Integration tests require:
 ```bash
-export GITLAB_TEST_PROJECT="namespace/project"
-export GITHUB_TEST_ORG="org-or-username"
+export SOURCE_GITLAB_TEST_PROJECT="namespace/project"
+export TARGET_GITHUB_TEST_OWNER="org-or-username"
 ```
 
 Tokens stored in env vars SOURCE_GITLAB_TOKEN and TARGET_GITHUB_TOKEN, or retrieved via `pass`:

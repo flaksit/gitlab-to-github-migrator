@@ -129,7 +129,7 @@ def main() -> None:
             Examples:
               uv run delete_test_repos your-org                              # Delete from organization
               uv run delete_test_repos your-user                             # Delete from user account
-              uv run delete_test_repos                                       # Uses GITHUB_TEST_ORG env var
+              uv run delete_test_repos                                       # Uses TARGET_GITHUB_TEST_OWNER env var
               uv run delete_test_repos your-org --github-token-pass-path github/admin/token
         """),
     )
@@ -137,7 +137,7 @@ def main() -> None:
         "github_owner",
         nargs="?",
         help="GitHub organization or user to search for test repositories. "
-        "If not provided, uses GITHUB_TEST_ORG environment variable.",
+        "If not provided, uses TARGET_GITHUB_TEST_OWNER environment variable.",
     )
     parser.add_argument(
         "--github-token-pass-path",
@@ -152,11 +152,11 @@ def main() -> None:
     # Determine github_owner: use argument if provided, otherwise use env var
     github_owner = args.github_owner
     if not github_owner:
-        github_owner = os.environ.get("GITHUB_TEST_ORG")
+        github_owner = os.environ.get("TARGET_GITHUB_TEST_OWNER")
         if not github_owner:
             parser.error(
-                "github_owner argument is required when GITHUB_TEST_ORG environment variable is not set.\n"
-                "Either provide github_owner as an argument or set GITHUB_TEST_ORG environment variable."
+                "github_owner argument is required when TARGET_GITHUB_TEST_OWNER environment variable is not set.\n"
+                "Either provide github_owner as an argument or set TARGET_GITHUB_TEST_OWNER environment variable."
             )
 
     github_token_pass_path: str | None = getattr(args, "github_token_pass_path", None)

@@ -169,7 +169,7 @@ class GitlabToGithubMigrator:
         """Validate GitLab and GitHub API access."""
         try:
             # Test GitLab access
-            _ = self.gitlab_project.name
+            _ = self.gitlab_project.name  # pyright: ignore[reportUnknownVariableType]
             logger.info("GitLab API access validated")
         except (GitlabError, GitlabAuthenticationError) as e:
             msg = f"GitLab API access failed: {e}"
@@ -273,7 +273,7 @@ class GitlabToGithubMigrator:
 
                     for child in child_nodes:
                         child_info = WorkItemChild(
-                            iid=child.get("iid"),
+                            iid=int(child.get("iid")),
                             title=child.get("title"),
                             state=child.get("state"),
                             type=child.get("workItemType", {}).get("name"),
@@ -289,8 +289,8 @@ class GitlabToGithubMigrator:
         else:
             return children
 
-    def migrate_git_content(self) -> None:
-        """Migrate git repository content from GitLab to GitHub."""
+    def migrate_git_content(self) -> None:  # noqa: PLR0912, PLR0915
+        """Migrate git repository content from GitLab to GitHub using HTTPS with token authentication."""
         temp_clone_path: str | None = None
         try:
             if self.local_clone_path:
@@ -304,13 +304,20 @@ class GitlabToGithubMigrator:
                 temp_clone_path = tempfile.mkdtemp(prefix="gitlab_migration_")
                 clone_path = temp_clone_path
 
-                # Clone from GitLab
+                # Clone from GitLab using HTTPS with authentication token
+                gitlab_http_url = str(self.gitlab_project.http_url_to_repo)  # pyright: ignore[reportUnknownArgumentType]
+                # Inject GitLab token into URL for authentication: https://oauth2:TOKEN@gitlab.com/...
+                if self.gitlab_token and gitlab_http_url.startswith("https://"):
+                    gitlab_url = gitlab_http_url.replace("https://", f"https://oauth2:{self.gitlab_token}@")
+                else:
+                    gitlab_url = gitlab_http_url
+                
                 result = subprocess.run(  # noqa: S603
                     [
                         "git",
                         "clone",
                         "--mirror",
-                        self.gitlab_project.ssh_url_to_repo,
+                        gitlab_url,
                         temp_clone_path,
                     ],
                     check=False,
@@ -319,21 +326,53 @@ class GitlabToGithubMigrator:
                 )
 
                 if result.returncode != 0:
-                    msg = f"Failed to clone GitLab repository: {result.stderr}"
+                    # Sanitize error message to remove potential token exposure
+                    error_msg = result.stderr
+                    if self.gitlab_token:
+                        error_msg = error_msg.replace(self.gitlab_token, "***TOKEN***")
+                    msg = f"Failed to clone GitLab repository: {error_msg}"
                     raise MigrationError(msg)
 
-            # Add GitHub remote
-            _ = subprocess.run(  # noqa: S603
-                ["git", "remote", "add", "github", self.github_repo.ssh_url], cwd=clone_path, check=True
-            )
+            # Add GitHub remote using HTTPS with authentication token
+            github_clone_url = self.github_repo.clone_url
+            # Inject GitHub token into URL for authentication: https://TOKEN@github.com/...
+            if self.github_token and github_clone_url.startswith("https://"):
+                github_url = github_clone_url.replace("https://", f"https://{self.github_token}@")
+            else:
+                github_url = github_clone_url
+            
+            try:
+                _ = subprocess.run(  # noqa: S603
+                    ["git", "remote", "add", "github", github_url], cwd=clone_path, check=True, capture_output=True, text=True
+                )
+            except subprocess.CalledProcessError as e:
+                # Sanitize error to prevent token leakage
+                error_msg = str(e)
+                if self.github_token:
+                    error_msg = error_msg.replace(self.github_token, "***TOKEN***")
+                msg = f"Failed to add GitHub remote: {error_msg}"
+                raise MigrationError(msg) from e
 
             # Push all branches and tags
             _ = subprocess.run(["git", "push", "--mirror", "github"], cwd=clone_path, check=True)
 
+            # Clean up the github remote to avoid leaving tokens in git config
+            try:
+                subprocess.run(["git", "remote", "remove", "github"], cwd=clone_path, check=True, capture_output=True)
+            except subprocess.CalledProcessError:
+                # Ignore errors during cleanup
+                pass
+
             logger.info("Repository content migrated successfully")
 
         except (subprocess.CalledProcessError, OSError) as e:
-            msg = f"Failed to migrate repository content: {e}"
+            # Sanitize error message to remove potential token exposure
+            error_msg = str(e)
+            if self.gitlab_token:
+                error_msg = error_msg.replace(self.gitlab_token, "***GITLAB_TOKEN***")
+            if self.github_token:
+                error_msg = error_msg.replace(self.github_token, "***GITHUB_TOKEN***")
+            msg = f"Failed to migrate repository content: {error_msg}"
             raise MigrationError(msg) from e
         finally:
             # Cleanup temporary clone if created
@@ -352,9 +391,7 @@ class GitlabToGithubMigrator:
         """
         try:
             # Get existing GitHub labels (case-insensitive lookup: lowercase -> actual name)
-            self.initial_github_labels = {
-                label.name.lower(): label.name for label in self.github_repo.get_labels()
-            }
+            self.initial_github_labels = {label.name.lower(): label.name for label in self.github_repo.get_labels()}
 
             # Get GitLab labels
             gitlab_labels = self.gitlab_project.labels.list(get_all=True)
@@ -367,9 +404,7 @@ class GitlabToGithubMigrator:
                 existing_label = self.initial_github_labels.get(translated_name.lower())
                 if existing_label is not None:
                     self.label_mapping[gitlab_label.name] = existing_label
-                    logger.debug(
-                        f"Using existing label: {gitlab_label.name} -> {existing_label}"
-                    )
+                    logger.debug(f"Using existing label: {gitlab_label.name} -> {existing_label}")
                     continue
 
                 # Create new label
@@ -620,23 +655,6 @@ class GitlabToGithubMigrator:
 
         return updated_content
 
-    def create_github_sub_issue(
-        self, parent_github_issue: github.Issue.Issue, sub_issue_title: str, sub_issue_body: str
-    ) -> None:
-        """Create a GitHub sub-issue using PyGithub's native sub-issue support.
-
-        This uses GitHub's sub-issues API introduced in December 2024, now supported
-        natively by PyGithub.
-        """
-        # First create a regular issue
-        sub_issue = self.github_repo.create_issue(title=sub_issue_title, body=sub_issue_body)
-
-        # Add the issue as a sub-issue to the parent using PyGithub's native support
-        # Note: PyGithub requires the issue ID (not number) for sub-issue operations
-        parent_github_issue.add_sub_issue(sub_issue.id)
-
-        logger.debug(f"Created sub-issue #{sub_issue.number} under parent #{parent_github_issue.number}")
-
     def create_github_issue_dependency(self, blocked_issue_number: int, blocking_issue_id: int) -> bool:
         """Create a GitHub issue dependency using PyGithub's requester.
 
@@ -699,12 +717,11 @@ class GitlabToGithubMigrator:
                 blocking_relations: list[IssueLinkInfo] - For GitHub issue dependencies
         """
         # Step 1: Get child tasks using GraphQL Work Items API (using python-gitlab's native GraphQL support)
-        child_work_items = []
-        child_work_items = self.get_work_item_children(gitlab_issue.iid)
+        child_work_items: list[WorkItemChild] = self.get_work_item_children(gitlab_issue.iid)
         logger.debug(f"Found {len(child_work_items)} tasks via GraphQL for issue #{gitlab_issue.iid}")
 
         # Step 2: Get regular issue links from REST API
-        regular_links = []
+        regular_links: list[IssueLinkInfo] = []
         links = gitlab_issue.links.list(get_all=True)
 
         for link in links:
@@ -784,9 +801,7 @@ class GitlabToGithubMigrator:
             for relationship, link_info in relates_to_links:
                 if link_info.is_same_project:
                     # Same project - will be migrated to GitHub issue numbers
-                    cross_links_text += (
-                        f"- **{relationship}**: #{link_info.target_iid} - {link_info.target_title}\n"
-                    )
+                    cross_links_text += f"- **{relationship}**: #{link_info.target_iid} - {link_info.target_title}\n"
                 else:
                     # External project - keep GitLab reference
                     cross_links_text += f"- **{relationship}**: [{link_info.target_project_path}#{link_info.target_iid}]({link_info.target_web_url}) - {link_info.target_title}\n"
@@ -817,7 +832,7 @@ class GitlabToGithubMigrator:
             max_issue_number = max(i.iid for i in gitlab_issues)
             gitlab_issue_dict: dict[int, GitlabProjectIssue] = {i.iid: i for i in gitlab_issues}
             github_issue_dict: dict[int, github.Issue.Issue] = {}  # Maps GitLab IID to GitHub issue
-            pending_parent_child_relations = []  # Store parent-child relations for second pass
+            pending_parent_child_relations: dict[int, list[IssueLinkInfo]] = {}  # Gitlab IID -> [IssueLinkInfo, ...]
             pending_blocking_relations: list[dict[str, Any]] = []  # Store blocking relations for second pass
 
             # First pass: Create issues maintaining number sequence
@@ -850,9 +865,9 @@ class GitlabToGithubMigrator:
 
                     # Store parent-child relations for second pass (after all issues are created)
                     if cross_links.parent_child_relations:
-                        pending_parent_child_relations.extend(
-                            {"parent_gitlab_iid": gitlab_issue.iid, "relation": relation}
-                            for relation in cross_links.parent_child_relations
+                        pending_parent_child_relations[gitlab_issue.iid] = cross_links.parent_child_relations
+                        logger.debug(
+                            f"Stored {len(cross_links.parent_child_relations)} parent-child relations for issue #{gitlab_issue.iid}"
                         )
 
                     # Store blocking relations for second pass
@@ -892,6 +907,7 @@ class GitlabToGithubMigrator:
 
                     # Store GitHub issue for parent-child relationship handling
                     github_issue_dict[gitlab_issue.iid] = github_issue
+                    logger.debug(f"Added issue #{gitlab_issue.iid} to github_issue_dict (now has {len(github_issue_dict)} issues)")
 
                     # Migrate comments
                     self.migrate_issue_comments(gitlab_issue, github_issue)
@@ -920,33 +936,38 @@ class GitlabToGithubMigrator:
             # Second pass: Create parent-child relationships as GitHub sub-issues
             if pending_parent_child_relations:
                 logger.info(f"Processing {len(pending_parent_child_relations)} parent-child relationships...")
+                logger.debug(f"Available GitHub issues in dict: {sorted(github_issue_dict.keys())}")
 
-                for pending_relation in pending_parent_child_relations:
-                    parent_gitlab_iid = pending_relation["parent_gitlab_iid"]
-                    child_relation = pending_relation["relation"]
-
+                for parent_gitlab_iid, child_relations in pending_parent_child_relations.items():
                     # Get the parent GitHub issue
                     if parent_gitlab_iid in github_issue_dict:
                         parent_github_issue = github_issue_dict[parent_gitlab_iid]
+                    else:
+                        logger.warning(f"Parent issue #{parent_gitlab_iid} not found for parent-child relationship")
+                        continue
 
+                    for child_relation in child_relations:
                         # Get the child issue info
-                        child_gitlab_iid = child_relation.target_iid
+                        # GraphQL API may return IID as string; ensure it's int to match dictionary keys
+                        child_gitlab_iid = int(child_relation.target_iid)
+                        logger.debug(f"Looking for child issue #{child_gitlab_iid}")
                         if child_gitlab_iid in github_issue_dict:
                             child_github_issue = github_issue_dict[child_gitlab_iid]
 
-                            # Create sub-issue relationship
-                            # Note: This will attempt to use GitHub's new sub-issues API
-                            self.create_github_sub_issue(
-                                parent_github_issue,
-                                f"Link to #{child_github_issue.number}",
-                                f"This issue is linked as a child of #{parent_github_issue.number}.\n\nOriginal GitLab relationship: {child_relation.type}",
-                            )
-
-                            logger.debug(f"Linked issue #{child_gitlab_iid} as sub-issue of #{parent_gitlab_iid}")
+                            try:
+                                # Link existing child issue to parent using GitHub's sub-issues API
+                                # Note: PyGithub requires the issue ID (not number) for sub-issue operations
+                                parent_github_issue.add_sub_issue(child_github_issue.id)
+                                logger.debug(f"Linked issue #{child_gitlab_iid} as sub-issue of #{parent_gitlab_iid}")
+                            except GithubException as e:
+                                # Log warning but continue migration - sub-issue relationship is non-critical
+                                logger.warning(
+                                    f"Failed to create sub-issue relationship: #{child_gitlab_iid} -> #{parent_gitlab_iid}: {e}"
+                                )
                         else:
-                            logger.warning(f"Child issue #{child_gitlab_iid} not found for parent-child relationship")
-                    else:
-                        logger.warning(f"Parent issue #{parent_gitlab_iid} not found for parent-child relationship")
+                            logger.warning(
+                                f"Child issue #{child_gitlab_iid} not found for parent-child relationship of parent #{parent_gitlab_iid}"
+                            )
 
             # Third pass: Create blocking relationships as GitHub issue dependencies
             if pending_blocking_relations:
@@ -956,7 +977,8 @@ class GitlabToGithubMigrator:
                     source_gitlab_iid = pending_relation["source_gitlab_iid"]
                     relation = pending_relation["relation"]
                     link_type = relation.type
-                    target_gitlab_iid = relation.target_iid
+                    # Ensure IID is int to match dictionary keys
+                    target_gitlab_iid = int(relation.target_iid)
 
                     # Get both GitHub issues
                     if source_gitlab_iid not in github_issue_dict:
