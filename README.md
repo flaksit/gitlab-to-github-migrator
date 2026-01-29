@@ -181,8 +181,8 @@ uv sync
 pass github/api/token > /dev/null
 
 # Set required environment variables for integration tests
-export GITLAB_TEST_PROJECT="your-namespace/your-project"
-export GITHUB_TEST_ORG="your-org-or-username"
+export SOURCE_GITLAB_TEST_PROJECT="your-namespace/your-project"
+export TARGET_GITHUB_TEST_OWNER="your-org-or-username"
 
 # Run all tests (unit and integration), with default tokens from `pass` (see below)
 uv run pytest -v
@@ -236,10 +236,10 @@ Integration tests require configuration via environment variables to specify the
 
 ```bash
 # Required: Set GitLab test project
-export GITLAB_TEST_PROJECT="your-namespace/your-project"
+export SOURCE_GITLAB_TEST_PROJECT="your-namespace/your-project"
 
 # Required: Set GitHub organization/user for test repositories
-export GITHUB_TEST_ORG="your-org-or-username"
+export TARGET_GITHUB_TEST_OWNER="your-org-or-username"
 ```
 
 **Running Integration Tests:**
@@ -272,8 +272,8 @@ uv run create-gitlab-test-project group/subgroup/project-name
 # (attachments cannot be uploaded via API)
 
 # Verify with integration tests
-export GITLAB_TEST_PROJECT=namespace/project-name
-export GITHUB_TEST_ORG=your-org-or-username
+export SOURCE_GITLAB_TEST_PROJECT=namespace/project-name
+export TARGET_GITHUB_TEST_OWNER=your-org-or-username
 uv run pytest tests/test_integration_real.py -v -m integration
 ```
 
@@ -281,7 +281,7 @@ The script is idempotent - it can be run multiple times and will skip resources 
 
 #### Cleanup of Test Repositories
 
-Integration tests create temporary repositories in the GitHub organization or user account specified by `GITHUB_TEST_ORG`. If the GitHub token doesn't have delete permissions for repositories, these repositories require manual cleanup. In that case, the tests will display instructions like:
+Integration tests create temporary repositories in the GitHub organization or user account specified by `TARGET_GITHUB_TEST_OWNER`. If the GitHub token doesn't have delete permissions for repositories, these repositories require manual cleanup. In that case, the tests will display instructions like:
 ```text
 ⚠️  Cannot delete test repository <owner>/gl2ghmigr-full-migration-test-abc123: insufficient permissions
    To clean up test repositories, run:
@@ -292,8 +292,8 @@ Integration tests create temporary repositories in the GitHub organization or us
 
 **Manual Cleanup:**
 ```bash
-# Using the cleanup script with GITHUB_TEST_ORG environment variable
-export GITHUB_TEST_ORG="your-org-or-username"
+# Using the cleanup script with TARGET_GITHUB_TEST_OWNER environment variable
+export TARGET_GITHUB_TEST_OWNER="your-org-or-username"
 uv run delete_test_repos github/admin/token
 
 # Or specify the owner explicitly

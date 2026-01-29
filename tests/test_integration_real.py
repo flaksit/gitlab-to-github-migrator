@@ -4,8 +4,8 @@ Integration tests for GitLab to GitHub Migration Tool using real APIs
 These tests connect to real GitLab and GitHub APIs to ensure the migration
 functionality works correctly with actual data.
 
-Test source: GitLab project (REQUIRED: set via GITLAB_TEST_PROJECT environment variable)
-Test target: Temporary GitHub repo (REQUIRED: set via GITHUB_TEST_ORG environment variable)
+Test source: GitLab project (REQUIRED: set via SOURCE_GITLAB_TEST_PROJECT environment variable)
+Test target: Temporary GitHub repo (REQUIRED: set via TARGET_GITHUB_TEST_OWNER environment variable)
 
 Test structure:
 - Read-only tests: Verify API access and data reading (no GitHub repo needed)
@@ -41,11 +41,11 @@ def _generate_repo_name(test_type: str = "generic") -> str:
 @pytest.fixture(scope="module")
 def source_gitlab_project() -> str:
     """Get the source GitLab project path from environment."""
-    project = os.environ.get("GITLAB_TEST_PROJECT")
+    project = os.environ.get("SOURCE_GITLAB_TEST_PROJECT")
     if not project:
         msg = (
-            "GITLAB_TEST_PROJECT environment variable is required. "
-            "Example: export GITLAB_TEST_PROJECT='your-namespace/your-project'"
+            "SOURCE_GITLAB_TEST_PROJECT environment variable is required. "
+            "Example: export SOURCE_GITLAB_TEST_PROJECT='your-namespace/your-project'"
         )
         raise ValueError(msg)
     return project
@@ -54,10 +54,10 @@ def source_gitlab_project() -> str:
 @pytest.fixture(scope="module")
 def target_github_org() -> str:
     """Get the target GitHub org/user from environment."""
-    org = os.environ.get("GITHUB_TEST_ORG")
+    org = os.environ.get("TARGET_GITHUB_TEST_OWNER")
     if not org:
         msg = (
-            "GITHUB_TEST_ORG environment variable is required. Example: export GITHUB_TEST_ORG='your-org-or-username'"
+            "TARGET_GITHUB_TEST_OWNER environment variable is required. Example: export TARGET_GITHUB_TEST_OWNER='your-org-or-username'"
         )
         raise ValueError(msg)
     return org
