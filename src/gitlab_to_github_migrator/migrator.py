@@ -841,6 +841,9 @@ class GitlabToGithubMigrator:
                     # Store parent-child relations for second pass (after all issues are created)
                     if cross_links.parent_child_relations:
                         pending_parent_child_relations[gitlab_issue.iid] = cross_links.parent_child_relations
+                        logger.debug(
+                            f"Stored {len(cross_links.parent_child_relations)} parent-child relations for issue #{gitlab_issue.iid}"
+                        )
 
                     # Store blocking relations for second pass
                     if cross_links.blocking_relations:
@@ -879,6 +882,7 @@ class GitlabToGithubMigrator:
 
                     # Store GitHub issue for parent-child relationship handling
                     github_issue_dict[gitlab_issue.iid] = github_issue
+                    logger.debug(f"Added issue #{gitlab_issue.iid} to github_issue_dict (now has {len(github_issue_dict)} issues)")
 
                     # Migrate comments
                     self.migrate_issue_comments(gitlab_issue, github_issue)
@@ -907,6 +911,7 @@ class GitlabToGithubMigrator:
             # Second pass: Create parent-child relationships as GitHub sub-issues
             if pending_parent_child_relations:
                 logger.info(f"Processing {len(pending_parent_child_relations)} parent-child relationships...")
+                logger.debug(f"Available GitHub issues in dict: {sorted(github_issue_dict.keys())}")
 
                 for parent_gitlab_iid, child_relations in pending_parent_child_relations.items():
                     # Get the parent GitHub issue
@@ -918,7 +923,9 @@ class GitlabToGithubMigrator:
 
                     for child_relation in child_relations:
                         # Get the child issue info
-                        child_gitlab_iid = child_relation.target_iid
+                        # Note: target_iid from GraphQL is a string, but github_issue_dict keys are ints
+                        child_gitlab_iid = int(child_relation.target_iid)
+                        logger.debug(f"Looking for child issue #{child_gitlab_iid}")
                         if child_gitlab_iid in github_issue_dict:
                             child_github_issue = github_issue_dict[child_gitlab_iid]
 
@@ -945,7 +952,8 @@ class GitlabToGithubMigrator:
                     source_gitlab_iid = pending_relation["source_gitlab_iid"]
                     relation = pending_relation["relation"]
                     link_type = relation.type
-                    target_gitlab_iid = relation.target_iid
+                    # Note: target_iid from GraphQL is a string, but github_issue_dict keys are ints
+                    target_gitlab_iid = int(relation.target_iid)
 
                     # Get both GitHub issues
                     if source_gitlab_iid not in github_issue_dict:
