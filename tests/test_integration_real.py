@@ -222,7 +222,7 @@ class TestReadOnlyGitlabAccess:
         from gitlab_to_github_migrator.gitlab_utils import get_parent_child_relationships
 
         gitlab_parent_children = get_parent_child_relationships(
-            gitlab_client, migrator.graphql_client, source_gitlab_project
+            gitlab_client, migrator.gitlab_graphql_client, source_gitlab_project
         )
 
         if not gitlab_parent_children:
