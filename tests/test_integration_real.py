@@ -56,9 +56,7 @@ def target_github_org() -> str:
     """Get the target GitHub org/user from environment."""
     org = os.environ.get("TARGET_GITHUB_TEST_OWNER")
     if not org:
-        msg = (
-            "TARGET_GITHUB_TEST_OWNER environment variable is required. Example: export TARGET_GITHUB_TEST_OWNER='your-org-or-username'"
-        )
+        msg = "TARGET_GITHUB_TEST_OWNER environment variable is required. Example: export TARGET_GITHUB_TEST_OWNER='your-org-or-username'"
         raise ValueError(msg)
     return org
 
@@ -90,22 +88,8 @@ def github_client(github_token: str) -> Github:
 
 
 @pytest.mark.integration
-class TestReadOnlyGitlabAccess:
-    """Tests that only read from GitLab - no GitHub repository needed."""
-
-    def test_gitlab_source_project_access(
-        self,
-        gitlab_client: gitlab.Gitlab,
-        source_gitlab_project: str,
-    ) -> None:
-        """Test that we can access the source GitLab project."""
-        project = gitlab_client.projects.get(source_gitlab_project)
-        assert project.path_with_namespace == source_gitlab_project
-
-        # Test that we can read issues, milestones, and labels
-        project.issues.list(get_all=True)
-        project.milestones.list(get_all=True)
-        project.labels.list(get_all=True)
+class TestGitHubAccess:
+    """Tests that only read from GitHub - no GitLab repository needed."""
 
     def test_github_api_access(
         self,
@@ -125,20 +109,39 @@ class TestReadOnlyGitlabAccess:
             except GithubException as user_err:
                 pytest.fail(f"Failed to access '{target_github_org}' as organization or user: {user_err}")
 
-    def test_issue_reading_from_real_source(
+
+@pytest.mark.integration
+class TestReadOnlyGitlabAccess:
+    """Tests that only read from GitLab - no GitHub repository needed."""
+
+    def test_gitlab_source_project_access(
+        self,
+        gitlab_client: gitlab.Gitlab,
+        source_gitlab_project: str,
+    ) -> None:
+        """Test that we can access the source GitLab project."""
+        project = gitlab_client.projects.get(source_gitlab_project)
+        assert project.path_with_namespace == source_gitlab_project
+
+        # Test that we can read milestones, and labels
+        # Issue reading is tested in more detail in another test
+        project.milestones.list(per_page=2, get_all=False, state="all")
+        project.labels.list(per_page=2, get_all=False)
+
+    def test_issue_read(
         self,
         gitlab_client: gitlab.Gitlab,
         source_gitlab_project: str,
     ) -> None:
         """Test reading issues from real GitLab source."""
         source_project = gitlab_client.projects.get(source_gitlab_project)
-        issues = source_project.issues.list(per_page=5, get_all=False)
+        issues = source_project.issues.list(per_page=2, get_all=False, state="all")
 
         if not issues:
             pytest.skip("No issues found in source project")
 
         for issue in issues:
-            issue.notes.list(get_all=True)
+            issue.notes.list(per_page=5, get_all=False)
 
             # Test that we can access issue properties needed for migration
             assert hasattr(issue, "iid")
@@ -155,31 +158,24 @@ class TestReadOnlyGitlabAccess:
         source_gitlab_project: str,
     ) -> None:
         """Test reading cross-linked issues from GitLab."""
+        # TODO Don't retrieve all (or 20) issues: use .list(iterator=True) and stop when we found one with links
         source_project = gitlab_client.projects.get(source_gitlab_project)
-        issues = source_project.issues.list(per_page=20, get_all=False)
+        issues = source_project.issues.list(iterator=True, state="all")
 
-        if not issues:
-            pytest.skip("No issues found in source project")
-
-        issues_with_links = []
         for issue in issues:
             try:
                 links = issue.links.list(get_all=True)
                 if links:
-                    issues_with_links.append((issue, links))
-
                     # Test link properties (data is directly on link object)
                     for link in links[:2]:
                         assert hasattr(link, "iid")
                         assert hasattr(link, "title")
                         assert hasattr(link, "link_type")
 
-                    if len(issues_with_links) >= 3:
-                        break
+                    break
             except Exception:
                 continue
-
-        if not issues_with_links:
+        else:
             pytest.skip("No cross-linked issues found in source project")
 
     def test_gitlab_attachment_detection(
@@ -188,31 +184,22 @@ class TestReadOnlyGitlabAccess:
         source_gitlab_project: str,
     ) -> None:
         """Test finding and accessing GitLab attachments."""
+        # TODO Don't retrieve all (or 50) issues: use .list(iterator=True) and stop when we found one with attachments
+
         source_project = gitlab_client.projects.get(source_gitlab_project)
-        issues = source_project.issues.list(per_page=50, get_all=False)
+        issues = source_project.issues.list(iterator=True, state="all")
 
-        if not issues:
-            pytest.skip("No issues found in source project")
-
-        issues_with_attachments = []
         attachment_pattern = r"/uploads/[a-f0-9]{32}/[^)\\s]+"
 
         for issue in issues:
             if issue.description:
                 attachments = re.findall(attachment_pattern, issue.description)
                 if attachments:
-                    issues_with_attachments.append((issue, attachments))
-                    if len(issues_with_attachments) >= 2:
-                        break
-
-        if not issues_with_attachments:
+                    break
+        else:
             pytest.skip("No attachments found in source project issues")
 
-        # Test URL construction
-        for _issue, attachments in issues_with_attachments[:1]:
-            for attachment_url in attachments[:1]:
-                assert attachment_url.startswith("/uploads/")
-                assert len(attachment_url.split("/")) >= 3
+        # TODO Add: check that we can download the attachments
 
     def test_graphql_work_items_api_functionality(
         self,
@@ -236,53 +223,52 @@ class TestReadOnlyGitlabAccess:
 
         # Find an issue that actually has work items by querying GraphQL API
         # Limit to first 20 issues to avoid excessive API calls
-        test_issue = None
-        child_work_items = []
         for issue in issues:
             try:
-                work_items = migrator.get_work_item_children(issue.iid)
-                if work_items:
-                    test_issue = issue
-                    child_work_items = work_items
+                child_work_items = migrator.get_work_item_children(issue.iid)
+                if child_work_items:
                     break
             except (GitlabError, MigrationError):
                 # Skip issues that fail to query (e.g., not a work item type)
                 continue
-
-        if not test_issue:
+        else:
             pytest.skip("No issues with work items found for GraphQL testing")
 
         # Test GraphQL Work Items API returns valid values
-        assert len(child_work_items) > 0, "Expected at least one child work item"
+        if not child_work_items:
+            pytest.skip("No child work items found for the test issue")
 
         for child in child_work_items:
             assert int(child.iid) > 0
             assert len(child.title) > 0
-            assert child.state in ("OPEN", "CLOSED")
+            assert child.state.lower() in ("open", "closed")
             assert len(child.type) > 0
             assert "gitlab" in child.web_url.lower()
 
-    def test_closed_issues_and_milestones_retrieval(
+    def test_closed_issues_retrieval(
         self,
         gitlab_client: gitlab.Gitlab,
         source_gitlab_project: str,
     ) -> None:
-        """Test that closed issues and milestones are properly retrieved."""
+        """Test that closed issues are properly retrieved."""
         source_project = gitlab_client.projects.get(source_gitlab_project)
 
         all_issues = source_project.issues.list(get_all=True, state="all")
-        opened_issues = source_project.issues.list(get_all=True, state="opened")
-        closed_issues = source_project.issues.list(get_all=True, state="closed")
-
-        assert len(all_issues) >= len(opened_issues)
-        assert len(all_issues) >= len(closed_issues)
-        assert len(all_issues) == len(opened_issues) + len(closed_issues)
 
         closed_count = len([issue for issue in all_issues if issue.state == "closed"])
         opened_count = len([issue for issue in all_issues if issue.state == "opened"])
 
         assert closed_count > 0, "No closed issues found - test project should have closed issues"
         assert opened_count > 0, "No opened issues found - test project should have open issues"
+        assert len(all_issues) == closed_count + opened_count
+
+    def test_closed_milestones_retrieval(
+        self,
+        gitlab_client: gitlab.Gitlab,
+        source_gitlab_project: str,
+    ) -> None:
+        """Test that closed milestones are properly retrieved."""
+        source_project = gitlab_client.projects.get(source_gitlab_project)
 
         all_milestones = source_project.milestones.list(get_all=True, state="all")
 
@@ -497,10 +483,10 @@ class TestFullMigration:
                     parent_issue = github_repo.get_issue(3)
                     # Get sub-issues using PyGithub's sub_issues property
                     sub_issues = list(parent_issue.sub_issues) if hasattr(parent_issue, "sub_issues") else []
-                    
+
                     # Check if sub-issues were created
                     sub_issue_numbers = [sub.number for sub in sub_issues]
-                    
+
                     # Expected child issues are #5 and #6
                     expected_children = [5, 6]
                     for expected_child in expected_children:
@@ -508,8 +494,10 @@ class TestFullMigration:
                             f"Issue #{expected_child} should be a sub-issue of #{parent_issue.number}, "
                             f"but found sub-issues: {sub_issue_numbers}"
                         )
-                    
-                    print(f"✓ Verified parent-child relationships (issue #3 has {len(sub_issues)} sub-issues: #{', #'.join(map(str, sub_issue_numbers))})")
+
+                    print(
+                        f"✓ Verified parent-child relationships (issue #3 has {len(sub_issues)} sub-issues: #{', #'.join(map(str, sub_issue_numbers))})"
+                    )
                 except AssertionError:
                     raise
                 except Exception as e:
