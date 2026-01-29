@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 import os
-from typing import Final
+from typing import Final, Literal, overload
 
 from gitlab import Gitlab, GraphQL
 
@@ -43,16 +43,26 @@ def get_graphql_client(url: str = "https://gitlab.com", token: str | None = None
     return GraphQL(url=url, token=token)
 
 
+@overload
+def get_readonly_token(*, env_var: str, pass_path: None | Literal[""] = None) -> str | None: ...
+
+
+@overload
+def get_readonly_token(*, env_var: None | Literal[""] = None, pass_path: str | None = None) -> str | None: ...
+
+
 def get_readonly_token(
     *,
-    env_var: str = GITLAB_TOKEN_ENV_VAR,
+    env_var: str | None = None,
     pass_path: str | None = None,
 ) -> str | None:
-    """Get GitLab read-only token from pass path, environment variable, or default pass location.
+    """Get GitLab read-only token from pass path or environment variable.
+
+    Only one of env_var or pass_path is allowed to be set to a non-empty string.
 
     Resolution order:
-    1. If pass_path is provided, use it
-    2. Try the environment variable
+    1. If pass_path is provided, use it; if env_var is provided, use that
+    2. Try the default env var (SOURCE_GITLAB_TOKEN)
     3. Try the default pass path (gitlab/api/ro_token)
 
     Args:
@@ -61,37 +71,63 @@ def get_readonly_token(
 
     Returns:
         GitLab token if found, None otherwise (allows anonymous access)
+
+    Raises:
+        ValueError: If both env_var and pass_path are set to non-empty strings
     """
-    # Try explicit pass path first
+    # Validate constraint: only one of env_var or pass_path can be non-empty
+    if pass_path and env_var:
+        msg = "Only one of env_var or pass_path can be set to a non-empty string"
+        raise ValueError(msg)
+
+    # 1. If pass_path is provided, use it
     if pass_path:
         return get_pass_value(pass_path)
 
-    # Try environment variable
-    token: str | None = os.environ.get(env_var)
+    # 1. If env_var is set (non-empty), check that environment variable
+    if env_var:
+        token: str | None = os.environ.get(env_var)
+        if token:
+            return token
+
+    # 2. Try the default env var
+    token = os.environ.get(GITLAB_TOKEN_ENV_VAR)
     if token:
         return token
 
-    # Try default pass path
+    # 3. Try the default pass path
     try:
         return get_pass_value(DEFAULT_GITLAB_RO_TOKEN_PASS_PATH)
     except PassError:
-        logger.warning(
-            f"No GitLab token specified nor found. If non-anonymous access is required, "
-            f"specify correct pass path or set {env_var} environment variable."
-        )
-        return None
+        pass
+
+    logger.warning(
+        f"No GitLab token found. If non-anonymous access is required, "
+        f"set {GITLAB_TOKEN_ENV_VAR} environment variable or configure pass at {DEFAULT_GITLAB_RO_TOKEN_PASS_PATH}."
+    )
+    return None
+
+
+@overload
+def get_readwrite_token(*, env_var: str, pass_path: None | Literal[""] = None) -> str | None: ...
+
+
+@overload
+def get_readwrite_token(*, env_var: None | Literal[""] = None, pass_path: str | None = None) -> str | None: ...
 
 
 def get_readwrite_token(
     *,
-    env_var: str = GITLAB_TOKEN_ENV_VAR,
+    env_var: str | None = None,
     pass_path: str | None = None,
 ) -> str | None:
-    """Get GitLab read-write token from pass path, environment variable, or default pass location.
+    """Get GitLab read-write token from pass path or environment variable.
+
+    Only one of env_var or pass_path is allowed to be set to a non-empty string.
 
     Resolution order:
-    1. If pass_path is provided, use it
-    2. Try the environment variable
+    1. If pass_path is provided, use it; if env_var is provided, use that
+    2. Try the default env var (SOURCE_GITLAB_TOKEN)
     3. Try the default pass path (gitlab/api/rw_token)
 
     Args:
@@ -100,21 +136,122 @@ def get_readwrite_token(
 
     Returns:
         GitLab token if found, None otherwise
+
+    Raises:
+        ValueError: If both env_var and pass_path are set to non-empty strings
     """
-    # Try explicit pass path first
+    # Validate constraint: only one of env_var or pass_path can be non-empty
+    if pass_path and env_var:
+        msg = "Only one of env_var or pass_path can be set to a non-empty string"
+        raise ValueError(msg)
+
+    # 1. If pass_path is provided, use it
     if pass_path:
         return get_pass_value(pass_path)
 
-    # Try environment variable
-    token: str | None = os.environ.get(env_var)
+    # 1. If env_var is set (non-empty), check that environment variable
+    if env_var:
+        token: str | None = os.environ.get(env_var)
+        if token:
+            return token
+
+    # 2. Try the default env var
+    token = os.environ.get(GITLAB_TOKEN_ENV_VAR)
     if token:
         return token
 
-    # Try default pass path
+    # 3. Try the default pass path
     try:
         return get_pass_value(DEFAULT_GITLAB_RW_TOKEN_PASS_PATH)
     except PassError:
-        logger.warning(
-            f"No GitLab token specified nor found. Specify correct pass path or set {env_var} environment variable."
-        )
-        return None
+        pass
+
+    logger.warning(
+        f"No GitLab token found. "
+        f"Set {GITLAB_TOKEN_ENV_VAR} environment variable or configure pass at {DEFAULT_GITLAB_RW_TOKEN_PASS_PATH}."
+    )
+    return None
+
+
+def get_parent_child_relationships(
+    gitlab_client: Gitlab,
+    graphql_client: GraphQL,
+    project_path: str,
+) -> dict[int, list[int]]:
+    """Get all parent-child relationships from a GitLab project.
+
+    Args:
+        gitlab_client: GitLab REST API client
+        graphql_client: GitLab GraphQL API client
+        project_path: Full project path (e.g., "namespace/project")
+
+    Returns:
+        Dictionary mapping parent issue IID to list of child issue IIDs
+
+    Note:
+        This function queries all issues in the project and checks for work item children
+        using the GraphQL API. It may make many API calls for projects with many issues.
+    """
+    parent_to_children: dict[int, list[int]] = {}
+
+    try:
+        project = gitlab_client.projects.get(project_path)
+        issues = project.issues.list(iterator=True, state="all")
+
+        for issue in issues:
+            # Query GraphQL API for work item children
+            query = """
+            query GetWorkItemWithChildren($fullPath: ID!, $iid: String!) {
+                namespace(fullPath: $fullPath) {
+                    workItem(iid: $iid) {
+                        iid
+                        widgets {
+                            type
+                            ... on WorkItemWidgetHierarchy {
+                                children {
+                                    nodes {
+                                        iid
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            """
+
+            variables = {"fullPath": project_path, "iid": str(issue.iid)}
+
+            try:
+                response = graphql_client.execute(query, variable_values=variables)
+
+                # Parse response - note that GitLab GraphQL client returns data directly,
+                # not wrapped in a "data" key
+                namespace = response.get("namespace")
+                if not namespace:
+                    continue
+
+                work_item = namespace.get("workItem")
+                if not work_item:
+                    continue
+
+                # Find hierarchy widget
+                widgets = work_item.get("widgets", [])
+                for widget in widgets:
+                    if widget.get("type") == "HIERARCHY":
+                        child_nodes = widget.get("children", {}).get("nodes", [])
+                        if child_nodes:
+                            child_iids = [int(child.get("iid")) for child in child_nodes if child.get("iid")]
+                            if child_iids:
+                                parent_to_children[issue.iid] = child_iids
+                        break
+
+            except Exception as e:
+                # Log but continue - some issues might not be work items
+                logger.debug(f"Could not get children for issue #{issue.iid}: {e}")
+                continue
+
+    except Exception:
+        logger.exception("Failed to get parent-child relationships")
+
+    return parent_to_children

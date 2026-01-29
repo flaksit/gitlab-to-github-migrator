@@ -32,9 +32,9 @@ GITLAB_URL = "https://gitlab.com"
 logger = logging.getLogger(__name__)
 
 
-def get_gitlab_token() -> str:
+def get_gitlab_token(pass_path: str | None = None) -> str:
     """Get GitLab token from environment or pass. Requires write access."""
-    token = glu.get_readwrite_token()
+    token = glu.get_readwrite_token(pass_path=pass_path)
     if token:
         return token
     msg = (
@@ -538,7 +538,7 @@ Project URL: https://gitlab.com/{project_path}
     logger.info("Script completed successfully!")
 
 
-def create_test_project(project_path: str) -> None:
+def create_test_project(project_path: str, gitlab_token_pass_path: str | None = None) -> None:
     """
     Create a GitLab test project with comprehensive test data.
 
@@ -547,13 +547,14 @@ def create_test_project(project_path: str) -> None:
 
     Args:
         project_path: GitLab project path (e.g., 'namespace/project' or 'group/subgroup/project')
+        gitlab_token_pass_path: Optional path in pass utility for GitLab token
     """
     logger.info("=" * 60)
     logger.info("Creating GitLab test project for migration testing")
     logger.info(f"Project: {project_path}")
     logger.info("=" * 60)
 
-    token = get_gitlab_token()
+    token = get_gitlab_token(pass_path=gitlab_token_pass_path)
     gl = Gitlab(GITLAB_URL, private_token=token)
     gql = GraphQL(GITLAB_URL, token=token)
 
@@ -576,6 +577,7 @@ def parse_args() -> argparse.Namespace:
 Examples:
   %(prog)s flaks/migrator-test-project
   %(prog)s mygroup/subgroup/test-project
+  %(prog)s flaks/test --gitlab-token-pass-path gitlab/admin/token
 """,
     )
     parser.add_argument(
@@ -583,6 +585,11 @@ Examples:
         help="GitLab project path (e.g., 'namespace/project' or 'group/subgroup/project')",
     )
     parser.add_argument("--verbose", "-v", action="store_true", help="Enable verbose logging")
+    parser.add_argument(
+        "--gitlab-token-pass-path",
+        help=f"Path for GitLab token in pass utility. If not set, will use {glu.GITLAB_TOKEN_ENV_VAR} env var, "
+        f"or fall back to default pass path {glu.DEFAULT_GITLAB_RW_TOKEN_PASS_PATH}.",
+    )
     return parser.parse_args()
 
 
@@ -590,7 +597,8 @@ def main() -> None:
     """Main entry point - handles argument parsing and logging setup."""
     args = parse_args()
     setup_logging(verbose=args.verbose)
-    create_test_project(args.project_path)
+    gitlab_token_pass_path: str | None = getattr(args, "gitlab_token_pass_path", None)
+    create_test_project(args.project_path, gitlab_token_pass_path=gitlab_token_pass_path)
 
 
 if __name__ == "__main__":
