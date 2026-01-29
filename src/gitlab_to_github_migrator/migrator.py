@@ -304,13 +304,20 @@ class GitlabToGithubMigrator:
                 temp_clone_path = tempfile.mkdtemp(prefix="gitlab_migration_")
                 clone_path = temp_clone_path
 
-                # Clone from GitLab
+                # Clone from GitLab using HTTPS with authentication token
+                gitlab_http_url = str(self.gitlab_project.http_url_to_repo)  # pyright: ignore[reportUnknownArgumentType]
+                # Inject GitLab token into URL for authentication: https://oauth2:TOKEN@gitlab.com/...
+                if self.gitlab_token and "https://" in gitlab_http_url:
+                    gitlab_url = gitlab_http_url.replace("https://", f"https://oauth2:{self.gitlab_token}@")
+                else:
+                    gitlab_url = gitlab_http_url
+                
                 result = subprocess.run(  # noqa: S603
                     [
                         "git",
                         "clone",
                         "--mirror",
-                        str(self.gitlab_project.ssh_url_to_repo),  # pyright: ignore[reportUnknownArgumentType]
+                        gitlab_url,
                         temp_clone_path,
                     ],
                     check=False,
@@ -322,9 +329,16 @@ class GitlabToGithubMigrator:
                     msg = f"Failed to clone GitLab repository: {result.stderr}"
                     raise MigrationError(msg)
 
-            # Add GitHub remote
+            # Add GitHub remote using HTTPS with authentication token
+            github_clone_url = self.github_repo.clone_url
+            # Inject GitHub token into URL for authentication: https://TOKEN@github.com/...
+            if self.github_token and "https://" in github_clone_url:
+                github_url = github_clone_url.replace("https://", f"https://{self.github_token}@")
+            else:
+                github_url = github_clone_url
+            
             _ = subprocess.run(  # noqa: S603
-                ["git", "remote", "add", "github", self.github_repo.ssh_url], cwd=clone_path, check=True
+                ["git", "remote", "add", "github", github_url], cwd=clone_path, check=True
             )
 
             # Push all branches and tags
