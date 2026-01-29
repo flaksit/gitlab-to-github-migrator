@@ -169,7 +169,7 @@ class GitlabToGithubMigrator:
         """Validate GitLab and GitHub API access."""
         try:
             # Test GitLab access
-            _ = self.gitlab_project.name
+            _ = self.gitlab_project.name  # pyright: ignore[reportUnknownVariableType]
             logger.info("GitLab API access validated")
         except (GitlabError, GitlabAuthenticationError) as e:
             msg = f"GitLab API access failed: {e}"
@@ -310,7 +310,7 @@ class GitlabToGithubMigrator:
                         "git",
                         "clone",
                         "--mirror",
-                        self.gitlab_project.ssh_url_to_repo,
+                        str(self.gitlab_project.ssh_url_to_repo),  # pyright: ignore[reportUnknownArgumentType]
                         temp_clone_path,
                     ],
                     check=False,
@@ -678,12 +678,11 @@ class GitlabToGithubMigrator:
                 blocking_relations: list[IssueLinkInfo] - For GitHub issue dependencies
         """
         # Step 1: Get child tasks using GraphQL Work Items API (using python-gitlab's native GraphQL support)
-        child_work_items = []
-        child_work_items = self.get_work_item_children(gitlab_issue.iid)
+        child_work_items: list[WorkItemChild] = self.get_work_item_children(gitlab_issue.iid)
         logger.debug(f"Found {len(child_work_items)} tasks via GraphQL for issue #{gitlab_issue.iid}")
 
         # Step 2: Get regular issue links from REST API
-        regular_links = []
+        regular_links: list[IssueLinkInfo] = []
         links = gitlab_issue.links.list(get_all=True)
 
         for link in links:
@@ -794,7 +793,7 @@ class GitlabToGithubMigrator:
             max_issue_number = max(i.iid for i in gitlab_issues)
             gitlab_issue_dict: dict[int, GitlabProjectIssue] = {i.iid: i for i in gitlab_issues}
             github_issue_dict: dict[int, github.Issue.Issue] = {}  # Maps GitLab IID to GitHub issue
-            pending_parent_child_relations = []  # Store parent-child relations for second pass
+            pending_parent_child_relations: dict[int, list[IssueLinkInfo]] = {}  # Gitlab IID -> [IssueLinkInfo, ...]
             pending_blocking_relations: list[dict[str, Any]] = []  # Store blocking relations for second pass
 
             # First pass: Create issues maintaining number sequence
@@ -827,10 +826,7 @@ class GitlabToGithubMigrator:
 
                     # Store parent-child relations for second pass (after all issues are created)
                     if cross_links.parent_child_relations:
-                        pending_parent_child_relations.extend(
-                            {"parent_gitlab_iid": gitlab_issue.iid, "relation": relation}
-                            for relation in cross_links.parent_child_relations
-                        )
+                        pending_parent_child_relations[gitlab_issue.iid] = cross_links.parent_child_relations
 
                     # Store blocking relations for second pass
                     if cross_links.blocking_relations:
@@ -898,14 +894,15 @@ class GitlabToGithubMigrator:
             if pending_parent_child_relations:
                 logger.info(f"Processing {len(pending_parent_child_relations)} parent-child relationships...")
 
-                for pending_relation in pending_parent_child_relations:
-                    parent_gitlab_iid = pending_relation["parent_gitlab_iid"]
-                    child_relation = pending_relation["relation"]
-
+                for parent_gitlab_iid, child_relations in pending_parent_child_relations.items():
                     # Get the parent GitHub issue
                     if parent_gitlab_iid in github_issue_dict:
                         parent_github_issue = github_issue_dict[parent_gitlab_iid]
+                    else:
+                        logger.warning(f"Parent issue #{parent_gitlab_iid} not found for parent-child relationship")
+                        continue
 
+                    for child_relation in child_relations:
                         # Get the child issue info
                         child_gitlab_iid = child_relation.target_iid
                         if child_gitlab_iid in github_issue_dict:
@@ -925,8 +922,6 @@ class GitlabToGithubMigrator:
                             logger.warning(
                                 f"Child issue #{child_gitlab_iid} not found for parent-child relationship of parent #{parent_gitlab_iid}"
                             )
-                    else:
-                        logger.warning(f"Parent issue #{parent_gitlab_iid} not found for parent-child relationship")
 
             # Third pass: Create blocking relationships as GitHub issue dependencies
             if pending_blocking_relations:
