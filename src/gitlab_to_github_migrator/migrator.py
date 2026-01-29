@@ -620,23 +620,6 @@ class GitlabToGithubMigrator:
 
         return updated_content
 
-    def create_github_sub_issue(
-        self, parent_github_issue: github.Issue.Issue, sub_issue_title: str, sub_issue_body: str
-    ) -> None:
-        """Create a GitHub sub-issue using PyGithub's native sub-issue support.
-
-        This uses GitHub's sub-issues API introduced in December 2024, now supported
-        natively by PyGithub.
-        """
-        # First create a regular issue
-        sub_issue = self.github_repo.create_issue(title=sub_issue_title, body=sub_issue_body)
-
-        # Add the issue as a sub-issue to the parent using PyGithub's native support
-        # Note: PyGithub requires the issue ID (not number) for sub-issue operations
-        parent_github_issue.add_sub_issue(sub_issue.id)
-
-        logger.debug(f"Created sub-issue #{sub_issue.number} under parent #{parent_github_issue.number}")
-
     def create_github_issue_dependency(self, blocked_issue_number: int, blocking_issue_id: int) -> bool:
         """Create a GitHub issue dependency using PyGithub's requester.
 
