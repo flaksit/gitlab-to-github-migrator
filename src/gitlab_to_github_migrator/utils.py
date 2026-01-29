@@ -49,6 +49,9 @@ def get_pass_value(pass_path: str) -> str:
         result: CompletedProcess[str] = subprocess.run(  # noqa: S603
             ["pass", pass_path], capture_output=True, text=True, check=True
         )
+    except FileNotFoundError as e:
+        msg = "The 'pass' command is not available. Install pass or use environment variables."
+        raise PassError(msg) from e
     except subprocess.CalledProcessError as e:
         if e.returncode == 1 and "not in the password store" in e.stderr.lower():
             msg = f"Pass path '{pass_path}' not found or invalid."
