@@ -16,7 +16,7 @@ class LabelTranslator:
 
     def __init__(self, patterns: Sequence[str] | None) -> None:
         self.patterns: list[tuple[str, str]] = []
-        
+
         for pattern in patterns or []:
             if ":" not in pattern:
                 msg = f"Invalid pattern format: {pattern}"

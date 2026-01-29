@@ -57,60 +57,70 @@ def _print_validation_report(report: dict[str, Any]) -> None:
     logger.info("MIGRATION VALIDATION REPORT")
     logger.info("=" * 80)
     logger.info("")
-    
+
     # Print project info
     logger.info(f"GitLab Project: {report['gitlab_project']}")
     logger.info(f"GitHub Repository: {report['github_repo']}")
     logger.info("")
-    
+
     # Print validation status
     if report["success"]:
         logger.info("✓ Validation Status: PASSED")
     else:
         logger.error("✗ Validation Status: FAILED")
     logger.info("")
-    
+
     # Print errors if any
     if report["errors"]:
         logger.error("ERRORS:")
         for error in report["errors"]:
             logger.error(f"  • {error}")
         logger.info("")
-    
+
     # Print statistics
     logger.info("MIGRATION STATISTICS:")
     logger.info("")
-    
+
     stats = report["statistics"]
-    
+
     # Issues section
     logger.info("Issues:")
-    logger.info(f"  GitLab:  Total={stats.get('gitlab_issues_total', 0)}, "
-                f"Open={stats.get('gitlab_issues_open', 0)}, "
-                f"Closed={stats.get('gitlab_issues_closed', 0)}")
-    logger.info(f"  GitHub:  Total={stats.get('github_issues_total', 0)}, "
-                f"Open={stats.get('github_issues_open', 0)}, "
-                f"Closed={stats.get('github_issues_closed', 0)}")
+    logger.info(
+        f"  GitLab:  Total={stats.get('gitlab_issues_total', 0)}, "
+        f"Open={stats.get('gitlab_issues_open', 0)}, "
+        f"Closed={stats.get('gitlab_issues_closed', 0)}"
+    )
+    logger.info(
+        f"  GitHub:  Total={stats.get('github_issues_total', 0)}, "
+        f"Open={stats.get('github_issues_open', 0)}, "
+        f"Closed={stats.get('github_issues_closed', 0)}"
+    )
     logger.info("")
-    
+
     # Milestones section
     logger.info("Milestones:")
-    logger.info(f"  GitLab:  Total={stats.get('gitlab_milestones_total', 0)}, "
-                f"Open={stats.get('gitlab_milestones_open', 0)}, "
-                f"Closed={stats.get('gitlab_milestones_closed', 0)}")
-    logger.info(f"  GitHub:  Total={stats.get('github_milestones_total', 0)}, "
-                f"Open={stats.get('github_milestones_open', 0)}, "
-                f"Closed={stats.get('github_milestones_closed', 0)}")
+    logger.info(
+        f"  GitLab:  Total={stats.get('gitlab_milestones_total', 0)}, "
+        f"Open={stats.get('gitlab_milestones_open', 0)}, "
+        f"Closed={stats.get('gitlab_milestones_closed', 0)}"
+    )
+    logger.info(
+        f"  GitHub:  Total={stats.get('github_milestones_total', 0)}, "
+        f"Open={stats.get('github_milestones_open', 0)}, "
+        f"Closed={stats.get('github_milestones_closed', 0)}"
+    )
     logger.info("")
-    
+
     # Labels section
     logger.info("Labels:")
     logger.info(f"  GitLab:  Total={stats.get('gitlab_labels_total', 0)}")
-    logger.info(f"  GitHub:  Existing={stats.get('github_labels_existing', 0)}, "
-                f"Created={stats.get('github_labels_created', 0)}, "
-                f"Translated={stats.get('labels_translated', 0)}")
+    logger.info(
+        f"  GitHub:  Existing={stats.get('github_labels_existing', 0)}, "
+        f"Created={stats.get('github_labels_created', 0)}, "
+        f"Translated={stats.get('labels_translated', 0)}"
+    )
     logger.info("")
-    
+
     logger.info("=" * 80)
 
 

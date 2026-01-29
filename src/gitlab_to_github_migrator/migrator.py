@@ -352,9 +352,7 @@ class GitlabToGithubMigrator:
         """
         try:
             # Get existing GitHub labels (case-insensitive lookup: lowercase -> actual name)
-            self.initial_github_labels = {
-                label.name.lower(): label.name for label in self.github_repo.get_labels()
-            }
+            self.initial_github_labels = {label.name.lower(): label.name for label in self.github_repo.get_labels()}
 
             # Get GitLab labels
             gitlab_labels = self.gitlab_project.labels.list(get_all=True)
@@ -367,9 +365,7 @@ class GitlabToGithubMigrator:
                 existing_label = self.initial_github_labels.get(translated_name.lower())
                 if existing_label is not None:
                     self.label_mapping[gitlab_label.name] = existing_label
-                    logger.debug(
-                        f"Using existing label: {gitlab_label.name} -> {existing_label}"
-                    )
+                    logger.debug(f"Using existing label: {gitlab_label.name} -> {existing_label}")
                     continue
 
                 # Create new label
@@ -784,9 +780,7 @@ class GitlabToGithubMigrator:
             for relationship, link_info in relates_to_links:
                 if link_info.is_same_project:
                     # Same project - will be migrated to GitHub issue numbers
-                    cross_links_text += (
-                        f"- **{relationship}**: #{link_info.target_iid} - {link_info.target_title}\n"
-                    )
+                    cross_links_text += f"- **{relationship}**: #{link_info.target_iid} - {link_info.target_title}\n"
                 else:
                     # External project - keep GitLab reference
                     cross_links_text += f"- **{relationship}**: [{link_info.target_project_path}#{link_info.target_iid}]({link_info.target_web_url}) - {link_info.target_title}\n"

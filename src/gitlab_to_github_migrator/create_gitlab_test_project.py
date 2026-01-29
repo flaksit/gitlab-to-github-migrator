@@ -66,13 +66,15 @@ def get_or_create_project(gl: Gitlab, project_path: str) -> Project:
             sys.exit(1)
         namespace_id = namespaces[0].id
 
-        project = gl.projects.create({
-            "name": project_name,
-            "namespace_id": namespace_id,
-            "visibility": "public",
-            "description": "Test project for gitlab-to-github-migrator (https://github.com/flaksit/gitlab-to-github-migrator)",
-            "default_branch": "main",
-        })
+        project = gl.projects.create(
+            {
+                "name": project_name,
+                "namespace_id": namespace_id,
+                "visibility": "public",
+                "description": "Test project for gitlab-to-github-migrator (https://github.com/flaksit/gitlab-to-github-migrator)",
+                "default_branch": "main",
+            }
+        )
         logger.info(f"    Created project: {project.web_url}")
     except GitlabCreateError as e:
         if "has already been taken" in str(e):
@@ -185,9 +187,7 @@ def get_work_item_id(gql: GraphQL, project_path: str, iid: int) -> str:
     return work_item_id
 
 
-def create_task_with_parent(
-    gql: GraphQL, project_path: str, title: str, description: str, parent_iid: int
-) -> None:
+def create_task_with_parent(gql: GraphQL, project_path: str, title: str, description: str, parent_iid: int) -> None:
     """Create a Task work item with a parent issue using GraphQL."""
     task_type_id = get_task_type_id(gql, project_path)
     parent_id = get_work_item_id(gql, project_path, parent_iid)
@@ -216,13 +216,16 @@ def create_task_with_parent(
     }
     """
 
-    result = gql.execute(mutation, variable_values={
-        "projectPath": project_path,
-        "title": title,
-        "description": description,
-        "workItemTypeId": task_type_id,
-        "parentId": parent_id,
-    })
+    result = gql.execute(
+        mutation,
+        variable_values={
+            "projectPath": project_path,
+            "title": title,
+            "description": description,
+            "workItemTypeId": task_type_id,
+            "parentId": parent_id,
+        },
+    )
     errors = result.get("workItemCreate", {}).get("errors", [])
     if errors:
         msg = f"GraphQL errors creating task: {errors}"
@@ -308,6 +311,7 @@ def create_issues(project: Project, gql: GraphQL, project_path: str, ms1_id: int
             issue = project.issues.create(issue_data)
             logger.info(f"    Created issue: #{issue.iid} {title}")
 
+
 def setup_issue_relationships(project: Project) -> None:
     """Set up issue links (blocking, related). Parent-child is set during Task creation."""
     logger.info("\n[5/8] Setting up issue relationships...")
@@ -328,11 +332,13 @@ def setup_issue_relationships(project: Project) -> None:
 
     for source_issue, target_iid, link_type, description in links_to_create:
         try:
-            source_issue.links.create({
-                "target_project_id": project_id,
-                "target_issue_iid": target_iid,
-                "link_type": link_type,
-            })
+            source_issue.links.create(
+                {
+                    "target_project_id": project_id,
+                    "target_issue_iid": target_iid,
+                    "link_type": link_type,
+                }
+            )
             logger.info(f"    Created link: {description}")
         except GitlabCreateError as e:
             if "already exists" in str(e).lower():
@@ -340,11 +346,13 @@ def setup_issue_relationships(project: Project) -> None:
             elif link_type == "blocks" and "not available" in str(e).lower():
                 # Fall back to relates_to if blocking not available (requires premium license)
                 logger.info(f"    Blocking not available, falling back to relates_to for {description}")
-                source_issue.links.create({
-                    "target_project_id": project_id,
-                    "target_issue_iid": target_iid,
-                    "link_type": "relates_to",
-                })
+                source_issue.links.create(
+                    {
+                        "target_project_id": project_id,
+                        "target_issue_iid": target_iid,
+                        "link_type": "relates_to",
+                    }
+                )
                 logger.info("    Created link: #7 relates to #8 (fallback)")
             else:
                 raise
@@ -533,10 +541,10 @@ Project URL: https://gitlab.com/{project_path}
 def create_test_project(project_path: str) -> None:
     """
     Create a GitLab test project with comprehensive test data.
-    
+
     This function contains the main business logic for creating a test project
     that can be used for migration testing.
-    
+
     Args:
         project_path: GitLab project path (e.g., 'namespace/project' or 'group/subgroup/project')
     """
