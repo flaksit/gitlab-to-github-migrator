@@ -60,8 +60,8 @@ Not recommended to use environment variables directly because this shows tokens 
 
 ```bash
 # Set environment variables
-export GITLAB_TOKEN="your_gitlab_token"
-export GITHUB_TOKEN="your_github_token"
+export SOURCE_GITLAB_TOKEN="your_gitlab_token"
+export TARGET_GITHUB_TOKEN="your_github_token"
 ```
 
 ## Usage
@@ -250,7 +250,7 @@ uv run pytest -m integration tests/test_integration_real.py::TestRealAPIIntegrat
 The `create-gitlab-test-project` command creates a GitLab project with test data covering all migration edge cases: labels, milestones (with gaps in numbering), issues (with gaps), issue relationships (parent-child, blocking, related), comments, attachments, branches, and tags.
 
 **Prerequisites:**
-- GitLab token with write access: set `GITLAB_TOKEN` env var or store in `pass` at `gitlab/api/rw_token`
+- GitLab token with write access: set `SOURCE_GITLAB_TOKEN` env var or store in `pass` at `gitlab/api/rw_token`
 - Git configured for SSH access to GitLab
 
 **Usage:**
@@ -276,7 +276,7 @@ The script is idempotent - it can be run multiple times and will skip resources 
 
 Integration tests create temporary repositories in the GitHub organization or user account specified by `GITHUB_TEST_ORG`. If the GitHub token doesn't have delete permissions for repositories, these repositories require manual cleanup. In that case, the tests will display instructions like:
 ```text
-⚠️  Cannot delete test repository <owner>/migration-test-abc123: insufficient permissions
+⚠️  Cannot delete test repository <owner>/gl2ghmigr-full-migration-test-abc123: insufficient permissions
    To clean up test repositories, run:
    uv run delete_test_repos <github_owner> <pass_path>
    where <github_owner> is the GitHub organization or user
@@ -302,7 +302,9 @@ token = result.stdout.strip()
 from github import Auth, Github
 g = Github(auth=Auth.Token(token))
 org = g.get_organization('your-org')  # or g.get_user('your-username') for user account
-repos = [r for r in org.get_repos() if r.name.startswith('migration-test-') or r.name.startswith('deletion-test-')]
+import re
+pattern = re.compile(r'gl2ghmigr-(.+-)?test\\b')
+repos = [r for r in org.get_repos() if pattern.match(r.name)]
 print(f'Found {len(repos)} test repositories to clean up')
 for repo in repos:
     print(f'  - {repo.name} (created: {repo.created_at})')

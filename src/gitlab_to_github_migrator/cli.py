@@ -6,21 +6,16 @@ from __future__ import annotations
 
 import argparse
 import logging
-import os
 import sys
 from logging import Logger
-from typing import Any, Final
+from typing import Any
 
-from .exceptions import MigrationError
+from . import github_utils as ghu
+from . import gitlab_utils as glu
 from .migrator import GitlabToGithubMigrator
-from .utils import PassError, get_pass_value, setup_logging
+from .utils import setup_logging
 
 logger: Logger = logging.getLogger(__name__)
-
-GITLAB_TOKEN_ENV_VAR: Final[str] = "GITLAB_TOKEN"  # noqa: S105
-DEFAULT_GITLAB_TOKEN_PASS_PATH: Final[str] = "gitlab/api/ro_token"  # noqa: S105
-GITHUB_TOKEN_ENV_VAR: Final[str] = "GITHUB_TOKEN"  # noqa: S105
-DEFAULT_GITHUB_TOKEN_PASS_PATH: Final[str] = "github/api/token"  # noqa: S105
 
 
 def parse_arguments() -> argparse.Namespace:
@@ -43,57 +38,17 @@ def parse_arguments() -> argparse.Namespace:
 
     _ = parser.add_argument(
         "--gitlab-token-pass-path",
-        help="Path for GitLab token in pass utility. If not set, will use GITLAB_TOKEN env var, or fall back to default pass path gitlab/api/ro_token. ",
+        help=f"Path for GitLab token in pass utility. If not set, will use {glu.GITLAB_TOKEN_ENV_VAR} env var, or fall back to default pass path {glu.DEFAULT_GITLAB_RO_TOKEN_PASS_PATH}. ",
     )
 
     _ = parser.add_argument(
         "--github-token-pass-path",
-        help="Path for GitHub token in pass utility. If not set, will use GITHUB_TOKEN env var, or fall back to default pass path github/api/token.",
+        help=f"Path for GitHub token in pass utility. If not set, will use {ghu.GITHUB_TOKEN_ENV_VAR} env var, or fall back to default pass path {ghu.DEFAULT_GITHUB_TOKEN_PASS_PATH}.",
     )
 
     _ = parser.add_argument("--verbose", "-v", action="store_true", help="Enable verbose logging")
 
     return parser.parse_args()
-
-
-def _get_gitlab_token(pass_path: str | None = None) -> str | None:
-    """Get GitLab token from pass path, env var GITLAB_TOKEN_ENV_VAR, or default pass location."""
-    # Try pass path first
-    if pass_path:
-        return get_pass_value(pass_path)
-
-    # Try environment variable
-    token: str | None = os.environ.get(GITLAB_TOKEN_ENV_VAR)
-    if token:
-        return token
-
-    # Try default pass path
-    try:
-        return get_pass_value(DEFAULT_GITLAB_TOKEN_PASS_PATH)
-    except PassError:
-        logger.warning(
-            f"No GitLab token specified nor found. If non-anonymous access is required, specify correct pass path or set {GITLAB_TOKEN_ENV_VAR} environment variable."
-        )
-        return None
-
-
-def _get_github_token(pass_path: str | None = None) -> str:
-    """Get GitHub token from pass path, env var GITHUB_TOKEN_ENV_VAR, or default pass location."""
-    # Try pass path first
-    if pass_path:
-        return get_pass_value(pass_path)
-
-    # Try environment variable
-    token: str | None = os.environ.get(GITHUB_TOKEN_ENV_VAR)
-    if token:
-        return token
-
-    # Try default pass path
-    try:
-        return get_pass_value(DEFAULT_GITHUB_TOKEN_PASS_PATH)
-    except PassError:
-        msg = f"No GitHub token specified nor found. Specify correct pass path or set {GITHUB_TOKEN_ENV_VAR} environment variable."
-        raise MigrationError(msg) from None
 
 
 def _print_validation_report(report: dict[str, Any]) -> None:
@@ -180,8 +135,8 @@ def main() -> None:
         args.github_repo,
         label_translations=label_translation,
         local_clone_path=local_clone_path,
-        gitlab_token=_get_gitlab_token(gitlab_token_pass_path),
-        github_token=_get_github_token(github_token_pass_path),
+        gitlab_token=glu.get_readonly_token(pass_path=gitlab_token_pass_path),
+        github_token=ghu.get_token(pass_path=github_token_pass_path),
     )
 
     # Execute migration
