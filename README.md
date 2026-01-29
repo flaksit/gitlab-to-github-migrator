@@ -60,8 +60,8 @@ Not recommended to use environment variables directly because this shows tokens 
 
 ```bash
 # Set environment variables
-export GITLAB_TOKEN="your_gitlab_token"
-export GITHUB_TOKEN="your_github_token"
+export SOURCE_GITLAB_TOKEN="your_gitlab_token"
+export TARGET_GITHUB_TOKEN="your_github_token"
 ```
 
 ## Usage
@@ -250,7 +250,7 @@ uv run pytest -m integration tests/test_integration_real.py::TestRealAPIIntegrat
 The `create-gitlab-test-project` command creates a GitLab project with test data covering all migration edge cases: labels, milestones (with gaps in numbering), issues (with gaps), issue relationships (parent-child, blocking, related), comments, attachments, branches, and tags.
 
 **Prerequisites:**
-- GitLab token with write access: set `GITLAB_TOKEN` env var or store in `pass` at `gitlab/api/rw_token`
+- GitLab token with write access: set `SOURCE_GITLAB_TOKEN` env var or store in `pass` at `gitlab/api/rw_token`
 - Git configured for SSH access to GitLab
 
 **Usage:**

@@ -17,7 +17,6 @@ import os
 import random
 import re
 import string
-import subprocess
 
 import gitlab
 import pytest
@@ -25,35 +24,9 @@ from github import Auth, Github, GithubException
 from gitlab.exceptions import GitlabError
 
 from gitlab_to_github_migrator import GitlabToGithubMigrator
+from gitlab_to_github_migrator import github_utils as ghu
+from gitlab_to_github_migrator import gitlab_utils as glu
 from gitlab_to_github_migrator.exceptions import MigrationError
-
-
-def _get_gitlab_token() -> str | None:
-    """Get GitLab token from environment or pass."""
-    gitlab_token = os.environ.get("GITLAB_TOKEN")
-    if not gitlab_token:
-        try:
-            result = subprocess.run(["pass", "gitlab/api/ro_token"], capture_output=True, text=True, check=True)
-            gitlab_token = result.stdout.strip()
-        except (subprocess.CalledProcessError, FileNotFoundError):
-            pass  # Fall back to anonymous access
-    return gitlab_token
-
-
-def _get_github_token() -> str:
-    """Get GitHub token from environment or pass. Raises if not available."""
-    github_token = os.environ.get("GITHUB_TOKEN")
-    if not github_token:
-        try:
-            result = subprocess.run(["pass", "github/api/token"], capture_output=True, text=True, check=True)
-            github_token = result.stdout.strip()
-        except (subprocess.CalledProcessError, FileNotFoundError) as e:
-            msg = (
-                "GitHub token is required for integration tests. "
-                "Set GITHUB_TOKEN env var or store token in 'pass' at 'github/api/token'."
-            )
-            raise ValueError(msg) from e
-    return github_token
 
 
 def _generate_repo_name(prefix: str = "migration-test") -> str:
@@ -91,13 +64,13 @@ def target_github_org() -> str:
 @pytest.fixture(scope="module")
 def gitlab_token() -> str | None:
     """Get GitLab API token."""
-    return _get_gitlab_token()
+    return glu.get_readonly_token()
 
 
 @pytest.fixture(scope="module")
 def github_token() -> str:
     """Get GitHub API token."""
-    return _get_github_token()
+    return ghu.get_token()
 
 
 @pytest.fixture(scope="module")
@@ -281,7 +254,7 @@ class TestReadOnlyGitlabAccess:
         assert len(child_work_items) > 0, "Expected at least one child work item"
 
         for child in child_work_items:
-            assert child.iid > 0
+            assert int(child.iid) > 0
             assert len(child.title) > 0
             assert child.state in ("OPEN", "CLOSED")
             assert len(child.type) > 0

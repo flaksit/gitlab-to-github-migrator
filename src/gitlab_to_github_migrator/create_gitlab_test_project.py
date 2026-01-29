@@ -6,12 +6,11 @@ for the gitlab-to-github-migrator. Manual steps for attachments are printed
 at the end.
 
 Prerequisites:
-- GITLAB_TOKEN environment variable set, or token stored in pass at gitlab/api/rw_token
+- SOURCE_GITLAB_TOKEN environment variable set, or token stored in pass at gitlab/api/rw_token
 - git installed and configured for SSH access to GitLab
 """
 
 import argparse
-import os
 import subprocess
 import sys
 import tempfile
@@ -21,6 +20,8 @@ from typing import TYPE_CHECKING
 from gitlab import Gitlab, GraphQL
 from gitlab.exceptions import GitlabCreateError, GitlabDeleteError, GitlabGetError
 
+from . import gitlab_utils as glu
+
 if TYPE_CHECKING:
     from gitlab.v4.objects import Project
 
@@ -29,20 +30,14 @@ GITLAB_URL = "https://gitlab.com"
 
 def get_gitlab_token() -> str:
     """Get GitLab token from environment or pass. Requires write access."""
-    token = os.environ.get("GITLAB_TOKEN")
-    if not token:
-        try:
-            result = subprocess.run(
-                ["pass", "gitlab/api/rw_token"],
-                capture_output=True,
-                text=True,
-                check=True,
-            )
-            token = result.stdout.strip()
-        except (subprocess.CalledProcessError, FileNotFoundError) as e:
-            msg = "GitLab token required. Set GITLAB_TOKEN or store in pass at gitlab/api/rw_token"
-            raise ValueError(msg) from e
-    return token
+    token = glu.get_readwrite_token()
+    if token:
+        return token
+    msg = (
+        f"GitLab token required. Set {glu.GITLAB_TOKEN_ENV_VAR} "
+        f"or store in pass at {glu.DEFAULT_GITLAB_RW_TOKEN_PASS_PATH}"
+    )
+    raise ValueError(msg)
 
 
 def run_git(cmd: list[str], cwd: Path | None = None) -> None:
