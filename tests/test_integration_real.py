@@ -491,6 +491,30 @@ class TestFullMigration:
                 if issues_with_comments > 0:
                     print(f"✓ Verified comments on {issues_with_comments} issues")
 
+                # Verify parent-child relationships (sub-issues)
+                # Test project has issue #3 as parent with children #5 and #6
+                try:
+                    parent_issue = github_repo.get_issue(3)
+                    # Get sub-issues using PyGithub's sub_issues property
+                    sub_issues = list(parent_issue.sub_issues) if hasattr(parent_issue, "sub_issues") else []
+                    
+                    # Check if sub-issues were created
+                    sub_issue_numbers = [sub.number for sub in sub_issues]
+                    
+                    # Expected child issues are #5 and #6
+                    expected_children = [5, 6]
+                    for expected_child in expected_children:
+                        assert expected_child in sub_issue_numbers, (
+                            f"Issue #{expected_child} should be a sub-issue of #{parent_issue.number}, "
+                            f"but found sub-issues: {sub_issue_numbers}"
+                        )
+                    
+                    print(f"✓ Verified parent-child relationships (issue #3 has {len(sub_issues)} sub-issues: #{', #'.join(map(str, sub_issue_numbers))})")
+                except AssertionError:
+                    raise
+                except Exception as e:
+                    print(f"⚠️  Could not verify parent-child relationships: {e}")
+
                 # Verify attachment migration
                 attachment_pattern = r"/uploads/[a-f0-9]{32}/[^)\s]+"
                 source_issues_with_attachments = []
