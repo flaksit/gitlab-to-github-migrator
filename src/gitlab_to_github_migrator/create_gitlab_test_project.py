@@ -6,7 +6,8 @@ for the gitlab-to-github-migrator. Manual steps for attachments are printed
 at the end.
 
 Prerequisites:
-- SOURCE_GITLAB_TOKEN environment variable set, or token stored in pass at gitlab/api/rw_token
+- GitLab token with write access (via --gitlab-token-pass-path, SOURCE_GITLAB_TOKEN env var,
+  or stored in pass at gitlab/api/rw_token)
 - git installed and configured for SSH access to GitLab
 """
 
@@ -26,18 +27,6 @@ if TYPE_CHECKING:
     from gitlab.v4.objects import Project
 
 GITLAB_URL = "https://gitlab.com"
-
-
-def get_gitlab_token() -> str:
-    """Get GitLab token from environment or pass. Requires write access."""
-    token = glu.get_readwrite_token()
-    if token:
-        return token
-    msg = (
-        f"GitLab token required. Set {glu.GITLAB_TOKEN_ENV_VAR} "
-        f"or store in pass at {glu.DEFAULT_GITLAB_RW_TOKEN_PASS_PATH}"
-    )
-    raise ValueError(msg)
 
 
 def run_git(cmd: list[str], cwd: Path | None = None) -> None:
@@ -62,13 +51,15 @@ def get_or_create_project(gl: Gitlab, project_path: str) -> Project:
             sys.exit(1)
         namespace_id = namespaces[0].id
 
-        project = gl.projects.create({
-            "name": project_name,
-            "namespace_id": namespace_id,
-            "visibility": "public",
-            "description": "Test project for gitlab-to-github-migrator (https://github.com/flaksit/gitlab-to-github-migrator)",
-            "default_branch": "main",
-        })
+        project = gl.projects.create(
+            {
+                "name": project_name,
+                "namespace_id": namespace_id,
+                "visibility": "public",
+                "description": "Test project for gitlab-to-github-migrator (https://github.com/flaksit/gitlab-to-github-migrator)",
+                "default_branch": "main",
+            }
+        )
         print(f"    Created project: {project.web_url}")
     except GitlabCreateError as e:
         if "has already been taken" in str(e):
@@ -181,9 +172,7 @@ def get_work_item_id(gql: GraphQL, project_path: str, iid: int) -> str:
     return work_item_id
 
 
-def create_task_with_parent(
-    gql: GraphQL, project_path: str, title: str, description: str, parent_iid: int
-) -> None:
+def create_task_with_parent(gql: GraphQL, project_path: str, title: str, description: str, parent_iid: int) -> None:
     """Create a Task work item with a parent issue using GraphQL."""
     task_type_id = get_task_type_id(gql, project_path)
     parent_id = get_work_item_id(gql, project_path, parent_iid)
@@ -212,13 +201,16 @@ def create_task_with_parent(
     }
     """
 
-    result = gql.execute(mutation, variable_values={
-        "projectPath": project_path,
-        "title": title,
-        "description": description,
-        "workItemTypeId": task_type_id,
-        "parentId": parent_id,
-    })
+    result = gql.execute(
+        mutation,
+        variable_values={
+            "projectPath": project_path,
+            "title": title,
+            "description": description,
+            "workItemTypeId": task_type_id,
+            "parentId": parent_id,
+        },
+    )
     errors = result.get("workItemCreate", {}).get("errors", [])
     if errors:
         msg = f"GraphQL errors creating task: {errors}"
@@ -304,6 +296,7 @@ def create_issues(project: Project, gql: GraphQL, project_path: str, ms1_id: int
             issue = project.issues.create(issue_data)
             print(f"    Created issue: #{issue.iid} {title}")
 
+
 def setup_issue_relationships(project: Project) -> None:
     """Set up issue links (blocking, related). Parent-child is set during Task creation."""
     print("\n[5/8] Setting up issue relationships...")
@@ -324,11 +317,13 @@ def setup_issue_relationships(project: Project) -> None:
 
     for source_issue, target_iid, link_type, description in links_to_create:
         try:
-            source_issue.links.create({
-                "target_project_id": project_id,
-                "target_issue_iid": target_iid,
-                "link_type": link_type,
-            })
+            source_issue.links.create(
+                {
+                    "target_project_id": project_id,
+                    "target_issue_iid": target_iid,
+                    "link_type": link_type,
+                }
+            )
             print(f"    Created link: {description}")
         except GitlabCreateError as e:
             if "already exists" in str(e).lower():
@@ -336,11 +331,13 @@ def setup_issue_relationships(project: Project) -> None:
             elif link_type == "blocks" and "not available" in str(e).lower():
                 # Fall back to relates_to if blocking not available (requires premium license)
                 print(f"    Blocking not available, falling back to relates_to for {description}")
-                source_issue.links.create({
-                    "target_project_id": project_id,
-                    "target_issue_iid": target_iid,
-                    "link_type": "relates_to",
-                })
+                source_issue.links.create(
+                    {
+                        "target_project_id": project_id,
+                        "target_issue_iid": target_iid,
+                        "link_type": "relates_to",
+                    }
+                )
                 print("    Created link: #7 relates to #8 (fallback)")
             else:
                 raise
@@ -535,11 +532,17 @@ def parse_args() -> argparse.Namespace:
 Examples:
   %(prog)s flaks/migrator-test-project
   %(prog)s mygroup/subgroup/test-project
+  %(prog)s flaks/test --gitlab-token-pass-path gitlab/admin/token
 """,
     )
     parser.add_argument(
         "project_path",
         help="GitLab project path (e.g., 'namespace/project' or 'group/subgroup/project')",
+    )
+    parser.add_argument(
+        "--gitlab-token-pass-path",
+        help=f"Path for GitLab token in pass utility. If not set, will use {glu.GITLAB_TOKEN_ENV_VAR} env var, "
+        f"or fall back to default pass path {glu.DEFAULT_GITLAB_RW_TOKEN_PASS_PATH}.",
     )
     return parser.parse_args()
 
@@ -547,13 +550,20 @@ Examples:
 def main() -> None:
     args = parse_args()
     project_path = args.project_path
+    gitlab_token_pass_path: str | None = getattr(args, "gitlab_token_pass_path", None)
 
     print("=" * 60)
     print("Creating GitLab test project for migration testing")
     print(f"Project: {project_path}")
     print("=" * 60)
 
-    token = get_gitlab_token()
+    token = glu.get_readwrite_token(pass_path=gitlab_token_pass_path)
+    if not token:
+        print(
+            f"ERROR: GitLab token required. Set {glu.GITLAB_TOKEN_ENV_VAR} env var "
+            f"or store in pass at {glu.DEFAULT_GITLAB_RW_TOKEN_PASS_PATH}."
+        )
+        sys.exit(1)
     gl = Gitlab(GITLAB_URL, private_token=token)
     gql = GraphQL(GITLAB_URL, token=token)
 

@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 import os
 import re
-from typing import TYPE_CHECKING, Final
+from typing import TYPE_CHECKING, Final, Literal, overload
 
 from github import Auth, Github, UnknownObjectException
 from github.AuthenticatedUser import AuthenticatedUser
@@ -35,17 +35,28 @@ def _sanitize_description(description: str | None) -> str:
     return re.sub(r"[\x00-\x08\x0b-\x1f\x7f-\x9f]", "", result)
 
 
+@overload
+def get_token(*, env_var: str, pass_path: None | Literal[""] = None) -> str: ...
+
+
+@overload
+def get_token(*, env_var: None | Literal[""] = None, pass_path: str | None = None) -> str: ...
+
+
 def get_token(
     *,
-    env_var: str = GITHUB_TOKEN_ENV_VAR,
+    env_var: str | None = None,
     pass_path: str | None = None,
 ) -> str:
     """Get GitHub token from pass path, environment variable, or default pass location.
 
+    Only one of env_var or pass_path is allowed to be set to a non-empty string.
+
     Resolution order:
     1. If pass_path is provided, use it
-    2. Try the environment variable
-    3. Try the default pass path
+    2. If env_var is set, use that
+    3. Try the default pass path (github/api/token)
+    4. Try the default env var (TARGET_GITHUB_TOKEN)
 
     Args:
         env_var: Environment variable name to check
@@ -56,25 +67,39 @@ def get_token(
 
     Raises:
         MigrationError: If no token is found (GitHub requires authentication)
+        ValueError: If both env_var and pass_path are set to non-empty strings
     """
-    # Try explicit pass path first
+    # Validate constraint: only one of env_var or pass_path can be non-empty
+    if pass_path and env_var:
+        msg = "Only one of env_var or pass_path can be set to a non-empty string"
+        raise ValueError(msg)
+
+    # 1. If pass_path is provided, use it
     if pass_path:
         return get_pass_value(pass_path)
 
-    # Try environment variable
-    token: str | None = os.environ.get(env_var)
-    if token:
-        return token
+    # 2. If env_var is set (non-empty), check that environment variable
+    if env_var:
+        token: str | None = os.environ.get(env_var)
+        if token:
+            return token
 
-    # Try default pass path
+    # 3. Try the default pass path
     try:
         return get_pass_value(DEFAULT_GITHUB_TOKEN_PASS_PATH)
     except PassError:
-        msg = (
-            f"No GitHub token specified nor found. "
-            f"Specify correct pass path or set {env_var} environment variable."
-        )
-        raise MigrationError(msg) from None
+        pass
+
+    # 4. Try the default env var
+    token = os.environ.get(GITHUB_TOKEN_ENV_VAR)
+    if token:
+        return token
+
+    msg = (
+        f"No GitHub token found. "
+        f"Set {GITHUB_TOKEN_ENV_VAR} environment variable or configure pass at {DEFAULT_GITHUB_TOKEN_PASS_PATH}."
+    )
+    raise MigrationError(msg)
 
 
 def get_client(token: str | None = None) -> Github:

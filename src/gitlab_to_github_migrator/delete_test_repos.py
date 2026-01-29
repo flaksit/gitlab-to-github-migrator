@@ -3,14 +3,6 @@ Cleanup script for orphaned test repositories.
 
 This script identifies and deletes test repositories matching the pattern
 "gl2ghmigr-(.+-)?test" from a specified GitHub owner (organization or user).
-
-Usage:
-    uv run delete_test_repos [github_owner] <pass_path>
-
-Args:
-    github_owner: (Optional) GitHub organization or user to search for test repositories.
-                  If not provided, uses GITHUB_TEST_ORG environment variable.
-    pass_path: Path to 'pass' entry containing GitHub token with admin rights
 """
 
 from __future__ import annotations
@@ -25,16 +17,12 @@ from typing import TYPE_CHECKING
 from github import Auth, Github, GithubException, UnknownObjectException
 from github.AuthenticatedUser import AuthenticatedUser
 
-from .utils import get_pass_value, setup_logging
+from . import github_utils as ghu
+from .utils import setup_logging
 
 if TYPE_CHECKING:
     from github.Organization import Organization
     from github.Repository import Repository
-
-
-def _get_github_token(pass_path: str) -> str:
-    """Get GitHub token from specified pass path."""
-    return get_pass_value(pass_path)
 
 
 def get_owner_repos(client: Github, owner_name: str) -> tuple[str, list[Repository]]:
@@ -79,9 +67,9 @@ def get_owner_repos(client: Github, owner_name: str) -> tuple[str, list[Reposito
         return "organization", repos
 
 
-def delete_test_repositories(github_owner: str, pass_path: str) -> None:
+def delete_test_repositories(github_owner: str, github_token_pass_path: str | None) -> None:
     """Find and delete test repositories for the specified GitHub owner."""
-    token = _get_github_token(pass_path)
+    token = ghu.get_token(pass_path=github_token_pass_path)
     github_client = Github(auth=Auth.Token(token))
 
     try:
@@ -139,9 +127,10 @@ def main() -> None:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=textwrap.dedent("""
             Examples:
-              uv run delete_test_repos your-org github/api/token       # Delete from organization
-              uv run delete_test_repos your-user github/admin/token    # Delete from user account
-              uv run delete_test_repos github/admin/token              # Uses GITHUB_TEST_ORG env var
+              uv run delete_test_repos your-org                              # Delete from organization
+              uv run delete_test_repos your-user                             # Delete from user account
+              uv run delete_test_repos                                       # Uses GITHUB_TEST_ORG env var
+              uv run delete_test_repos your-org --github-token-pass-path github/admin/token
         """),
     )
     parser.add_argument(
@@ -150,7 +139,11 @@ def main() -> None:
         help="GitHub organization or user to search for test repositories. "
         "If not provided, uses GITHUB_TEST_ORG environment variable.",
     )
-    parser.add_argument("pass_path", help="Path to 'pass' entry containing GitHub token with admin rights")
+    parser.add_argument(
+        "--github-token-pass-path",
+        help=f"Path for GitHub token in pass utility. If not set, will use {ghu.GITHUB_TOKEN_ENV_VAR} env var, "
+        f"or fall back to default pass path {ghu.DEFAULT_GITHUB_TOKEN_PASS_PATH}.",
+    )
     parser.add_argument("--verbose", "-v", action="store_true", help="Enable verbose logging")
 
     args = parser.parse_args()
@@ -166,7 +159,8 @@ def main() -> None:
                 "Either provide github_owner as an argument or set GITHUB_TEST_ORG environment variable."
             )
 
-    delete_test_repositories(github_owner, args.pass_path)
+    github_token_pass_path: str | None = getattr(args, "github_token_pass_path", None)
+    delete_test_repositories(github_owner, github_token_pass_path)
 
 
 if __name__ == "__main__":
