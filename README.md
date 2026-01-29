@@ -45,7 +45,23 @@ uv run gitlab-to-github-migrator --help
 - **GitLab Token**: Read access to source project, issues, milestones, and labels
 - **GitHub Token**: Full repository access for target user/organization. Optional delete_repo permission for cleanup script.
 
-### Option 1: Using `pass` Utility
+### Token Resolution Order
+
+When no explicit token path is provided via CLI options, tokens are resolved in this order:
+1. Environment variable (`SOURCE_GITLAB_TOKEN` / `TARGET_GITHUB_TOKEN`)
+2. Default `pass` path (`gitlab/api/ro_token` / `github/api/token`)
+
+### Option 1: Using Environment Variables
+
+```bash
+# Set environment variables
+export SOURCE_GITLAB_TOKEN="your_gitlab_token"
+export TARGET_GITHUB_TOKEN="your_github_token"
+```
+
+Note: Environment variables may be visible in process lists and logs.
+
+### Option 2: Using `pass` Utility
 
 ```bash
 # Store GitLab token in the default location (read-only recommended)
@@ -53,15 +69,6 @@ pass insert gitlab/api/ro_token
 
 # Store GitHub token in the default location (requires repo creation permissions)
 pass insert github/api/token
-```
-
-### Option 2: Using Environment Variables
-Not recommended to use environment variables directly because this shows tokens in process lists and logs.
-
-```bash
-# Set environment variables
-export SOURCE_GITLAB_TOKEN="your_gitlab_token"
-export TARGET_GITHUB_TOKEN="your_github_token"
 ```
 
 ## Usage

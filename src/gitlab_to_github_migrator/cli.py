@@ -38,12 +38,12 @@ def parse_arguments() -> argparse.Namespace:
 
     _ = parser.add_argument(
         "--gitlab-token-pass-path",
-        help=f"Path for GitLab token in pass utility. If not set, will use {glu.GITLAB_TOKEN_ENV_VAR} env var, or fall back to default pass path {glu.DEFAULT_GITLAB_RO_TOKEN_PASS_PATH}. ",
+        help=f"Path for GitLab token in pass utility. If not set, will try {glu.GITLAB_TOKEN_ENV_VAR} env var first, then fall back to default pass path {glu.DEFAULT_GITLAB_RO_TOKEN_PASS_PATH}.",
     )
 
     _ = parser.add_argument(
         "--github-token-pass-path",
-        help=f"Path for GitHub token in pass utility. If not set, will use {ghu.GITHUB_TOKEN_ENV_VAR} env var, or fall back to default pass path {ghu.DEFAULT_GITHUB_TOKEN_PASS_PATH}.",
+        help=f"Path for GitHub token in pass utility. If not set, will try {ghu.GITHUB_TOKEN_ENV_VAR} env var first, then fall back to default pass path {ghu.DEFAULT_GITHUB_TOKEN_PASS_PATH}.",
     )
 
     _ = parser.add_argument("--verbose", "-v", action="store_true", help="Enable verbose logging")

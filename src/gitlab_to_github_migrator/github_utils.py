@@ -48,15 +48,14 @@ def get_token(
     env_var: str | None = None,
     pass_path: str | None = None,
 ) -> str:
-    """Get GitHub token from pass path, environment variable, or default pass location.
+    """Get GitHub token from pass path, environment variable, or default location.
 
     Only one of env_var or pass_path is allowed to be set to a non-empty string.
 
     Resolution order:
-    1. If pass_path is provided, use it
-    2. If env_var is set, use that
+    1. If pass_path is provided, use it; if env_var is provided, use that
+    2. Try the default env var (TARGET_GITHUB_TOKEN)
     3. Try the default pass path (github/api/token)
-    4. Try the default env var (TARGET_GITHUB_TOKEN)
 
     Args:
         env_var: Environment variable name to check
@@ -78,22 +77,22 @@ def get_token(
     if pass_path:
         return get_pass_value(pass_path)
 
-    # 2. If env_var is set (non-empty), check that environment variable
+    # 1. If env_var is set (non-empty), check that environment variable
     if env_var:
         token: str | None = os.environ.get(env_var)
         if token:
             return token
+
+    # 2. Try the default env var
+    token = os.environ.get(GITHUB_TOKEN_ENV_VAR)
+    if token:
+        return token
 
     # 3. Try the default pass path
     try:
         return get_pass_value(DEFAULT_GITHUB_TOKEN_PASS_PATH)
     except PassError:
         pass
-
-    # 4. Try the default env var
-    token = os.environ.get(GITHUB_TOKEN_ENV_VAR)
-    if token:
-        return token
 
     msg = (
         f"No GitHub token found. "
