@@ -12,7 +12,6 @@ from .exceptions import MigrationError
 from .utils import PassError, get_pass_value
 
 if TYPE_CHECKING:
-    from github.Issue import Issue
     from github.Organization import Organization
     from github.Repository import Repository
 
@@ -167,24 +166,4 @@ def create_repo(client: Github, repo_path: str, description: str | None) -> Repo
         raise
 
 
-def get_sub_issue_numbers(issue: Issue) -> list[int]:
-    """Get list of sub-issue numbers for a GitHub issue.
 
-    Args:
-        issue: GitHub Issue object
-
-    Returns:
-        List of issue numbers that are sub-issues of the given issue
-
-    Note:
-        Uses PyGithub's get_sub_issues() method to retrieve sub-issues.
-        Returns an empty list if the issue has no sub-issues or if an error occurs.
-    """
-    try:
-        # PyGithub Issue.get_sub_issues() returns a PaginatedList of sub-issues
-        sub_issues = issue.get_sub_issues()
-        return [sub_issue.number for sub_issue in sub_issues]
-    except Exception as e:
-        # Log but return empty list on error
-        logger.warning(f"Could not get sub-issues for issue #{issue.number}: {e}")
-        return []

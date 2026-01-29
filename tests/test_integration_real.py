@@ -21,12 +21,10 @@ import string
 import gitlab
 import pytest
 from github import Auth, Github, GithubException
-from gitlab.exceptions import GitlabError
 
 from gitlab_to_github_migrator import GitlabToGithubMigrator
 from gitlab_to_github_migrator import github_utils as ghu
 from gitlab_to_github_migrator import gitlab_utils as glu
-from gitlab_to_github_migrator.exceptions import MigrationError
 
 
 def _generate_repo_name(test_type: str = "generic") -> str:
@@ -205,6 +203,7 @@ class TestReadOnlyGitlabAccess:
         self,
         source_gitlab_project: str,
         gitlab_token: str | None,
+        gitlab_client: gitlab.Gitlab,
         github_token: str,
     ) -> None:
         """Test the GitLab GraphQL Work Items API functionality."""
@@ -219,24 +218,24 @@ class TestReadOnlyGitlabAccess:
             github_token=github_token,
         )
 
-        issues = migrator.gitlab_project.issues.list(iterator=True, state="all")
+        # Use the extracted utility function to get parent-child relationships
+        from gitlab_to_github_migrator.gitlab_utils import get_parent_child_relationships
 
-        # Find an issue that actually has work items by querying GraphQL API
-        # Limit to first 20 issues to avoid excessive API calls
-        for issue in issues:
-            try:
-                child_work_items = migrator.get_work_item_children(issue.iid)
-                if child_work_items:
-                    break
-            except (GitlabError, MigrationError):
-                # Skip issues that fail to query (e.g., not a work item type)
-                continue
-        else:
-            pytest.skip("No issues with work items found for GraphQL testing")
+        gitlab_parent_children = get_parent_child_relationships(
+            gitlab_client, migrator.graphql_client, source_gitlab_project
+        )
 
-        # Test GraphQL Work Items API returns valid values
-        if not child_work_items:
-            pytest.skip("No child work items found for the test issue")
+        if not gitlab_parent_children:
+            pytest.skip("No parent-child relationships found in GitLab project")
+
+        # Test that we found valid parent-child relationships
+        assert len(gitlab_parent_children) > 0
+
+        # Test GraphQL Work Items API returns valid values for the first parent
+        parent_iid = next(iter(gitlab_parent_children.keys()))
+        child_work_items = migrator.get_work_item_children(parent_iid)
+
+        assert child_work_items, f"Expected children for issue #{parent_iid}"
 
         for child in child_work_items:
             assert int(child.iid) > 0
@@ -480,7 +479,6 @@ class TestFullMigration:
                 # Verify parent-child relationships (sub-issues)
                 # Dynamically get parent-child relationships from GitLab and verify they exist in GitHub
                 try:
-                    from gitlab_to_github_migrator.github_utils import get_sub_issue_numbers
                     from gitlab_to_github_migrator.gitlab_utils import get_parent_child_relationships
 
                     # Get parent-child relationships from GitLab
@@ -497,7 +495,10 @@ class TestFullMigration:
                             try:
                                 # Get corresponding GitHub issue
                                 parent_github_issue = github_repo.get_issue(parent_iid)
-                                github_sub_issue_numbers = get_sub_issue_numbers(parent_github_issue)
+                                
+                                # Get sub-issues directly from PyGithub
+                                github_sub_issues = list(parent_github_issue.get_sub_issues())
+                                github_sub_issue_numbers = [sub.number for sub in github_sub_issues]
 
                                 # Verify all children exist in GitHub
                                 missing_children = set(child_iids) - set(github_sub_issue_numbers)
