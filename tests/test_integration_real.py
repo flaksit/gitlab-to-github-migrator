@@ -156,7 +156,6 @@ class TestReadOnlyGitlabAccess:
         source_gitlab_project: str,
     ) -> None:
         """Test reading cross-linked issues from GitLab."""
-        # TODO Don't retrieve all (or 20) issues: use .list(iterator=True) and stop when we found one with links
         source_project = gitlab_client.projects.get(source_gitlab_project)
         issues = source_project.issues.list(iterator=True, state="all")
 
@@ -182,8 +181,6 @@ class TestReadOnlyGitlabAccess:
         source_gitlab_project: str,
     ) -> None:
         """Test finding and accessing GitLab attachments."""
-        # TODO Don't retrieve all (or 50) issues: use .list(iterator=True) and stop when we found one with attachments
-
         source_project = gitlab_client.projects.get(source_gitlab_project)
         issues = source_project.issues.list(iterator=True, state="all")
 
@@ -207,6 +204,8 @@ class TestReadOnlyGitlabAccess:
         github_token: str,
     ) -> None:
         """Test the GitLab GraphQL Work Items API functionality."""
+        # TODO Rewrite this test so it doesn't use migrator, but the gitlab_utils function directly.
+        #      Add a fixture for gitlab_graphql_client if needed.
         if not gitlab_token:
             pytest.skip("GitLab token required for GraphQL API testing")
 
@@ -479,10 +478,8 @@ class TestFullMigration:
                 # Verify parent-child relationships (sub-issues)
                 # Dynamically get parent-child relationships from GitLab and verify they exist in GitHub
                 try:
-                    from gitlab_to_github_migrator.gitlab_utils import get_parent_child_relationships
-
                     # Get parent-child relationships from GitLab
-                    gitlab_parent_children = get_parent_child_relationships(
+                    gitlab_parent_children = glu.get_parent_child_relationships(
                         gitlab_client, migrator.graphql_client, source_gitlab_project
                     )
 
@@ -584,6 +581,7 @@ class TestFullMigration:
             if migrator._github_repo is not None:
                 print(f"\n⚠️  Did not delete test repository {repo_path} so that you can inspect it manually.")
                 print("   To clean up all test repos, run: uv run delete-test-repos")
+
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v", "-s", "-ra", "--tb=short"])
