@@ -934,13 +934,9 @@ class GitlabToGithubMigrator:
                         if child_gitlab_iid in github_issue_dict:
                             child_github_issue = github_issue_dict[child_gitlab_iid]
 
-                            # Create sub-issue relationship
-                            # Note: This will attempt to use GitHub's new sub-issues API
-                            self.create_github_sub_issue(
-                                parent_github_issue,
-                                f"Link to #{child_github_issue.number}",
-                                f"This issue is linked as a child of #{parent_github_issue.number}.\n\nOriginal GitLab relationship: {child_relation.type}",
-                            )
+                            # Link existing child issue to parent using GitHub's sub-issues API
+                            # Note: PyGithub requires the issue ID (not number) for sub-issue operations
+                            parent_github_issue.add_sub_issue(child_github_issue.id)
 
                             logger.debug(f"Linked issue #{child_gitlab_iid} as sub-issue of #{parent_gitlab_iid}")
                         else:
