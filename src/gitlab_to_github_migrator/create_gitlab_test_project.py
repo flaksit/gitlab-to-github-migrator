@@ -11,6 +11,7 @@ Prerequisites:
 """
 
 import argparse
+import logging
 import subprocess
 import sys
 import tempfile
@@ -21,11 +22,14 @@ from gitlab import Gitlab, GraphQL
 from gitlab.exceptions import GitlabCreateError, GitlabDeleteError, GitlabGetError
 
 from . import gitlab_utils as glu
+from .utils import setup_logging
 
 if TYPE_CHECKING:
     from gitlab.v4.objects import Project
 
 GITLAB_URL = "https://gitlab.com"
+
+logger = logging.getLogger(__name__)
 
 
 def get_gitlab_token() -> str:
@@ -42,13 +46,13 @@ def get_gitlab_token() -> str:
 
 def run_git(cmd: list[str], cwd: Path | None = None) -> None:
     """Run a git command."""
-    print(f"  $ {' '.join(cmd)}")
+    logger.info(f"  $ {' '.join(cmd)}")
     subprocess.run(cmd, check=True, cwd=cwd)
 
 
 def get_or_create_project(gl: Gitlab, project_path: str) -> Project:
     """Create the test project or get it if it already exists."""
-    print("\n[1/8] Creating project...")
+    logger.info("\n[1/8] Creating project...")
 
     # Handle nested namespaces like "group/subgroup/project"
     path_parts = project_path.split("/")
@@ -58,7 +62,7 @@ def get_or_create_project(gl: Gitlab, project_path: str) -> Project:
     try:
         namespaces = gl.namespaces.list(search=namespace)
         if not namespaces:
-            print(f"ERROR: Namespace '{namespace}' not found")
+            logger.error(f"Namespace '{namespace}' not found")
             sys.exit(1)
         namespace_id = namespaces[0].id
 
@@ -69,22 +73,22 @@ def get_or_create_project(gl: Gitlab, project_path: str) -> Project:
             "description": "Test project for gitlab-to-github-migrator (https://github.com/flaksit/gitlab-to-github-migrator)",
             "default_branch": "main",
         })
-        print(f"    Created project: {project.web_url}")
+        logger.info(f"    Created project: {project.web_url}")
     except GitlabCreateError as e:
         if "has already been taken" in str(e):
-            print("    Project already exists, fetching...")
+            logger.info("    Project already exists, fetching...")
             project = gl.projects.get(project_path)
-            print(f"    Found project: {project.web_url}")
+            logger.info(f"    Found project: {project.web_url}")
         else:
             raise
 
-    print(f"    Project ID: {project.id}")
+    logger.info(f"    Project ID: {project.id}")
     return project
 
 
 def create_labels(project: Project) -> None:
     """Create test labels."""
-    print("\n[2/8] Creating labels...")
+    logger.info("\n[2/8] Creating labels...")
     labels = [
         ("p_high", "#FF0000", "High priority"),
         ("p_low", "#00FF00", "Low priority"),
@@ -95,44 +99,44 @@ def create_labels(project: Project) -> None:
     for name, color, desc in labels:
         try:
             project.labels.create({"name": name, "color": color, "description": desc})
-            print(f"    Created label: {name}")
+            logger.info(f"    Created label: {name}")
         except GitlabCreateError:
-            print(f"    Label already exists: {name}")
+            logger.info(f"    Label already exists: {name}")
 
 
 def create_milestones(project: Project) -> tuple[int, int]:
     """Create test milestones with a gap at #2. Returns (ms1_id, ms3_id)."""
-    print("\n[3/8] Creating milestones (with gap at #2)...")
+    logger.info("\n[3/8] Creating milestones (with gap at #2)...")
 
     # Milestone v1.0
     try:
         ms1 = project.milestones.create({"title": "v1.0", "due_date": "2024-06-15"})
-        print(f"    Created milestone: v1.0 (iid={ms1.iid})")
+        logger.info(f"    Created milestone: v1.0 (iid={ms1.iid})")
     except GitlabCreateError:
         ms1 = next(m for m in project.milestones.list(get_all=True) if m.title == "v1.0")
-        print(f"    Milestone already exists: v1.0 (iid={ms1.iid})")
+        logger.info(f"    Milestone already exists: v1.0 (iid={ms1.iid})")
 
     # Dummy milestone to create gap
     try:
         ms_dummy = project.milestones.create({"title": "DELETE-ME"})
-        print(f"    Created placeholder milestone: DELETE-ME (iid={ms_dummy.iid})")
+        logger.info(f"    Created placeholder milestone: DELETE-ME (iid={ms_dummy.iid})")
         ms_dummy.delete()
-        print("    Deleted placeholder milestone to create gap")
+        logger.info("    Deleted placeholder milestone to create gap")
     except GitlabCreateError:
-        print("    Placeholder milestone already handled")
+        logger.info("    Placeholder milestone already handled")
 
     # Milestone v2.0
     try:
         ms3 = project.milestones.create({"title": "v2.0", "due_date": "2025-12-31"})
-        print(f"    Created milestone: v2.0 (iid={ms3.iid})")
+        logger.info(f"    Created milestone: v2.0 (iid={ms3.iid})")
     except GitlabCreateError:
         ms3 = next(m for m in project.milestones.list(get_all=True) if m.title == "v2.0")
-        print(f"    Milestone already exists: v2.0 (iid={ms3.iid})")
+        logger.info(f"    Milestone already exists: v2.0 (iid={ms3.iid})")
 
     # Close v1.0
     ms1.state_event = "close"
     ms1.save()
-    print("    Closed milestone v1.0")
+    logger.info("    Closed milestone v1.0")
 
     return ms1.id, ms3.id
 
@@ -224,12 +228,12 @@ def create_task_with_parent(
         msg = f"GraphQL errors creating task: {errors}"
         raise RuntimeError(msg)
     work_item = result.get("workItemCreate", {}).get("workItem", {})
-    print(f"    Created task: #{work_item.get('iid')} {work_item.get('title')} (child of #{parent_iid})")
+    logger.info(f"    Created task: #{work_item.get('iid')} {work_item.get('title')} (child of #{parent_iid})")
 
 
 def create_issues(project: Project, gql: GraphQL, project_path: str, ms1_id: int, ms3_id: int) -> None:
     """Create test issues with a gap at #4, tasks at #5-6, and issues at #7-8."""
-    print("\n[4/8] Creating issues (with gap at #4, tasks at #5-6)...")
+    logger.info("\n[4/8] Creating issues (with gap at #4, tasks at #5-6)...")
 
     existing_issues = {i.title: i for i in project.issues.list(get_all=True, state="all")}
 
@@ -243,7 +247,7 @@ def create_issues(project: Project, gql: GraphQL, project_path: str, ms1_id: int
 
     for title, desc, issue_labels, milestone_id in first_batch:
         if title in existing_issues:
-            print(f"    Issue already exists: #{existing_issues[title].iid} {title}")
+            logger.info(f"    Issue already exists: #{existing_issues[title].iid} {title}")
         else:
             issue_data: dict[str, object] = {
                 "title": title,
@@ -253,16 +257,16 @@ def create_issues(project: Project, gql: GraphQL, project_path: str, ms1_id: int
             if milestone_id:
                 issue_data["milestone_id"] = milestone_id
             issue = project.issues.create(issue_data)
-            print(f"    Created issue: #{issue.iid} {title}")
+            logger.info(f"    Created issue: #{issue.iid} {title}")
 
     # Delete dummy issue #4 if it exists
     try:
         dummy_issue = project.issues.get(4)
         if dummy_issue.title == "DELETE-ME":
             dummy_issue.delete()
-            print("    Deleted placeholder issue #4 to create gap")
+            logger.info("    Deleted placeholder issue #4 to create gap")
     except (GitlabGetError, GitlabDeleteError):
-        print("    Placeholder issue #4 already deleted or doesn't exist")
+        logger.info("    Placeholder issue #4 already deleted or doesn't exist")
 
     # Create Tasks #5 and #6 (children of issue #3) via GraphQL
     tasks_to_create = [
@@ -273,16 +277,16 @@ def create_issues(project: Project, gql: GraphQL, project_path: str, ms1_id: int
         if task_title not in existing_issues:
             create_task_with_parent(gql, project_path, task_title, task_desc, parent_iid=3)
         else:
-            print(f"    Task already exists: #{existing_issues[task_title].iid} {task_title}")
+            logger.info(f"    Task already exists: #{existing_issues[task_title].iid} {task_title}")
 
     # Close task #6
     task6 = project.issues.get(6)
     if task6.state != "closed":
         task6.state_event = "close"
         task6.save()
-        print("    Closed task #6")
+        logger.info("    Closed task #6")
     else:
-        print("    Task #6 already closed")
+        logger.info("    Task #6 already closed")
 
     # Second batch: issues #7-8
     second_batch: list[tuple[str, str, list[str], int | None]] = [
@@ -292,7 +296,7 @@ def create_issues(project: Project, gql: GraphQL, project_path: str, ms1_id: int
 
     for title, desc, issue_labels, milestone_id in second_batch:
         if title in existing_issues:
-            print(f"    Issue already exists: #{existing_issues[title].iid} {title}")
+            logger.info(f"    Issue already exists: #{existing_issues[title].iid} {title}")
         else:
             issue_data = {
                 "title": title,
@@ -302,11 +306,11 @@ def create_issues(project: Project, gql: GraphQL, project_path: str, ms1_id: int
             if milestone_id:
                 issue_data["milestone_id"] = milestone_id
             issue = project.issues.create(issue_data)
-            print(f"    Created issue: #{issue.iid} {title}")
+            logger.info(f"    Created issue: #{issue.iid} {title}")
 
 def setup_issue_relationships(project: Project) -> None:
     """Set up issue links (blocking, related). Parent-child is set during Task creation."""
-    print("\n[5/8] Setting up issue relationships...")
+    logger.info("\n[5/8] Setting up issue relationships...")
 
     project_id = project.id
     issue1 = project.issues.get(1)
@@ -329,26 +333,26 @@ def setup_issue_relationships(project: Project) -> None:
                 "target_issue_iid": target_iid,
                 "link_type": link_type,
             })
-            print(f"    Created link: {description}")
+            logger.info(f"    Created link: {description}")
         except GitlabCreateError as e:
             if "already exists" in str(e).lower():
-                print(f"    Link already exists: {description}")
+                logger.info(f"    Link already exists: {description}")
             elif link_type == "blocks" and "not available" in str(e).lower():
                 # Fall back to relates_to if blocking not available (requires premium license)
-                print(f"    Blocking not available, falling back to relates_to for {description}")
+                logger.info(f"    Blocking not available, falling back to relates_to for {description}")
                 source_issue.links.create({
                     "target_project_id": project_id,
                     "target_issue_iid": target_iid,
                     "link_type": "relates_to",
                 })
-                print("    Created link: #7 relates to #8 (fallback)")
+                logger.info("    Created link: #7 relates to #8 (fallback)")
             else:
                 raise
 
 
 def add_comments_and_close_issue(project: Project) -> None:
     """Add a comment to issue #1 and close it."""
-    print("\n[6/8] Adding comments and system notes...")
+    logger.info("\n[6/8] Adding comments and system notes...")
 
     issue1 = project.issues.get(1)
 
@@ -357,22 +361,22 @@ def add_comments_and_close_issue(project: Project) -> None:
     has_comment = any("This is a regular comment" in (n.body or "") for n in notes)
     if not has_comment:
         issue1.notes.create({"body": "This is a regular comment on the basic issue."})
-        print("    Added comment to issue #1")
+        logger.info("    Added comment to issue #1")
     else:
-        print("    Comment already exists on issue #1")
+        logger.info("    Comment already exists on issue #1")
 
     # Close issue #1 to generate system note
     if issue1.state != "closed":
         issue1.state_event = "close"
         issue1.save()
-        print("    Closed issue #1")
+        logger.info("    Closed issue #1")
     else:
-        print("    Issue #1 already closed")
+        logger.info("    Issue #1 already closed")
 
 
 def create_git_content(project_path: str) -> None:
     """Create a feature branch and tag in the repository."""
-    print("\n[7/8] Creating git content (branch and tag)...")
+    logger.info("\n[7/8] Creating git content (branch and tag)...")
 
     with tempfile.TemporaryDirectory() as tmpdir:
         repo_path = Path(tmpdir) / "repo"
@@ -426,9 +430,9 @@ This project contains test data for verifying migration functionality:
                 run_git(["git", "commit", "-m", "Initial commit"], cwd=repo_path)
 
             run_git(["git", "push", "-u", "origin", "main"], cwd=repo_path)
-            print("    Created and pushed main branch")
+            logger.info("    Created and pushed main branch")
         else:
-            print("    Branch main already exists")
+            logger.info("    Branch main already exists")
 
         # Check if feature branch exists
         result = subprocess.run(
@@ -448,9 +452,9 @@ This project contains test data for verifying migration functionality:
             run_git(["git", "add", "sample.txt"], cwd=repo_path)
             run_git(["git", "commit", "-m", "Add sample feature file"], cwd=repo_path)
             run_git(["git", "push", "-u", "origin", "feature/sample"], cwd=repo_path)
-            print("    Created and pushed feature/sample branch")
+            logger.info("    Created and pushed feature/sample branch")
         else:
-            print("    Branch feature/sample already exists")
+            logger.info("    Branch feature/sample already exists")
 
         # Check if tag exists
         result = subprocess.run(
@@ -466,16 +470,16 @@ This project contains test data for verifying migration functionality:
             run_git(["git", "checkout", "main"], cwd=repo_path)
             run_git(["git", "tag", "-a", "v1.0.0", "-m", "First stable release"], cwd=repo_path)
             run_git(["git", "push", "--tags"], cwd=repo_path)
-            print("    Created and pushed v1.0.0 tag")
+            logger.info("    Created and pushed v1.0.0 tag")
         else:
-            print("    Tag v1.0.0 already exists")
+            logger.info("    Tag v1.0.0 already exists")
 
 
 def print_manual_instructions(project_path: str) -> None:
     """Print instructions for manual steps that can't be automated."""
-    print("\n[8/8] MANUAL STEPS REQUIRED")
-    print("=" * 60)
-    print(
+    logger.info("\n[8/8] MANUAL STEPS REQUIRED")
+    logger.info("=" * 60)
+    logger.info(
         f"""
 The following steps must be done manually via the GitLab web UI:
 
@@ -522,8 +526,37 @@ This tests that the migrator caches attachments by URL.
 Project URL: https://gitlab.com/{project_path}
 """
     )
-    print("=" * 60)
-    print("Script completed successfully!")
+    logger.info("=" * 60)
+    logger.info("Script completed successfully!")
+
+
+def create_test_project(project_path: str) -> None:
+    """
+    Create a GitLab test project with comprehensive test data.
+    
+    This function contains the main business logic for creating a test project
+    that can be used for migration testing.
+    
+    Args:
+        project_path: GitLab project path (e.g., 'namespace/project' or 'group/subgroup/project')
+    """
+    logger.info("=" * 60)
+    logger.info("Creating GitLab test project for migration testing")
+    logger.info(f"Project: {project_path}")
+    logger.info("=" * 60)
+
+    token = get_gitlab_token()
+    gl = Gitlab(GITLAB_URL, private_token=token)
+    gql = GraphQL(GITLAB_URL, token=token)
+
+    project = get_or_create_project(gl, project_path)
+    create_labels(project)
+    ms1_id, ms3_id = create_milestones(project)
+    create_issues(project, gql, project_path, ms1_id, ms3_id)
+    setup_issue_relationships(project)
+    add_comments_and_close_issue(project)
+    create_git_content(project_path)
+    print_manual_instructions(project_path)
 
 
 def parse_args() -> argparse.Namespace:
@@ -541,30 +574,15 @@ Examples:
         "project_path",
         help="GitLab project path (e.g., 'namespace/project' or 'group/subgroup/project')",
     )
+    parser.add_argument("--verbose", "-v", action="store_true", help="Enable verbose logging")
     return parser.parse_args()
 
 
 def main() -> None:
+    """Main entry point - handles argument parsing and logging setup."""
     args = parse_args()
-    project_path = args.project_path
-
-    print("=" * 60)
-    print("Creating GitLab test project for migration testing")
-    print(f"Project: {project_path}")
-    print("=" * 60)
-
-    token = get_gitlab_token()
-    gl = Gitlab(GITLAB_URL, private_token=token)
-    gql = GraphQL(GITLAB_URL, token=token)
-
-    project = get_or_create_project(gl, project_path)
-    create_labels(project)
-    ms1_id, ms3_id = create_milestones(project)
-    create_issues(project, gql, project_path, ms1_id, ms3_id)
-    setup_issue_relationships(project)
-    add_comments_and_close_issue(project)
-    create_git_content(project_path)
-    print_manual_instructions(project_path)
+    setup_logging(verbose=args.verbose)
+    create_test_project(args.project_path)
 
 
 if __name__ == "__main__":

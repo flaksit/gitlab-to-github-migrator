@@ -16,6 +16,7 @@ Args:
 from __future__ import annotations
 
 import argparse
+import logging
 import os
 import re
 import sys
@@ -30,6 +31,8 @@ from .utils import get_pass_value, setup_logging
 if TYPE_CHECKING:
     from github.Organization import Organization
     from github.Repository import Repository
+
+logger = logging.getLogger(__name__)
 
 
 def _get_github_token(pass_path: str) -> str:
@@ -86,49 +89,49 @@ def delete_test_repositories(github_owner: str, pass_path: str) -> None:
 
     try:
         owner_type, repos = get_owner_repos(github_client, github_owner)
-        print(f"🔍 Scanning repositories for {github_owner} ({owner_type})...")
+        logger.info(f"🔍 Scanning repositories for {github_owner} ({owner_type})...")
 
         test_repo_pattern = re.compile(r"gl2ghmigr-(.+-)?test\b")
         test_repos = [repo for repo in repos if test_repo_pattern.match(repo.name)]
 
         if not test_repos:
-            print("✅ No test repositories found to cleanup")
+            logger.info("✅ No test repositories found to cleanup")
             return
 
-        print(f"📋 Found {len(test_repos)} test repositories:")
+        logger.info(f"📋 Found {len(test_repos)} test repositories:")
         for repo in test_repos:
-            print(f"  - {repo.name} (created: {repo.created_at})")
+            logger.info(f"  - {repo.name} (created: {repo.created_at})")
 
         # Auto-confirm deletion since this is a cleanup script
-        print(f"\n🚀 Proceeding to delete all {len(test_repos)} test repositories...")
+        logger.info(f"\n🚀 Proceeding to delete all {len(test_repos)} test repositories...")
 
-        print("\n🗑️  Deleting repositories...")
+        logger.info("\n🗑️  Deleting repositories...")
         success_count = 0
         failed_repos: list[tuple[str, str]] = []
 
         for repo in test_repos:
             try:
                 repo.delete()
-                print(f"✅ Deleted: {repo.name}")
+                logger.info(f"✅ Deleted: {repo.name}")
                 success_count += 1
             except GithubException as e:
-                print(f"❌ Failed to delete {repo.name}: {e}")
+                logger.exception(f"❌ Failed to delete {repo.name}")
                 failed_repos.append((repo.name, str(e)))
 
-        print("\n📊 Cleanup Summary:")
-        print(f"  ✅ Successfully deleted: {success_count}")
-        print(f"  ❌ Failed to delete: {len(failed_repos)}")
+        logger.info("\n📊 Cleanup Summary:")
+        logger.info(f"  ✅ Successfully deleted: {success_count}")
+        logger.info(f"  ❌ Failed to delete: {len(failed_repos)}")
 
         if failed_repos:
-            print("\n❌ Failed repositories:")
+            logger.error("\n❌ Failed repositories:")
             for repo_name, error in failed_repos:
-                print(f"  - {repo_name}: {error}")
+                logger.error(f"  - {repo_name}: {error}")
 
         if success_count > 0:
-            print(f"\n🎉 Cleanup completed! Deleted {success_count} test repositories.")
+            logger.info(f"\n🎉 Cleanup completed! Deleted {success_count} test repositories.")
 
-    except (GithubException, ValueError) as e:
-        print(f"❌ Error during cleanup: {e}")
+    except (GithubException, ValueError):
+        logger.exception("❌ Error during cleanup")
         sys.exit(1)
 
 
