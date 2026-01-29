@@ -556,17 +556,8 @@ class TestFullMigration:
         finally:
             # Cleanup - only if repo was created
             if migrator._github_repo is not None:
-                try:
-                    migrator._github_repo.delete()
-                    print(f"✓ Cleaned up test repository: {repo_path}")
-                except Exception as e:
-                    error_str = str(e)
-                    if "403" in error_str and "admin rights" in error_str:
-                        print(f"\n⚠️  Cannot delete test repository {repo_path}: insufficient permissions")
-                        print("   To clean up, run: uv run delete_test_repos <github_owner> <pass_path>")
-                    else:
-                        print(f"\n✗ Failed to cleanup: {e}")
-
+                print(f"\n⚠️  Did not delete test repository {repo_path} so that you can inspect it manually.")
+                print("   To clean up all test repos, run: uv run delete-test-repos")
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v", "-s", "-ra", "--tb=short"])
