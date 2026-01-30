@@ -81,6 +81,9 @@ class IssueCrossLinks:
 class GitlabToGithubMigrator:
     """Main migration class."""
 
+    # GitLab uses "oauth2" as the token prefix for HTTPS authentication
+    GITLAB_TOKEN_PREFIX: str = "oauth2"  # noqa: S105
+
     def __init__(
         self,
         gitlab_project_path: str,
@@ -332,7 +335,7 @@ class GitlabToGithubMigrator:
         """
         gitlab_http_url = str(self.gitlab_project.http_url_to_repo)  # pyright: ignore[reportUnknownArgumentType]
         gitlab_url = self._inject_token_into_url(
-            gitlab_http_url, self.gitlab_token, token_prefix="oauth2"  # noqa: S106
+            gitlab_http_url, self.gitlab_token, token_prefix=self.GITLAB_TOKEN_PREFIX
         )
 
         result = subprocess.run(  # noqa: S603
