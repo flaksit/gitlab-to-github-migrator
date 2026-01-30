@@ -164,6 +164,3 @@ def create_repo(client: Github, repo_path: str, description: str | None) -> Repo
                 has_issues=True,
             )
         raise
-
-
-

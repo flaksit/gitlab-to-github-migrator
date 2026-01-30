@@ -101,10 +101,6 @@ def get_readonly_token(
     except PassError:
         pass
 
-    logger.warning(
-        f"No GitLab token found. If non-anonymous access is required, "
-        f"set {GITLAB_TOKEN_ENV_VAR} environment variable or configure pass at {DEFAULT_GITLAB_RO_TOKEN_PASS_PATH}."
-    )
     return None
 
 
@@ -166,10 +162,6 @@ def get_readwrite_token(
     except PassError:
         pass
 
-    logger.warning(
-        f"No GitLab token found. "
-        f"Set {GITLAB_TOKEN_ENV_VAR} environment variable or configure pass at {DEFAULT_GITLAB_RW_TOKEN_PASS_PATH}."
-    )
     return None
 
 

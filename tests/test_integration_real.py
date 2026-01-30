@@ -223,17 +223,11 @@ class TestReadOnlyGitlabAccess:
             except requests.RequestException:
                 continue  # Try next attachment
 
-        # If no attachments could be downloaded, just log a warning
-        # (attachments might have been deleted from the project)
-        if not download_successful:
-            import warnings
-
-            warnings.warn(
-                f"Could not download any of the {len(attachments)} detected attachments. "
-                "They may have been deleted from the project.",
-                UserWarning,
-                stacklevel=2,
-            )
+        # The test project should have downloadable attachments
+        assert download_successful, (
+            f"Could not download any of the {len(attachments)} detected attachments. "
+            "The GitLab test project should be set up with accessible attachments."
+        )
 
     def test_graphql_work_items_api_functionality(
         self,
@@ -520,7 +514,7 @@ class TestFullMigration:
                             try:
                                 # Get corresponding GitHub issue
                                 parent_github_issue = github_repo.get_issue(parent_iid)
-                                
+
                                 # Get sub-issues directly from PyGithub
                                 github_sub_issues = list(parent_github_issue.get_sub_issues())
                                 github_sub_issue_numbers = [sub.number for sub in github_sub_issues]
