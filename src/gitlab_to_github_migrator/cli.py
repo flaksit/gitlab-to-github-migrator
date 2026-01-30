@@ -140,12 +140,19 @@ def main() -> None:
     gitlab_token_pass_path: str | None = getattr(args, "gitlab_token_pass_path", None)
     github_token_pass_path: str | None = getattr(args, "github_token_pass_path", None)
 
+    gitlab_token = glu.get_readonly_token(pass_path=gitlab_token_pass_path)
+    if gitlab_token is None:
+        logger.warning(
+            f"No GitLab token found. If non-anonymous access is required, "
+            f"set {glu.GITLAB_TOKEN_ENV_VAR} environment variable or configure pass at {glu.DEFAULT_GITLAB_RO_TOKEN_PASS_PATH}."
+        )
+
     migrator = GitlabToGithubMigrator(
         args.gitlab_project,
         args.github_repo,
         label_translations=label_translation,
         local_clone_path=local_clone_path,
-        gitlab_token=glu.get_readonly_token(pass_path=gitlab_token_pass_path),
+        gitlab_token=gitlab_token,
         github_token=ghu.get_token(pass_path=github_token_pass_path),
     )
 
