@@ -9,7 +9,7 @@ This module configures pytest behavior for different test types:
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, override
 
 import pytest
 
@@ -30,12 +30,12 @@ class IntegrationTestWarningHandler(logging.Handler):
         self.test_nodeid = test_nodeid
         self.setLevel(logging.WARNING)
 
-    def emit(self, record: logging.LogRecord) -> None:  # type: ignore[override]
+    @override
+    def emit(self, record: logging.LogRecord) -> None:
         """Capture WARNING and above level logs."""
-        if record.levelno >= logging.WARNING:
-            if self.test_nodeid not in _integration_test_warnings:
-                _integration_test_warnings[self.test_nodeid] = []
-            _integration_test_warnings[self.test_nodeid].append(record)
+        if self.test_nodeid not in _integration_test_warnings:
+            _integration_test_warnings[self.test_nodeid] = []
+        _integration_test_warnings[self.test_nodeid].append(record)
 
 
 @pytest.fixture(autouse=True)
