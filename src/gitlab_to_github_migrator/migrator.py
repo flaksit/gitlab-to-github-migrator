@@ -24,6 +24,7 @@ from gitlab.exceptions import GitlabAuthenticationError, GitlabError
 
 from . import github_utils as ghu
 from . import gitlab_utils as glu
+from . import utils
 from .exceptions import MigrationError, NumberVerificationError
 from .label_translator import LabelTranslator
 
@@ -292,23 +293,6 @@ class GitlabToGithubMigrator:
         else:
             return children
 
-    def _inject_token_into_url(self, url: str, token: str | None, token_prefix: str = "") -> str:
-        """Inject authentication token into HTTPS URL.
-
-        Args:
-            url: The HTTPS URL to inject token into
-            token: The authentication token
-            token_prefix: Optional prefix for the token (e.g., "oauth2:")
-
-        Returns:
-            URL with token injected, or original URL if no token or not HTTPS
-        """
-        if token and url.startswith("https://"):
-            if token_prefix:
-                return url.replace("https://", f"https://{token_prefix}:{token}@")
-            return url.replace("https://", f"https://{token}@")
-        return url
-
     def _sanitize_error_message(self, error_msg: str) -> str:
         """Remove tokens from error message to prevent token exposure.
 
@@ -334,7 +318,7 @@ class GitlabToGithubMigrator:
             MigrationError: If cloning fails
         """
         gitlab_http_url = str(self.gitlab_project.http_url_to_repo)  # pyright: ignore[reportUnknownArgumentType]
-        gitlab_url = self._inject_token_into_url(
+        gitlab_url = utils.inject_token_into_url(
             gitlab_http_url, self.gitlab_token, token_prefix=self.GITLAB_TOKEN_PREFIX
         )
 
@@ -360,7 +344,7 @@ class GitlabToGithubMigrator:
             MigrationError: If adding remote fails
         """
         github_clone_url = self.github_repo.clone_url
-        github_url = self._inject_token_into_url(github_clone_url, self.github_token)
+        github_url = utils.inject_token_into_url(github_clone_url, self.github_token)
 
         try:
             subprocess.run(  # noqa: S603
