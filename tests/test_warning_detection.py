@@ -33,17 +33,43 @@ class TestIntegrationTestWarningBehavior:
         logger.debug("This is a debug log - should not fail")
         assert True  # Test passes - no warnings
 
-    def test_integration_test_with_warnings_would_fail(self) -> None:
-        """
-        This test documents what would happen if a warning was logged.
+    def test_integration_test_with_warning_fails(self, tmp_path) -> None:
+        """Verify that integration tests fail when logger.warning() is called.
 
-        If you uncomment the logger.warning() line below, this test will FAIL
-        with a message about warnings being detected.
-
-        This demonstrates that integration tests fail when the code under test
-        logs warnings, which is the desired behavior.
+        This test creates a temporary test file that emits a warning,
+        runs pytest on it, and verifies that it fails with the expected error message.
         """
-        # Uncomment the next two lines to see the test fail:
-        # logger = logging.getLogger("test_logger")
-        # logger.warning("This warning would cause the test to fail")
-        assert True  # Test passes without the warning
+        import shutil
+        import subprocess
+        import sys
+        from pathlib import Path
+
+        # Copy conftest.py to tmp_path so it's picked up
+        tests_dir = Path(__file__).parent
+        shutil.copy(tests_dir / "conftest.py", tmp_path / "conftest.py")
+
+        # Create a test file that emits a warning
+        test_file = tmp_path / "test_temp_warning.py"
+        test_file.write_text('''
+import logging
+import pytest
+
+@pytest.mark.integration
+def test_warning():
+    logger = logging.getLogger("test_logger")
+    logger.warning("Test warning message")
+''')
+
+        # Run pytest on the test file
+        result = subprocess.run(
+            [sys.executable, "-m", "pytest", str(test_file), "-v", "--tb=short", "-p", "no:cacheprovider"],
+            capture_output=True,
+            text=True,
+            cwd=str(tmp_path),
+        )
+
+        # The test should fail due to the warning
+        assert result.returncode != 0, f"Expected test to fail but it passed:\n{result.stdout}"
+        assert "warning(s) detected" in result.stdout or "warning(s) detected" in result.stderr, (
+            f"Expected 'warning(s) detected' in output:\nstdout: {result.stdout}\nstderr: {result.stderr}"
+        )
