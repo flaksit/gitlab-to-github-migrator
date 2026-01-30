@@ -1,17 +1,14 @@
-# CLAUDE.md / AGENTS.md
-
-This file provides guidance to AI agents when working with code in this repository.
+# AGENTS.md
 
 ## Project Overview
 
-GitLab to GitHub Migrator - Python tool for migrating GitLab projects to GitHub with full metadata preservation. Preserves exact issue/milestone numbers, comments, attachments, and relationships (blocking, parent-child, related).
+GitLab to GitHub Migrator - Python tool for migrating GitLab projects to GitHub including git repo, labels, milestones and issues, keeping exact numbers, comments, attachments, and relationships (blocking, parent-child, related).
 
 ## Commands
 
 ```bash
 # Install dependencies
-uv sync              # With dev dependencies
-uv sync --no-dev     # Production only
+uv sync
 
 # Run the tool
 uv run gitlab-to-github-migrator --help
@@ -47,7 +44,8 @@ uv run delete-test-repos github/admin_token               # Cleanup test repos
 **Supporting modules:**
 - `cli.py` - argparse CLI with label translation patterns
 - `label_translator.py` - Glob-style pattern translation (`p_*:priority: *`)
-- `github_utils.py` / `gitlab_utils.py` - API client setup, token handling via `pass` utility
+- `github_utils.py` / `gitlab_utils.py` - API client setup
+- `utils.py` - Logging setup, token retrieval via `pass` utility
 - `exceptions.py` - `MigrationError`, `NumberVerificationError`
 
 **Data flow:**
@@ -55,11 +53,13 @@ uv run delete-test-repos github/admin_token               # Cleanup test repos
 
 ## Test Environment
 
-Integration tests require:
+Integration tests require env vars:
 ```bash
-export SOURCE_GITLAB_TEST_PROJECT="namespace/project"
-export TARGET_GITHUB_TEST_OWNER="org-or-username"
+SOURCE_GITLAB_TEST_PROJECT="namespace/project"
+TARGET_GITHUB_TEST_OWNER="org-or-username"
 ```
+
+These are set in GitHub copilot environment secrets and in `.env` for local testing.
 
 Tokens stored in env vars SOURCE_GITLAB_TOKEN and TARGET_GITHUB_TOKEN, or retrieved via `pass`:
 - `gitlab/api/ro_token` (read-only for tests)
@@ -70,11 +70,10 @@ Tokens stored in env vars SOURCE_GITLAB_TOKEN and TARGET_GITHUB_TOKEN, or retrie
 
 - Python 3.14+, strict typing with BasedPyright
 - Ruff with 119-char line length
-- GitLab library lacks type stubs - `allowedUntypedLibraries = ["gitlab"]`
-- Test files have relaxed type checking rules
+- GitLab library lacks type stubs
+- Tests have relaxed type checking rules
 
 ## Development Notes
 
-- TDD approach: write tests first (red), then implement (green)
+- TDD: write tests first (red), then implement (green)
 - Integration tests use real APIs - they create/delete real resources
-- Test repos prefixed with `gl2ghmigr-` for easy cleanup (format: `gl2ghmigr-<test-type>-test-<hash>`)
