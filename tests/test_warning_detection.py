@@ -50,7 +50,7 @@ class TestIntegrationTestWarningBehavior:
 
         # Create a test file that emits a warning
         test_file = tmp_path / "test_temp_warning.py"
-        test_file.write_text('''
+        test_file.write_text("""
 import logging
 import pytest
 
@@ -58,14 +58,15 @@ import pytest
 def test_warning():
     logger = logging.getLogger("test_logger")
     logger.warning("Test warning message")
-''')
+""")
 
         # Run pytest on the test file
-        result = subprocess.run(
+        result = subprocess.run(  # noqa: S603
             [sys.executable, "-m", "pytest", str(test_file), "-v", "--tb=short", "-p", "no:cacheprovider"],
             capture_output=True,
             text=True,
             cwd=str(tmp_path),
+            check=False,
         )
 
         # The test should fail due to the warning
