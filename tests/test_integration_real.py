@@ -514,7 +514,7 @@ class TestFullMigration:
                             try:
                                 # Get corresponding GitHub issue
                                 parent_github_issue = github_repo.get_issue(parent_iid)
-                                
+
                                 # Get sub-issues directly from PyGithub
                                 github_sub_issues = list(parent_github_issue.get_sub_issues())
                                 github_sub_issue_numbers = [sub.number for sub in github_sub_issues]

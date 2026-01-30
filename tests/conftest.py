@@ -81,9 +81,7 @@ def fail_on_log_warnings_for_integration_tests(
 
 
 @pytest.hookimpl(tryfirst=True, hookwrapper=True)
-def pytest_runtest_makereport(
-    item: pytest.Item, call: pytest.CallInfo[None]
-) -> Generator[None]:  # type: ignore[misc]
+def pytest_runtest_makereport(item: pytest.Item, call: pytest.CallInfo[None]) -> Generator[None]:  # type: ignore[misc]
     """
     Hook to check for warnings after test execution and mark test as failed if warnings were detected.
 

@@ -311,7 +311,7 @@ class GitlabToGithubMigrator:
                     gitlab_url = gitlab_http_url.replace("https://", f"https://oauth2:{self.gitlab_token}@")
                 else:
                     gitlab_url = gitlab_http_url
-                
+
                 result = subprocess.run(  # noqa: S603
                     [
                         "git",
@@ -340,10 +340,14 @@ class GitlabToGithubMigrator:
                 github_url = github_clone_url.replace("https://", f"https://{self.github_token}@")
             else:
                 github_url = github_clone_url
-            
+
             try:
                 _ = subprocess.run(  # noqa: S603
-                    ["git", "remote", "add", "github", github_url], cwd=clone_path, check=True, capture_output=True, text=True
+                    ["git", "remote", "add", "github", github_url],
+                    cwd=clone_path,
+                    check=True,
+                    capture_output=True,
+                    text=True,
                 )
             except subprocess.CalledProcessError as e:
                 # Sanitize error to prevent token leakage
@@ -907,7 +911,9 @@ class GitlabToGithubMigrator:
 
                     # Store GitHub issue for parent-child relationship handling
                     github_issue_dict[gitlab_issue.iid] = github_issue
-                    logger.debug(f"Added issue #{gitlab_issue.iid} to github_issue_dict (now has {len(github_issue_dict)} issues)")
+                    logger.debug(
+                        f"Added issue #{gitlab_issue.iid} to github_issue_dict (now has {len(github_issue_dict)} issues)"
+                    )
 
                     # Migrate comments
                     self.migrate_issue_comments(gitlab_issue, github_issue)
