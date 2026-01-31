@@ -2,11 +2,15 @@ from __future__ import annotations
 
 import logging
 import os
-from typing import Final, Literal, overload
+from typing import TYPE_CHECKING, Final, Literal, cast, overload
 
+import requests
 from gitlab import Gitlab, GraphQL
 
 from .utils import PassError, get_pass_value
+
+if TYPE_CHECKING:
+    from gitlab.v4.objects import Project
 
 # Module-wide logger
 logger: logging.Logger = logging.getLogger(__name__)
@@ -41,6 +45,49 @@ def get_graphql_client(url: str = "https://gitlab.com", token: str | None = None
         GraphQL client instance for executing GraphQL queries
     """
     return GraphQL(url=url, token=token)
+
+
+def download_attachment(
+    gitlab_client: Gitlab,
+    project: Project | int,
+    secret: str,
+    filename: str,
+    *,
+    timeout: int = 30,
+) -> tuple[bytes, str]:
+    """Download an attachment from GitLab using the REST API.
+
+    Uses the GitLab REST API endpoint (GitLab 17.4+) to download uploads
+    by secret and filename, avoiding Cloudflare blocks on web URLs.
+
+    Args:
+        gitlab_client: Authenticated GitLab client
+        project: GitLab project object or project ID
+        secret: The 32-character hex secret from the upload URL
+        filename: The filename from the upload URL
+        timeout: Request timeout in seconds
+
+    Returns:
+        Tuple of (content bytes, content-type header)
+
+    Raises:
+        requests.RequestException: If the download fails
+    """
+    project_id: int = project if isinstance(project, int) else cast(int, project.id)
+    api_path = f"/projects/{project_id}/uploads/{secret}/{filename}"
+
+    # http_get with raw=True returns requests.Response (type stubs are incorrect)
+    response = cast(
+        requests.Response,
+        gitlab_client.http_get(api_path, raw=True, timeout=timeout),
+    )
+    response.raise_for_status()
+
+    content = response.content
+    content_type = response.headers.get("Content-Type", "unknown")
+    logger.debug(f"Downloaded {filename}: {len(content)} bytes, Content-Type: {content_type}")
+
+    return content, content_type
 
 
 @overload

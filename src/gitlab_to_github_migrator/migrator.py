@@ -12,7 +12,7 @@ import subprocess
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any
 
 import github.GitRelease
 import github.Issue
@@ -517,20 +517,9 @@ class GitlabToGithubMigrator:
 
             full_url = f"{self.gitlab_project.web_url}{short_url}"
             try:
-                # Use GitLab REST API endpoint instead of web URL to avoid Cloudflare
-                # API: GET /projects/:id/uploads/:secret/:filename (GitLab 17.4+)
-                api_path = f"/projects/{self.gitlab_project.id}/uploads/{secret}/{filename}"
-
-                # http_get with raw=True returns requests.Response (type stubs are incorrect)
-                response = cast(
-                    requests.Response,
-                    self.gitlab_client.http_get(api_path, raw=True, timeout=30),
+                attachment_content, content_type = glu.download_attachment(
+                    self.gitlab_client, self.gitlab_project, secret, filename
                 )
-                response.raise_for_status()
-
-                attachment_content = response.content
-                content_type = response.headers.get("Content-Type", "unknown")
-                logger.debug(f"Downloaded {filename}: {len(attachment_content)} bytes, Content-Type: {content_type}")
 
                 if attachment_content:
                     downloaded_files.append(
@@ -543,8 +532,7 @@ class GitlabToGithubMigrator:
                     )
                 else:
                     logger.warning(
-                        f"GitLab returned empty content for attachment {short_url} "
-                        f"(status: {response.status_code}, Content-Type: {content_type})"
+                        f"GitLab returned empty content for attachment {short_url} (Content-Type: {content_type})"
                     )
 
             except (requests.RequestException, OSError) as e:

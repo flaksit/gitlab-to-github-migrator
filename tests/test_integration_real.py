@@ -185,13 +185,13 @@ class TestReadOnlyGitlabAccess:
         self,
         gitlab_client: gitlab.Gitlab,
         source_gitlab_project: str,
-        gitlab_token: str | None,
     ) -> None:
-        """Test finding and accessing GitLab attachments."""
+        """Test finding and accessing GitLab attachments via the REST API."""
         source_project = gitlab_client.projects.get(source_gitlab_project)
         issues = source_project.issues.list(iterator=True, state="all")
 
-        attachment_pattern = r"/uploads/[a-f0-9]{32}/[^)\s]+"
+        # Pattern to extract secret and filename from attachment URLs
+        attachment_pattern = r"/uploads/([a-f0-9]{32})/([^)\s]+)"
 
         for issue in issues:
             if issue.description:
@@ -201,32 +201,23 @@ class TestReadOnlyGitlabAccess:
         else:
             pytest.skip("No attachments found in source project issues")
 
-        # Verify that we can download the attachments (if they still exist)
+        # Verify that we can download at least one attachment using the GitLab API
         import requests
 
-        # Prepare headers with authentication if token is available
-        headers = {}
-        if gitlab_token:
-            headers["PRIVATE-TOKEN"] = gitlab_token
-
         download_successful = False
-        for attachment_path in attachments[:3]:  # Test up to 3 attachments
-            # Construct the full URL
-            attachment_url = f"https://gitlab.com/{source_gitlab_project}{attachment_path}"
-
-            # Try to download the attachment
+        last_error: Exception | None = None
+        for secret, filename in attachments[:3]:  # Test up to 3 attachments
             try:
-                response = requests.get(attachment_url, headers=headers, timeout=10)
-                if response.status_code == 200 and len(response.content) > 0:
+                content, _content_type = glu.download_attachment(gitlab_client, source_project, secret, filename)
+                if len(content) > 0:
                     download_successful = True
-                    break  # At least one attachment downloaded successfully
-            except requests.RequestException:
-                continue  # Try next attachment
+                    break
+            except requests.RequestException as e:
+                last_error = e
+                continue
 
-        # The test project should have downloadable attachments
         assert download_successful, (
-            f"Could not download any of the {len(attachments)} detected attachments. "
-            "The GitLab test project should be set up with accessible attachments."
+            f"Could not download any of the {len(attachments)} detected attachments. Last error: {last_error}"
         )
 
     def test_graphql_work_items_api_functionality(
