@@ -34,8 +34,6 @@ def parse_arguments() -> argparse.Namespace:
         help='Label translation pattern (format: "source_pattern:target_pattern"). Can be specified multiple times. Supports * as a glob-style wildcard. Example: "p_*:prio: *" translates "p_high" to "prio: high"',
     )
 
-    _ = parser.add_argument("--local-clone", help="Path to existing local git clone of GitLab project")
-
     _ = parser.add_argument(
         "--gitlab-token-pass-path",
         help=f"Path for GitLab token in pass utility. If not set, will try {glu.GITLAB_TOKEN_ENV_VAR} env var first, then fall back to default pass path {glu.DEFAULT_GITLAB_RO_TOKEN_PASS_PATH}.",
@@ -136,7 +134,6 @@ def main() -> None:
 
     # Initialize migrator
     label_translation: list[str] | None = getattr(args, "label_translation", None)
-    local_clone_path: str | None = getattr(args, "local_clone_path", None)
     gitlab_token_pass_path: str | None = getattr(args, "gitlab_token_pass_path", None)
     github_token_pass_path: str | None = getattr(args, "github_token_pass_path", None)
 
@@ -151,7 +148,6 @@ def main() -> None:
         args.gitlab_project,
         args.github_repo,
         label_translations=label_translation,
-        local_clone_path=local_clone_path,
         gitlab_token=gitlab_token,
         github_token=ghu.get_token(pass_path=github_token_pass_path),
     )
