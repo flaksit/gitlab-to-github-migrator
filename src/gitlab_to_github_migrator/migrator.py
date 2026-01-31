@@ -393,7 +393,7 @@ class GitlabToGithubMigrator:
 
         for note in notes:
             if note.system:
-                comment_body = f"**System note:** {note.body}"
+                comment_body = f"**System note** on {format_timestamp(note.created_at)}: {note.body.strip()}"
             else:
                 comment_body = (
                     f"**Comment by** {note.author['name']} (@{note.author['username']}) "
