@@ -578,5 +578,63 @@ class TestGitlabToGithubMigrator:
         self.mock_github_repo.get_releases.assert_called_once()
 
 
+@pytest.mark.unit
+class TestGetWorkItemChildren:
+    def test_returns_empty_list_when_no_children(self) -> None:
+        from unittest.mock import Mock
+
+        from gitlab_to_github_migrator.gitlab_utils import get_work_item_children
+
+        mock_graphql = Mock()
+        mock_graphql.execute.return_value = {
+            "namespace": {
+                "workItem": {
+                    "iid": "42",
+                    "widgets": [{"type": "HIERARCHY", "children": {"nodes": []}}],
+                }
+            }
+        }
+
+        result = get_work_item_children(mock_graphql, "org/project", 42)
+        assert result == []
+
+    def test_returns_children_when_present(self) -> None:
+        from unittest.mock import Mock
+
+        from gitlab_to_github_migrator.gitlab_utils import get_work_item_children
+        from gitlab_to_github_migrator.relationships import WorkItemChild
+
+        mock_graphql = Mock()
+        mock_graphql.execute.return_value = {
+            "namespace": {
+                "workItem": {
+                    "iid": "42",
+                    "widgets": [
+                        {
+                            "type": "HIERARCHY",
+                            "children": {
+                                "nodes": [
+                                    {
+                                        "iid": "100",
+                                        "title": "Child task",
+                                        "state": "opened",
+                                        "workItemType": {"name": "Task"},
+                                        "webUrl": "https://gitlab.com/org/proj/-/issues/100",
+                                    }
+                                ]
+                            },
+                        }
+                    ],
+                }
+            }
+        }
+
+        result = get_work_item_children(mock_graphql, "org/project", 42)
+        assert len(result) == 1
+        assert isinstance(result[0], WorkItemChild)
+        assert result[0].iid == 100
+        assert result[0].title == "Child task"
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

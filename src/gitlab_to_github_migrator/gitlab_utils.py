@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Final, Literal, cast, overload
 import requests
 from gitlab import Gitlab, GraphQL
 
+from .relationships import WorkItemChild
 from .utils import PassError, get_pass_value
 
 if TYPE_CHECKING:
@@ -294,3 +295,83 @@ def get_parent_child_relationships(
         logger.exception("Failed to get parent-child relationships")
 
     return parent_to_children
+
+
+def get_work_item_children(
+    graphql_client: GraphQL,
+    project_path: str,
+    issue_iid: int,
+) -> list[WorkItemChild]:
+    """Get child work items for an issue using GraphQL Work Items API.
+
+    Args:
+        graphql_client: GitLab GraphQL client
+        project_path: Full project path (e.g., "namespace/project")
+        issue_iid: The internal ID of the issue
+
+    Returns:
+        List of child work items
+    """
+    query = """
+    query GetWorkItemWithChildren($fullPath: ID!, $iid: String!) {
+        namespace(fullPath: $fullPath) {
+            workItem(iid: $iid) {
+                iid
+                widgets {
+                    type
+                    ... on WorkItemWidgetHierarchy {
+                        children {
+                            nodes {
+                                iid
+                                title
+                                state
+                                workItemType {
+                                    name
+                                }
+                                webUrl
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    """
+
+    variables = {"fullPath": project_path, "iid": str(issue_iid)}
+
+    try:
+        response = graphql_client.execute(query, variable_values=variables)
+
+        namespace = response.get("namespace")
+        if not namespace:
+            logger.debug(f"Namespace {project_path} not found in GraphQL response")
+            return []
+
+        work_item = namespace.get("workItem")
+        if not work_item:
+            logger.debug(f"Work item {issue_iid} not found in project {project_path}")
+            return []
+
+        children: list[WorkItemChild] = []
+        widgets = work_item.get("widgets", [])
+
+        for widget in widgets:
+            if widget.get("type") == "HIERARCHY":
+                child_nodes = widget.get("children", {}).get("nodes", [])
+                for child in child_nodes:
+                    child_info = WorkItemChild(
+                        iid=int(child.get("iid")),
+                        title=child.get("title"),
+                        state=child.get("state"),
+                        type=child.get("workItemType", {}).get("name"),
+                        web_url=child.get("webUrl"),
+                    )
+                    children.append(child_info)
+
+        logger.debug(f"Found {len(children)} child work items for issue #{issue_iid}")
+    except Exception as e:
+        logger.debug(f"Could not get children for issue #{issue_iid}: {e}")
+        return []
+    else:
+        return children
