@@ -300,6 +300,7 @@ class TestFullMigration:
         gitlab_token: str | None,
         github_token: str,
         gitlab_client: gitlab.Gitlab,
+        subtests: pytest.Subtests,
     ) -> None:
         """Test complete migration workflow using the main migrate() method."""
         repo_name = _generate_repo_name("full-migration")
@@ -490,54 +491,48 @@ class TestFullMigration:
 
                 # Verify parent-child relationships (sub-issues)
                 # Dynamically get parent-child relationships from GitLab and verify they exist in GitHub
-                try:
-                    # Get parent-child relationships from GitLab
-                    gitlab_parent_children = glu.get_parent_child_relationships(
-                        gitlab_client, migrator.graphql_client, source_gitlab_project
-                    )
+                gitlab_parent_children = glu.get_parent_child_relationships(
+                    gitlab_client, migrator.graphql_client, source_gitlab_project
+                )
 
-                    if not gitlab_parent_children:
-                        print("⚠️  No parent-child relationships found in GitLab project")
-                    else:
-                        # Verify each parent-child relationship exists in GitHub
-                        relationships_verified = 0
-                        for parent_iid, child_iids in gitlab_parent_children.items():
-                            try:
-                                # Get corresponding GitHub issue
-                                parent_github_issue = github_repo.get_issue(parent_iid)
+                if not gitlab_parent_children:
+                    # TODO Skip rather than fail if no relationships exist.
+                    #       However, we should not skip the entire full migration test, so we should rather isolate
+                    #       this into its own test case.
+                    print("⚠️  No parent-child relationships found in GitLab project")
+                else:
+                    # Verify each parent-child relationship exists in GitHub
+                    relationships_verified = 0
+                    for parent_iid, child_iids in gitlab_parent_children.items():
+                        try:
+                            # Get corresponding GitHub issue
+                            parent_github_issue = github_repo.get_issue(parent_iid)
 
-                                # Get sub-issues directly from PyGithub
-                                github_sub_issues = list(parent_github_issue.get_sub_issues())
-                                github_sub_issue_numbers = [sub.number for sub in github_sub_issues]
+                            # Get sub-issues directly from PyGithub
+                            github_sub_issues = list(parent_github_issue.get_sub_issues())
+                            github_sub_issue_numbers = [sub.number for sub in github_sub_issues]
 
+                            with subtests.test(f"Parent #{parent_iid} has children {child_iids}"):
                                 # Verify all children exist in GitHub
                                 missing_children = set(child_iids) - set(github_sub_issue_numbers)
-                                if missing_children:
-                                    print(
-                                        f"⚠️  Issue #{parent_iid}: Missing sub-issues {missing_children} in GitHub "
-                                        f"(expected {child_iids}, found {github_sub_issue_numbers})"
-                                    )
-                                else:
-                                    relationships_verified += 1
+                                assert not missing_children, (
+                                    f"Parent issue #{parent_iid} missing sub-issues {missing_children} in GitHub"
+                                )
+                                relationships_verified += len(child_iids)
 
-                            except Exception as e:
-                                print(f"⚠️  Could not verify parent issue #{parent_iid}: {e}")
-                                continue
+                        except Exception as e:
+                            print(f"⚠️  Could not verify parent issue #{parent_iid}: {e}")
+                            continue
 
-                        assert relationships_verified > 0, (
-                            f"Failed to verify any parent-child relationships. "
-                            f"Expected to verify {len(gitlab_parent_children)} relationships."
-                        )
+                    assert relationships_verified > 0, (
+                        f"Failed to verify any parent-child relationships. "
+                        f"Expected to verify {len(gitlab_parent_children)} relationships."
+                    )
 
-                        print(
-                            f"✓ Verified {relationships_verified} parent-child relationships "
-                            f"(out of {len(gitlab_parent_children)} total)"
-                        )
-
-                except AssertionError:
-                    raise
-                except Exception as e:
-                    print(f"⚠️  Could not verify parent-child relationships: {e}")
+                    print(
+                        f"\n✓ Verified {relationships_verified} parent-child relationships "
+                        f"(out of {len(gitlab_parent_children)} total)"
+                    )
 
                 # Verify attachment migration
                 attachment_pattern = r"/uploads/[a-f0-9]{32}/[^)\s]+"
