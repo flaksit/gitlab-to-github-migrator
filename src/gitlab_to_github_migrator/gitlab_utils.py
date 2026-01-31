@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import os
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Final, Literal, cast, overload
 
 import requests
@@ -10,7 +11,7 @@ from gitlab import Gitlab, GraphQL
 from .utils import PassError, get_pass_value
 
 if TYPE_CHECKING:
-    from gitlab.v4.objects import Project
+    from gitlab.v4.objects import Project, ProjectIssue
 
 # Module-wide logger
 logger: logging.Logger = logging.getLogger(__name__)
@@ -212,85 +213,136 @@ def get_readwrite_token(
     return None
 
 
-def get_parent_child_relationships(
-    gitlab_client: Gitlab,
+def get_work_item_children(
     graphql_client: GraphQL,
     project_path: str,
-) -> dict[int, list[int]]:
-    """Get all parent-child relationships from a GitLab project.
+    issue_iid: int,
+) -> list[int]:
+    """Get child work items for an issue using GraphQL Work Items API.
 
     Args:
-        gitlab_client: GitLab REST API client
-        graphql_client: GitLab GraphQL API client
+        graphql_client: GitLab GraphQL client
         project_path: Full project path (e.g., "namespace/project")
+        issue_iid: The internal ID of the issue
 
     Returns:
-        Dictionary mapping parent issue IID to list of child issue IIDs
-
-    Note:
-        This function queries all issues in the project and checks for work item children
-        using the GraphQL API. It may make many API calls for projects with many issues.
+        List of IIDs of child work items
     """
-    parent_to_children: dict[int, list[int]] = {}
-
-    try:
-        project = gitlab_client.projects.get(project_path)
-        issues = project.issues.list(iterator=True, state="all")
-
-        for issue in issues:
-            # Query GraphQL API for work item children
-            query = """
-            query GetWorkItemWithChildren($fullPath: ID!, $iid: String!) {
-                namespace(fullPath: $fullPath) {
-                    workItem(iid: $iid) {
-                        iid
-                        widgets {
-                            type
-                            ... on WorkItemWidgetHierarchy {
-                                children {
-                                    nodes {
-                                        iid
-                                    }
+    query = """
+    query GetWorkItemWithChildren($fullPath: ID!, $iid: String!) {
+        namespace(fullPath: $fullPath) {
+            workItem(iid: $iid) {
+                iid
+                widgets {
+                    type
+                    ... on WorkItemWidgetHierarchy {
+                        children {
+                            nodes {
+                                iid
+                                title
+                                state
+                                workItemType {
+                                    name
                                 }
+                                webUrl
                             }
                         }
                     }
                 }
             }
-            """
+        }
+    }
+    """
 
-            variables = {"fullPath": project_path, "iid": str(issue.iid)}
+    variables = {"fullPath": project_path, "iid": str(issue_iid)}
 
-            try:
-                response = graphql_client.execute(query, variable_values=variables)
+    response = graphql_client.execute(query, variable_values=variables)
 
-                # Parse response - note that GitLab GraphQL client returns data directly,
-                # not wrapped in a "data" key
-                namespace = response.get("namespace")
-                if not namespace:
-                    continue
+    namespace = response.get("namespace")
+    # if not namespace:
+    #     logger.debug(f"Namespace {project_path} not found in GraphQL response")
+    #     return []
 
-                work_item = namespace.get("workItem")
-                if not work_item:
-                    continue
+    work_item = namespace.get("workItem")
+    # if not work_item:
+    #     logger.debug(f"Work item {issue_iid} not found in project {project_path}")
+    #     return []
 
-                # Find hierarchy widget
-                widgets = work_item.get("widgets", [])
-                for widget in widgets:
-                    if widget.get("type") == "HIERARCHY":
-                        child_nodes = widget.get("children", {}).get("nodes", [])
-                        if child_nodes:
-                            child_iids = [int(child.get("iid")) for child in child_nodes if child.get("iid")]
-                            if child_iids:
-                                parent_to_children[issue.iid] = child_iids
-                        break
+    children: list[int] = []
+    widgets = work_item.get("widgets", [])
 
-            except Exception as e:
-                # Log but continue - some issues might not be work items
-                logger.debug(f"Could not get children for issue #{issue.iid}: {e}")
-                continue
+    for widget in widgets:
+        if widget.get("type") == "HIERARCHY":
+            child_nodes = widget.get("children", {}).get("nodes", [])
+            children.extend(int(child.get("iid")) for child in child_nodes)
 
-    except Exception:
-        logger.exception("Failed to get parent-child relationships")
+    logger.debug(f"Found {len(children)} child work items for issue #{issue_iid}")
+    return children
 
-    return parent_to_children
+
+@dataclass
+class IssueCrossLinks:
+    """Cross-linked issues separated by relationship type."""
+
+    cross_links_text: str
+    blocked_issue_iids: list[int]
+    """List of issue IIDs that are blocked by this issue."""
+
+
+def get_normal_issue_cross_links(
+    gitlab_issue: ProjectIssue,
+    gitlab_project_path: str,
+) -> IssueCrossLinks:
+    """Get cross-linked issues separated by relationship type.
+
+    Uses REST API.
+
+    Args:
+        gitlab_issue: GitLab issue object
+        gitlab_project_path: Full project path
+
+    Returns:
+        IssueCrossLinks with categorized relationships
+    """
+    # Get regular issue links from REST API
+    links = gitlab_issue.links.list(get_all=True)
+    blocked_issue_iids: list[int] = []
+
+    link_type_to_label = {
+        "blocks": "Blocks",
+        "is_blocked_by": "Blocked by",
+        "relates_to": "Related to",
+    }
+    cross_links_text = ""
+
+    for link in links:
+        link_type = getattr(link, "link_type", "relates_to")
+
+        references = getattr(link, "references", {})
+        target_project_path = references.get("full", "").rsplit("#", 1)[0] if references else None
+        target_project_path = target_project_path or gitlab_project_path
+        is_same_project = target_project_path == gitlab_project_path
+
+        if link_type in ("blocks", "is_blocked_by") and is_same_project:
+            # GitLab "blocks" means: source blocks target -> target is blocked by source
+            # GitLab "is_blocked_by" means: source is blocked by target
+            # We receive each relation twice (once per direction), so skip the reverse direction
+            if link_type == "blocks":
+                blocked_issue_iids.append(link.iid)
+        else:
+            # Format cross-links text
+            label = link_type_to_label.get(link_type, f"Linked ({link_type})")
+            target_title = getattr(link, "title", "Unknown Title")
+            target_web_url = getattr(link, "web_url", "")
+
+            if is_same_project:
+                cross_links_text += f"- **{label}**: #{link.iid} - {target_title}\n"
+            else:
+                cross_links_text += (
+                    f"- **{label}**: [{target_project_path}#{link.iid}]({target_web_url}) - {target_title}\n"
+                )
+
+    if cross_links_text:
+        cross_links_text = "\n\n---\n\n**Cross-linked Issues:**\n\n" + cross_links_text
+
+    return IssueCrossLinks(cross_links_text, blocked_issue_iids)

@@ -8,35 +8,8 @@ import pytest
 from github import GithubException
 from gitlab.exceptions import GitlabError
 
-from gitlab_to_github_migrator import GitlabToGithubMigrator, LabelTranslator, MigrationError
-
-
-@pytest.mark.unit
-class TestLabelTranslator:
-    """Test label translation functionality."""
-
-    def test_simple_translation(self) -> None:
-        translator = LabelTranslator(["p_high:priority: high", "bug:defect"])
-        assert translator.translate("p_high") == "priority: high"
-        assert translator.translate("bug") == "defect"
-        assert translator.translate("unknown") == "unknown"
-
-    def test_wildcard_translation(self) -> None:
-        translator = LabelTranslator(["p_*:priority: *", "status_*:status: *"])
-        assert translator.translate("p_high") == "priority: high"
-        assert translator.translate("p_low") == "priority: low"
-        assert translator.translate("status_open") == "status: open"
-        assert translator.translate("unmatched") == "unmatched"
-
-    def test_invalid_pattern(self) -> None:
-        with pytest.raises(ValueError, match="Invalid pattern format"):
-            LabelTranslator(["invalid_pattern"])
-
-    def test_multiple_patterns(self) -> None:
-        translator = LabelTranslator(["p_*:priority: *", "comp_*:component: *", "bug:defect"])
-        assert translator.translate("p_critical") == "priority: critical"
-        assert translator.translate("comp_ui") == "component: ui"
-        assert translator.translate("bug") == "defect"
+from gitlab_to_github_migrator import GitlabToGithubMigrator, MigrationError
+from gitlab_to_github_migrator.gitlab_utils import get_work_item_children
 
 
 @pytest.mark.unit
@@ -45,11 +18,11 @@ class TestGitlabToGithubMigrator:
 
     def setup_method(self) -> None:
         """Setup test fixtures."""
-        self.gitlab_project_path = "test-org/test-project"
-        self.github_repo_path = "github-org/test-repo"
+        self.gitlab_project_path: str = "test-org/test-project"
+        self.github_repo_path: str = "github-org/test-repo"
 
         # Mock GitLab project
-        self.mock_gitlab_project = Mock()
+        self.mock_gitlab_project: Mock = Mock()
         self.mock_gitlab_project.id = 12345
         self.mock_gitlab_project.name = "test-project"
         self.mock_gitlab_project.description = "Test project description"
@@ -57,7 +30,7 @@ class TestGitlabToGithubMigrator:
         self.mock_gitlab_project.ssh_url_to_repo = "git@gitlab.com:test-org/test-project.git"
 
         # Mock GitHub repo
-        self.mock_github_repo = Mock()
+        self.mock_github_repo: Mock = Mock()
         self.mock_github_repo.html_url = "https://github.com/github-org/test-repo"
         self.mock_github_repo.ssh_url = "git@github.com:github-org/test-repo.git"
 
@@ -368,10 +341,6 @@ class TestCreateIssueDependency:
 @pytest.mark.unit
 class TestGetWorkItemChildren:
     def test_returns_empty_list_when_no_children(self) -> None:
-        from unittest.mock import Mock
-
-        from gitlab_to_github_migrator.relationships import get_work_item_children
-
         mock_graphql = Mock()
         mock_graphql.execute.return_value = {
             "namespace": {
@@ -386,10 +355,6 @@ class TestGetWorkItemChildren:
         assert result == []
 
     def test_returns_children_when_present(self) -> None:
-        from unittest.mock import Mock
-
-        from gitlab_to_github_migrator.relationships import WorkItemChild, get_work_item_children
-
         mock_graphql = Mock()
         mock_graphql.execute.return_value = {
             "namespace": {
@@ -417,9 +382,7 @@ class TestGetWorkItemChildren:
 
         result = get_work_item_children(mock_graphql, "org/project", 42)
         assert len(result) == 1
-        assert isinstance(result[0], WorkItemChild)
-        assert result[0].iid == 100
-        assert result[0].title == "Child task"
+        assert result[0] == 100
 
 
 if __name__ == "__main__":

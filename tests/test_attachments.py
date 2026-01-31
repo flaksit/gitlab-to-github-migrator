@@ -23,11 +23,11 @@ class TestDownloadedFile:
 @pytest.mark.unit
 class TestAttachmentHandler:
     def setup_method(self) -> None:
-        self.mock_gitlab_client = Mock()
-        self.mock_gitlab_project = Mock()
+        self.mock_gitlab_client: Mock = Mock()
+        self.mock_gitlab_project: Mock = Mock()
         self.mock_gitlab_project.id = 12345
         self.mock_gitlab_project.web_url = "https://gitlab.com/org/project"
-        self.mock_github_repo = Mock()
+        self.mock_github_repo: Mock = Mock()
 
     def test_process_content_no_attachments(self) -> None:
         handler = AttachmentHandler(

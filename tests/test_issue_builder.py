@@ -1,5 +1,9 @@
 """Tests for issue body building functions."""
 
+from __future__ import annotations
+
+from unittest.mock import MagicMock
+
 import pytest
 
 from gitlab_to_github_migrator.issue_builder import build_issue_body, format_timestamp
@@ -35,12 +39,15 @@ class TestFormatTimestamp:
 @pytest.mark.unit
 class TestBuildIssueBody:
     def test_basic_issue_body(self) -> None:
-        result = build_issue_body(
+        issue = MagicMock(
             iid=42,
-            author_name="John Doe",
-            author_username="johndoe",
+            author={"name": "John Doe", "username": "johndoe"},
             created_at="2024-01-15T10:30:45Z",
             web_url="https://gitlab.com/org/proj/-/issues/42",
+            description="Issue description here",
+        )
+        result = build_issue_body(
+            issue,
             processed_description="Issue description here",
             cross_links_text="",
         )
@@ -51,24 +58,30 @@ class TestBuildIssueBody:
         assert "Issue description here" in result
 
     def test_issue_body_with_cross_links(self) -> None:
-        result = build_issue_body(
+        issue = MagicMock(
             iid=42,
-            author_name="John Doe",
-            author_username="johndoe",
+            author={"name": "John Doe", "username": "johndoe"},
             created_at="2024-01-15T10:30:45Z",
             web_url="https://gitlab.com/org/proj/-/issues/42",
+            description="Description",
+        )
+        result = build_issue_body(
+            issue,
             processed_description="Description",
             cross_links_text="\n\n**Related:** #123",
         )
         assert "**Related:** #123" in result
 
     def test_issue_body_with_empty_description(self) -> None:
-        result = build_issue_body(
+        issue = MagicMock(
             iid=42,
-            author_name="Jane",
-            author_username="jane",
+            author={"name": "Jane", "username": "jane"},
             created_at="2024-01-15T10:30:45Z",
             web_url="https://gitlab.com/org/proj/-/issues/42",
+            description="",
+        )
+        result = build_issue_body(
+            issue,
             processed_description="",
             cross_links_text="",
         )

@@ -3,6 +3,10 @@
 from __future__ import annotations
 
 import datetime as dt
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from gitlab.v4.objects import ProjectIssue
 
 
 def format_timestamp(iso_timestamp: str) -> str:
@@ -27,34 +31,26 @@ def format_timestamp(iso_timestamp: str) -> str:
 
 
 def build_issue_body(
+    gitlab_issue: ProjectIssue,
     *,
-    iid: int,
-    author_name: str,
-    author_username: str,
-    created_at: str,
-    web_url: str,
-    processed_description: str,
-    cross_links_text: str,
+    processed_description: str | None = None,
+    cross_links_text: str | None = None,
 ) -> str:
     """Build complete GitHub issue body with migration header.
 
     Args:
-        iid: GitLab issue IID
-        author_name: Original author's display name
-        author_username: Original author's username
-        created_at: ISO timestamp of issue creation
-        web_url: GitLab issue URL
-        processed_description: Description with attachments already processed
+        gitlab_issue: GitLab issue object
+        processed_description: Description with some text already adapted for GitHub (if any)
         cross_links_text: Formatted cross-links section (may be empty)
 
     Returns:
         Complete issue body for GitHub
     """
-    body = f"**Migrated from GitLab issue #{iid}**\n"
-    body += f"**Original Author:** {author_name} (@{author_username})\n"
-    body += f"**Created:** {format_timestamp(created_at)}\n"
-    body += f"**GitLab URL:** {web_url}\n\n"
+    body = f"**Migrated from GitLab issue #{gitlab_issue.iid}**\n"
+    body += f"**Original Author:** {gitlab_issue.author['name']} (@{gitlab_issue.author['username']})\n"
+    body += f"**Created:** {format_timestamp(gitlab_issue.created_at)}\n"
+    body += f"**GitLab URL:** {gitlab_issue.web_url}\n\n"
     body += "---\n\n"
-    body += processed_description
-    body += cross_links_text
+    body += processed_description or gitlab_issue.description
+    body += cross_links_text or ""
     return body
