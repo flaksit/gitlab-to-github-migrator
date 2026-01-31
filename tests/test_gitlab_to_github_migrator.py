@@ -350,12 +350,12 @@ class TestDeleteIssue:
             "deleteIssue": {"deletedIssueId": "gid_123"}
         }
 
-        result = delete_issue(mock_client, "gid_123")
+        # Should not raise any exception
+        delete_issue(mock_client, "gid_123")
 
-        assert result is True
         mock_client._Github__requester.requestGraphql.assert_called_once()
 
-    def test_returns_false_on_graphql_exception(self) -> None:
+    def test_raises_exception_on_graphql_exception(self) -> None:
         from unittest.mock import Mock
 
         from gitlab_to_github_migrator.github_utils import delete_issue
@@ -365,21 +365,22 @@ class TestDeleteIssue:
             404, {"message": "Not found"}, headers={}
         )
 
-        result = delete_issue(mock_client, "gid_123")
+        # Should propagate the exception
+        with pytest.raises(GithubException):
+            delete_issue(mock_client, "gid_123")
 
-        assert result is False
-
-    def test_returns_false_on_unexpected_response(self) -> None:
+    def test_raises_error_on_unexpected_response(self) -> None:
         from unittest.mock import Mock
 
+        from gitlab_to_github_migrator.exceptions import MigrationError
         from gitlab_to_github_migrator.github_utils import delete_issue
 
         mock_client = Mock()
         mock_client._Github__requester.requestGraphql.return_value = {"unexpected": "response"}
 
-        result = delete_issue(mock_client, "gid_123")
-
-        assert result is False
+        # Should raise MigrationError for unexpected response
+        with pytest.raises(MigrationError):
+            delete_issue(mock_client, "gid_123")
 
 
 @pytest.mark.unit
