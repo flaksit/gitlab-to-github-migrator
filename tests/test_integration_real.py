@@ -8,28 +8,28 @@ Test source: GitLab project (REQUIRED: set via SOURCE_GITLAB_TEST_PROJECT enviro
 Test target: Temporary GitHub repo (REQUIRED: set via TARGET_GITHUB_TEST_OWNER environment variable)
 
 Test structure:
-- Read-only tests: Verify API access and data reading (no GitHub repo needed)
-- Repository lifecycle test: Tests repo creation and deletion (isolated)
-- Full migration test: End-to-end migration with comprehensive assertions (isolated)
+- GitHub access test: Verify GitHub API access (no GitLab repository needed)
+- Full migration tests: End-to-end migration with aspect-based assertions (isolated)
 """
 
 import os
 import random
 import re
 import string
-from typing import TYPE_CHECKING
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, Any
 
 import gitlab
 import gitlab.v4.objects
 import pytest
-from github import Auth, Github, GithubException
+from github import Auth, Github, GithubException, Repository
 
 from gitlab_to_github_migrator import GitlabToGithubMigrator
 from gitlab_to_github_migrator import github_utils as ghu
 from gitlab_to_github_migrator import gitlab_utils as glu
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import Generator, Sequence
 
 
 def _generate_repo_name(test_type: str = "generic") -> str:
@@ -83,9 +83,32 @@ def gitlab_project(gitlab_client: gitlab.Gitlab, gitlab_project_path: str) -> gi
 
 @pytest.fixture(scope="module")
 def gitlab_issues(gitlab_project: gitlab.v4.objects.Project) -> Sequence[gitlab.v4.objects.ProjectIssue]:
-    issues = gitlab_project.issues.list(get_all=True, state="all")
-    assert len(issues) > 0, "No issues found in source project"
-    return issues
+    return gitlab_project.issues.list(get_all=True, state="all")
+
+
+@pytest.fixture(scope="module")
+def gitlab_labels(gitlab_project: gitlab.v4.objects.Project) -> Sequence[gitlab.v4.objects.ProjectLabel]:
+    return gitlab_project.labels.list(get_all=True)
+
+
+@pytest.fixture(scope="module")
+def gitlab_milestones(gitlab_project: gitlab.v4.objects.Project) -> Sequence[gitlab.v4.objects.ProjectMilestone]:
+    return gitlab_project.milestones.list(get_all=True, state="all")
+
+
+@pytest.fixture(scope="module")
+def gitlab_branches(gitlab_project: gitlab.v4.objects.Project) -> Sequence[gitlab.v4.objects.ProjectBranch]:
+    return gitlab_project.branches.list(get_all=True)
+
+
+@pytest.fixture(scope="module")
+def gitlab_tags(gitlab_project: gitlab.v4.objects.Project) -> Sequence[gitlab.v4.objects.ProjectTag]:
+    return gitlab_project.tags.list(get_all=True)
+
+
+@pytest.fixture(scope="module")
+def gitlab_commits(gitlab_project: gitlab.v4.objects.Project) -> Sequence[gitlab.v4.objects.ProjectCommit]:
+    return gitlab_project.commits.list(get_all=True)
 
 
 @pytest.fixture(scope="module")
@@ -133,451 +156,396 @@ class TestGitHubAccess:
                 pytest.fail(f"Failed to access '{github_owner}' as organization or user: {user_err}")
 
 
-@pytest.mark.integration
-class TestReadOnlyGitlabAccess:
-    """Tests that only read from GitLab - no GitHub repository needed."""
+@dataclass
+class MigrationResult:
+    """Result of a migration run, providing access to the migrator and its output."""
 
-    def test_gitlab_source_project_access(
-        self,
-        gitlab_project: gitlab.v4.objects.Project,
-    ) -> None:
-        """Test that we can access the source GitLab project."""
+    migrator: GitlabToGithubMigrator
+    report: dict[str, Any]
+    github_repo: Repository.Repository
+    repo_path: str
+    label_translations: list[str]
+    expected_label_translations: dict[str, str]
 
-        # Test that we can read milestones, and labels
-        # Issue reading is tested in more detail in another test
-        gitlab_project.milestones.list(per_page=2, get_all=False, state="all")
-        gitlab_project.labels.list(per_page=2, get_all=False)
 
-    def test_issue_read(
-        self,
-        gitlab_issues: Sequence[gitlab.v4.objects.ProjectIssue],
-    ) -> None:
-        """Test reading issues from real GitLab source."""
-        if not gitlab_issues:
-            pytest.skip("No issues found in source project")
+def _create_label_translations(
+    gitlab_labels: Sequence[gitlab.v4.objects.ProjectLabel],
+) -> tuple[list[str], dict[str, str]]:
+    """Dynamically create label translation patterns for testing."""
+    label_translations = []
+    expected_translations = {}  # Maps source label -> expected target label
 
-        for issue in gitlab_issues[:2]:
-            issue.notes.list(per_page=5, get_all=False)
+    label_names = [label.name for label in gitlab_labels]
 
-            # Test that we can access issue properties needed for migration
-            assert hasattr(issue, "iid")
-            assert hasattr(issue, "title")
-            assert hasattr(issue, "description")
-            assert hasattr(issue, "state")
-            assert hasattr(issue, "labels")
-            assert hasattr(issue, "created_at")
-            assert hasattr(issue, "web_url")
+    # Strategy 1: Find common prefixes among labels without assuming any specific format
+    prefix_matches: dict[str, set[str]] = {}
+    for label_name in label_names:
+        if label_name:  # Skip empty labels
+            prefix = label_name[0]  # First letter as prefix
+            if prefix not in prefix_matches:
+                prefix_matches[prefix] = set()
+            prefix_matches[prefix].add(label_name)
 
-    def test_gitlab_cross_linking_read(
-        self,
-        gitlab_issues: Sequence[gitlab.v4.objects.ProjectIssue],
-    ) -> None:
-        """Test reading cross-linked issues from GitLab."""
-        for issue in gitlab_issues:
-            links = issue.links.list(get_all=True)
-            if links:
-                # Test link properties (data is directly on link object)
-                for link in links[:2]:
-                    assert hasattr(link, "iid")
-                    assert hasattr(link, "title")
-                    assert hasattr(link, "link_type")
+    # Find a prefix that matches multiple labels (indicating a pattern)
+    for prefix, matching_labels in prefix_matches.items():
+        if len(matching_labels) >= 2:
+            # Create wildcard pattern: "prefix*:prefix-*"
+            pattern = f"{prefix}*:{prefix}-*"
+            label_translations.append(pattern)
 
-                break
-        else:
-            pytest.skip("No cross-linked issues found in source project")
+            # Track expected translations for verification
+            for label_name in matching_labels:
+                suffix = label_name[1:] if len(label_name) > 1 else ""  # Get part after first letter
+                expected_translations[label_name] = f"{prefix}-{suffix}"
 
-    def test_gitlab_attachment_detection(
-        self,
-        gitlab_client: gitlab.Gitlab,
-        gitlab_project: gitlab.v4.objects.Project,
-        gitlab_issues: Sequence[gitlab.v4.objects.ProjectIssue],
-    ) -> None:
-        """Test finding and accessing GitLab attachments via the REST API."""
-        # Pattern to extract secret and filename from attachment URLs
-        attachment_pattern = r"/uploads/([a-f0-9]{32})/([^)\s]+)"
+            break  # Use first pattern found
 
-        for issue in gitlab_issues:
-            if issue.description:
-                attachments = re.findall(attachment_pattern, issue.description)
-                if attachments:
-                    break
-        else:
-            pytest.skip("No attachments found in source project issues")
+    # Strategy 2: Add a non-wildcard translation for a single label
+    # Pick a label that wasn't already matched by wildcard patterns
+    for label_name in label_names:
+        if label_name not in expected_translations:
+            # Create exact translation: "original:translated"
+            translated_name = f"renamed-{label_name}"
+            pattern = f"{label_name}:{translated_name}"
+            label_translations.append(pattern)
+            expected_translations[label_name] = translated_name
+            break
 
-        # Verify that we can download at least one attachment using the GitLab API
-        import requests
+    return label_translations, expected_translations
 
-        download_successful = False
-        last_error: Exception | None = None
-        for secret, filename in attachments[:3]:  # Test up to 3 attachments
-            try:
-                content, _content_type = glu.download_attachment(gitlab_client, gitlab_project, secret, filename)
-                if len(content) > 0:
-                    download_successful = True
-                    break
-            except requests.RequestException as e:
-                last_error = e
-                continue
 
-        assert download_successful, (
-            f"Could not download any of the {len(attachments)} detected attachments. Last error: {last_error}"
-        )
+@pytest.fixture(scope="class")
+def migration_result(
+    gitlab_token: str | None,
+    gitlab_project_path: str,
+    gitlab_labels: Sequence[gitlab.v4.objects.ProjectLabel],
+    github_token: str,
+    github_owner: str,
+) -> Generator[MigrationResult]:
+    """Run migration once and provide result to all test methods in the class."""
+    repo_name = _generate_repo_name("full-migration")
+    repo_path = f"{github_owner}/{repo_name}"
 
-    def test_graphql_work_items_api_functionality(
-        self,
-        gitlab_project_path: str,
-        gitlab_graphql_client: gitlab.GraphQL,
-        gitlab_issues: Sequence[gitlab.v4.objects.ProjectIssue],
-    ) -> None:
-        """Test the GitLab GraphQL Work Items API functionality using gitlab_utils directly."""
-        # Use the utility function to get parent-child relationships
-        for issue in gitlab_issues:
-            child_iids = glu.get_work_item_children(gitlab_graphql_client, gitlab_project_path, issue.iid)
-            if child_iids:
-                # We found at least one issue with children - verify structure
-                for child_iid in child_iids:
-                    assert int(child_iid) > 0, f"Invalid child IID: {child_iid} for parent #{issue.iid}"
-                break
-        else:
-            pytest.skip("No parent-child relationships found in GitLab project")
+    label_translations, expected_translations = _create_label_translations(gitlab_labels)
 
-    def test_closed_issues_retrieval(
-        self,
-        gitlab_issues: Sequence[gitlab.v4.objects.ProjectIssue],
-    ) -> None:
-        """Test that closed issues are properly retrieved."""
-        closed_count = len([issue for issue in gitlab_issues if issue.state == "closed"])
-        opened_count = len([issue for issue in gitlab_issues if issue.state == "opened"])
+    migrator = GitlabToGithubMigrator(
+        gitlab_project_path=gitlab_project_path,
+        github_repo_path=repo_path,
+        label_translations=label_translations,
+        gitlab_token=gitlab_token,
+        github_token=github_token,
+    )
 
-        assert closed_count > 0, "No closed issues found - test project should have closed issues"
-        assert opened_count > 0, "No opened issues found - test project should have open issues"
-        assert len(gitlab_issues) == closed_count + opened_count
+    report = migrator.migrate()
+    print(f"\n Migration completed for: {repo_path}")
 
-    def test_closed_milestones_retrieval(
-        self,
-        gitlab_project: gitlab.v4.objects.Project,
-    ) -> None:
-        """Test that closed milestones are properly retrieved."""
-        all_milestones = gitlab_project.milestones.list(get_all=True, state="all")
+    yield MigrationResult(
+        migrator=migrator,
+        report=report,
+        github_repo=migrator.github_repo,
+        repo_path=repo_path,
+        label_translations=label_translations,
+        expected_label_translations=expected_translations,
+    )
 
-        if all_milestones:
-            active_milestones = [m for m in all_milestones if m.state == "active"]
-            closed_milestones = [m for m in all_milestones if m.state == "closed"]
-            assert len(all_milestones) == len(active_milestones) + len(closed_milestones)
+    # Cleanup message (don't delete for manual inspection)
+    print(f"\n Did not delete test repository {repo_path} so that you can inspect it manually.")
+    print("   To clean up all test repos, run: uv run delete-test-repos")
 
 
 @pytest.mark.integration
 class TestFullMigration:
-    """End-to-end migration test with comprehensive assertions."""
+    """End-to-end migration tests split by aspect."""
 
-    @staticmethod
-    def _create_label_translations(
-        gitlab_labels: Sequence[gitlab.v4.objects.ProjectLabel],
-    ) -> tuple[list[str], dict[str, str]]:
-        """Dynamically create label translation patterns for testing."""
-        label_translations = []
-        expected_translations = {}  # Maps source label -> expected target label
-
-        label_names = [label.name for label in gitlab_labels]
-
-        # Strategy 1: Find common prefixes among labels without assuming any specific format
-        prefix_matches = {}
-        for label_name in label_names:
-            if label_name:  # Skip empty labels
-                prefix = label_name[0]  # First letter as prefix
-                if prefix not in prefix_matches:
-                    prefix_matches[prefix] = set()
-                prefix_matches[prefix].add(label_name)
-
-        # Find a prefix that matches multiple labels (indicating a pattern)
-        for prefix, matching_labels in prefix_matches.items():
-            if len(matching_labels) >= 2:
-                # Create wildcard pattern: "prefix*:prefix-*"
-                pattern = f"{prefix}*:{prefix}-*"
-                label_translations.append(pattern)
-
-                # Track expected translations for verification
-                for label_name in matching_labels:
-                    suffix = label_name[1:] if len(label_name) > 1 else ""  # Get part after first letter
-                    expected_translations[label_name] = f"{prefix}-{suffix}"
-
-                break  # Use first pattern found
-
-        # Strategy 2: Add a non-wildcard translation for a single label
-        # Pick a label that wasn't already matched by wildcard patterns
-        for label_name in label_names:
-            if label_name not in expected_translations:
-                # Create exact translation: "original:translated"
-                translated_name = f"renamed-{label_name}"
-                pattern = f"{label_name}:{translated_name}"
-                label_translations.append(pattern)
-                expected_translations[label_name] = translated_name
-                break
-
-        return label_translations, expected_translations
-
-    def test_full_migration(  # noqa: PLR0915 - intentionally comprehensive test
+    def test_migration_report(
         self,
-        gitlab_token: str | None,
-        gitlab_graphql_client: gitlab.GraphQL,
-        gitlab_project_path: str,
-        gitlab_project: gitlab.v4.objects.Project,
+        migration_result: MigrationResult,
         gitlab_issues: Sequence[gitlab.v4.objects.ProjectIssue],
-        github_token: str,
-        github_owner: str,
-        subtests: pytest.Subtests,
+        gitlab_milestones: Sequence[gitlab.v4.objects.ProjectMilestone],
+        gitlab_labels: Sequence[gitlab.v4.objects.ProjectLabel],
     ) -> None:
-        """Test complete migration workflow using the main migrate() method."""
-        repo_name = _generate_repo_name("full-migration")
-        repo_path = f"{github_owner}/{repo_name}"
+        """Test that migration report is correct and complete."""
+        report = migration_result.report
 
-        # Get source data for comparison before migration
-        gitlab_labels = gitlab_project.labels.list(get_all=True)
-        gitlab_milestones = gitlab_project.milestones.list(get_all=True, state="all")
-        gitlab_branches = gitlab_project.branches.list(get_all=True)
-        gitlab_tags = gitlab_project.tags.list(get_all=True)
-        gitlab_commits = gitlab_project.commits.list(get_all=True)
+        assert report["success"] is True, f"Migration failed: {report.get('errors', [])}"
+        assert report["gitlab_project"] == migration_result.migrator.gitlab_project_path
+        assert report["github_repo"] == migration_result.repo_path
+        assert "statistics" in report
 
-        # Dynamically discover label patterns and create translations
-        # Find common prefixes among labels without assuming any specific format
-        label_translations, expected_translations = self._create_label_translations(gitlab_labels)
+        stats = report["statistics"]
+        assert stats["gitlab_issues_total"] == len(gitlab_issues)
+        assert stats["gitlab_milestones_total"] == len(gitlab_milestones)
+        assert stats["gitlab_labels_total"] == len(gitlab_labels)
 
-        migrator = GitlabToGithubMigrator(
-            gitlab_project_path=gitlab_project_path,
-            github_repo_path=repo_path,
-            label_translations=label_translations,
-            gitlab_token=gitlab_token,
-            github_token=github_token,
+        # Verify GitHub counts match GitLab counts
+        assert stats["github_issues_total"] == stats["gitlab_issues_total"], (
+            f"Issue count mismatch in report: {stats['github_issues_total']} != {stats['gitlab_issues_total']}"
+        )
+        assert stats["github_milestones_total"] == stats["gitlab_milestones_total"], (
+            f"Milestone count mismatch in report: {stats['github_milestones_total']} != {stats['gitlab_milestones_total']}"
         )
 
-        try:
-            # Run the full migration
-            report = migrator.migrate()
-            github_repo = migrator.github_repo
-            print(f"\n✓ Migration completed for: {repo_path}")
+        print("Migration report verified")
+        print(f"  - Issues: {stats['gitlab_issues_total']} -> {stats['github_issues_total']}")
+        print(f"  - Milestones: {stats['gitlab_milestones_total']} -> {stats['github_milestones_total']}")
+        print(f"  - Labels: {stats['gitlab_labels_total']} (translated: {stats['labels_translated']})")
 
-            # Verify migration report
-            assert report["success"] is True, f"Migration failed: {report.get('errors', [])}"
-            assert report["gitlab_project"] == gitlab_project_path
-            assert report["github_repo"] == repo_path
-            assert "statistics" in report
+    def test_git_content(
+        self,
+        migration_result: MigrationResult,
+        gitlab_branches: Sequence[gitlab.v4.objects.ProjectBranch],
+        gitlab_tags: Sequence[gitlab.v4.objects.ProjectTag],
+        gitlab_commits: Sequence[gitlab.v4.objects.ProjectCommit],
+    ) -> None:
+        """Test that git content (branches, tags, commits) was migrated correctly."""
+        github_repo = migration_result.github_repo
 
-            stats = report["statistics"]
-            assert stats["gitlab_issues_total"] == len(gitlab_issues)
-            assert stats["gitlab_milestones_total"] == len(gitlab_milestones)
-            assert stats["gitlab_labels_total"] == len(gitlab_labels)
+        github_branches = list(github_repo.get_branches())
+        github_tags = list(github_repo.get_tags())
+        github_commits = list(github_repo.get_commits())
 
-            # Verify GitHub counts match GitLab counts
-            assert stats["github_issues_total"] == stats["gitlab_issues_total"], (
-                f"Issue count mismatch in report: {stats['github_issues_total']} != {stats['gitlab_issues_total']}"
-            )
-            assert stats["github_milestones_total"] == stats["gitlab_milestones_total"], (
-                f"Milestone count mismatch in report: {stats['github_milestones_total']} != {stats['gitlab_milestones_total']}"
-            )
+        assert len(github_branches) == len(gitlab_branches), (
+            f"Branch count mismatch: {len(github_branches)} != {len(gitlab_branches)}"
+        )
+        assert len(github_tags) == len(gitlab_tags), f"Tag count mismatch: {len(github_tags)} != {len(gitlab_tags)}"
+        assert len(github_commits) == len(gitlab_commits), (
+            f"Commit count mismatch: {len(github_commits)} != {len(gitlab_commits)}"
+        )
 
-            print("✓ Migration report verified")
-            print(f"  - Issues: {stats['gitlab_issues_total']} → {stats['github_issues_total']}")
-            print(f"  - Milestones: {stats['gitlab_milestones_total']} → {stats['github_milestones_total']}")
-            print(f"  - Labels: {stats['gitlab_labels_total']} (translated: {stats['labels_translated']})")
+        print(
+            f"Git content migrated ({len(github_branches)} branches, {len(github_tags)} tags, {len(github_commits)} commits)"
+        )
 
-            # Verify git content was migrated
-            github_branches = list(github_repo.get_branches())
-            github_tags = list(github_repo.get_tags())
-            github_commits = list(github_repo.get_commits())
+    def test_labels(
+        self,
+        migration_result: MigrationResult,
+    ) -> None:
+        """Test that labels were migrated and translations applied correctly."""
+        migrator = migration_result.migrator
+        github_repo = migration_result.github_repo
+        expected_translations = migration_result.expected_label_translations
 
-            assert len(github_branches) == len(gitlab_branches), (
-                f"Branch count mismatch: {len(github_branches)} != {len(gitlab_branches)}"
-            )
-            assert len(github_tags) == len(gitlab_tags), (
-                f"Tag count mismatch: {len(github_tags)} != {len(gitlab_tags)}"
-            )
-            assert len(github_commits) == len(gitlab_commits), (
-                f"Commit count mismatch: {len(github_commits)} != {len(gitlab_commits)}"
-            )
-            print(
-                f"✓ Git content migrated ({len(github_branches)} branches, {len(github_tags)} tags, {len(github_commits)} commits)"
-            )
+        github_labels = list(github_repo.get_labels())
+        assert len(migrator.label_mapping) > 0, "No labels were mapped"
 
-            # Verify labels
-            github_labels = list(github_repo.get_labels())
-            assert len(migrator.label_mapping) > 0, "No labels were mapped"
-            print(f"✓ Verified {len(migrator.label_mapping)} labels")
-
-            # Check label translations were applied correctly
-            if expected_translations:
-                # Verify that the expected translations were created
-                github_label_names = {label.name for label in github_labels}
-                for source_label, expected_target_label in expected_translations.items():
-                    assert expected_target_label in github_label_names, (
-                        f"Expected translated label '{expected_target_label}' (from '{source_label}') not found in GitHub"
-                    )
-                    # Verify the mapping was recorded correctly
-                    assert migrator.label_mapping.get(source_label) == expected_target_label, (
-                        f"Label mapping incorrect: {source_label} -> {migrator.label_mapping.get(source_label)} "
-                        f"(expected {expected_target_label})"
-                    )
-                print(f"✓ Label translations applied and verified ({len(expected_translations)} translated)")
-
-            # Verify milestones
-            if gitlab_milestones:
-                github_milestones = list(github_repo.get_milestones(state="all"))
-                # After cleanup_placeholders(), only real milestones remain
-                real_milestones = [m for m in github_milestones if m.title != "Placeholder Milestone"]
-                assert len(real_milestones) == len(gitlab_milestones), (
-                    f"Milestone count mismatch: {len(real_milestones)} != {len(gitlab_milestones)}"
+        # Check label translations were applied correctly
+        if expected_translations:
+            github_label_names = {label.name for label in github_labels}
+            for source_label, expected_target_label in expected_translations.items():
+                assert expected_target_label in github_label_names, (
+                    f"Expected translated label '{expected_target_label}' (from '{source_label}') not found in GitHub"
+                )
+                assert migrator.label_mapping.get(source_label) == expected_target_label, (
+                    f"Label mapping incorrect: {source_label} -> {migrator.label_mapping.get(source_label)} "
+                    f"(expected {expected_target_label})"
                 )
 
-                # Verify milestone number preservation
-                for source_ms in gitlab_milestones:
-                    matching = [m for m in github_milestones if m.title == source_ms.title]
-                    assert len(matching) == 1, f"Milestone '{source_ms.title}' not found"
-                    assert matching[0].number == source_ms.iid, (
-                        f"Milestone number not preserved: {matching[0].number} != {source_ms.iid}"
+        print(f"Verified {len(migrator.label_mapping)} labels ({len(expected_translations)} translated)")
+
+    def test_milestones(
+        self,
+        migration_result: MigrationResult,
+        gitlab_milestones: Sequence[gitlab.v4.objects.ProjectMilestone],
+    ) -> None:
+        """Test that milestones were migrated with number preservation."""
+        if not gitlab_milestones:
+            pytest.skip("No milestones in source project")
+
+        github_repo = migration_result.github_repo
+        github_milestones = list(github_repo.get_milestones(state="all"))
+
+        # After cleanup_placeholders(), only real milestones remain
+        real_milestones = [m for m in github_milestones if m.title != "Placeholder Milestone"]
+        assert len(real_milestones) == len(gitlab_milestones), (
+            f"Milestone count mismatch: {len(real_milestones)} != {len(gitlab_milestones)}"
+        )
+
+        # Verify milestone number preservation
+        for source_ms in gitlab_milestones:
+            matching = [m for m in github_milestones if m.title == source_ms.title]
+            assert len(matching) == 1, f"Milestone '{source_ms.title}' not found"
+            assert matching[0].number == source_ms.iid, (
+                f"Milestone number not preserved: {matching[0].number} != {source_ms.iid}"
+            )
+
+        print(f"Verified {len(gitlab_milestones)} milestones with number preservation")
+
+    def test_issues(
+        self,
+        migration_result: MigrationResult,
+        gitlab_issues: Sequence[gitlab.v4.objects.ProjectIssue],
+    ) -> None:
+        """Test that issues were migrated with number preservation and correct state."""
+        if not gitlab_issues:
+            pytest.skip("No issues in source project")
+
+        github_repo = migration_result.github_repo
+        github_issues = list(github_repo.get_issues(state="all"))
+
+        # Placeholders are now deleted via GraphQL API, so all issues should be real
+        assert len(github_issues) == len(gitlab_issues), (
+            f"Issue count mismatch: {len(github_issues)} != {len(gitlab_issues)}"
+        )
+
+        # Verify issue number preservation
+        for source_issue in gitlab_issues:
+            matching = [i for i in github_issues if i.number == source_issue.iid]
+            assert len(matching) == 1, f"GitLab issue #{source_issue.iid} not found in GitHub"
+        for github_issue in github_issues:
+            matching = [i for i in gitlab_issues if i.iid == github_issue.number]
+            assert len(matching) == 1, f"GitHub issue #{github_issue.number} has no matching GitLab issue"
+
+        # Verify issue state preservation
+        gitlab_open = {i.iid for i in gitlab_issues if i.state == "opened"}
+        github_open = {i.number for i in github_issues if i.state == "open"}
+        assert gitlab_open == github_open, f"Open issue mismatch: {sorted(github_open)} != {sorted(gitlab_open)}"
+
+        gitlab_closed = {i.iid for i in gitlab_issues if i.state == "closed"}
+        github_closed = {i.number for i in github_issues if i.state == "closed"}
+        assert github_closed == gitlab_closed, (
+            f"Closed issue mismatch: {sorted(github_closed)} != {sorted(gitlab_closed)}"
+        )
+
+        print(f"Verified {len(gitlab_issues)} issues with number preservation")
+
+    def test_comments(
+        self,
+        migration_result: MigrationResult,
+        gitlab_issues: Sequence[gitlab.v4.objects.ProjectIssue],
+    ) -> None:
+        """Test that comments were migrated with correct format."""
+        if not gitlab_issues:
+            pytest.skip("No issues in source project")
+
+        github_repo = migration_result.github_repo
+        github_issues = list(github_repo.get_issues(state="all"))
+
+        issues_with_comments = 0
+        for github_issue in github_issues:
+            comments = list(github_issue.get_comments())
+            if comments:
+                issues_with_comments += 1
+                # Verify comment format (should have bold text or system note marker)
+                for comment in comments:
+                    assert "**" in comment.body or "System note:" in comment.body
+
+        if issues_with_comments == 0:
+            pytest.skip("No comments found in migrated issues")
+
+        print(f"Verified comments on {issues_with_comments} issues")
+
+    def test_parent_child_relationships(
+        self,
+        migration_result: MigrationResult,
+        gitlab_graphql_client: gitlab.GraphQL,
+        gitlab_project_path: str,
+        gitlab_issues: Sequence[gitlab.v4.objects.ProjectIssue],
+        subtests: pytest.Subtests,
+    ) -> None:
+        """Test that parent-child relationships (sub-issues) were migrated correctly."""
+        if not gitlab_issues:
+            pytest.skip("No issues in source project")
+
+        github_repo = migration_result.github_repo
+
+        # Find parent-child relationships from GitLab
+        gitlab_relationship_count = 0
+        relationships_verified = 0
+
+        for gitlab_issue in gitlab_issues:
+            child_iids = glu.get_work_item_children(gitlab_graphql_client, gitlab_project_path, gitlab_issue.iid)
+            if child_iids:
+                gitlab_relationship_count += len(child_iids)
+
+                # Get corresponding GitHub issue
+                parent_github_issue = github_repo.get_issue(int(gitlab_issue.iid))
+
+                # Get sub-issues directly from PyGithub
+                github_sub_issues = list(parent_github_issue.get_sub_issues())
+                github_sub_issue_numbers = {sub.number for sub in github_sub_issues}
+
+                with subtests.test(f"Parent #{gitlab_issue.iid} has children {child_iids}"):
+                    # Verify all children exist in GitHub
+                    missing_children = set(child_iids) - github_sub_issue_numbers
+                    assert not missing_children, (
+                        f"Parent issue #{gitlab_issue.iid} missing sub-issues {missing_children} in GitHub"
                     )
+                    relationships_verified += len(child_iids)
 
-                print(f"✓ Verified {len(gitlab_milestones)} milestones with number preservation")
+        if not gitlab_relationship_count:
+            pytest.skip("No parent-child relationships found in GitLab project")
 
-            # Verify issues
-            if gitlab_issues:
-                github_issues = list(github_repo.get_issues(state="all"))
-                # Placeholders are now deleted via GraphQL API, so all issues should be real
-                assert len(github_issues) == len(gitlab_issues), (
-                    f"Issue count mismatch: {len(github_issues)} != {len(gitlab_issues)}"
+        assert relationships_verified > 0, (
+            f"Failed to verify any parent-child relationships. Expected to verify {gitlab_relationship_count} relationships."
+        )
+
+        print(
+            f"Verified {relationships_verified} parent-child relationships (out of {gitlab_relationship_count} total)"
+        )
+
+    def test_attachments(
+        self,
+        migration_result: MigrationResult,
+        gitlab_issues: Sequence[gitlab.v4.objects.ProjectIssue],
+        github_token: str,
+    ) -> None:
+        """Test that attachments were migrated with correct URLs."""
+        if not gitlab_issues:
+            pytest.skip("No issues in source project")
+
+        github_repo = migration_result.github_repo
+        migrator = migration_result.migrator
+        repo_path = migration_result.repo_path
+
+        # Find issues with attachments
+        attachment_pattern = r"/uploads/[a-f0-9]{32}/[^)\s]+"
+        source_issues_with_attachments = []
+        for source_issue in gitlab_issues:
+            if source_issue.description:
+                attachments = re.findall(attachment_pattern, source_issue.description)
+                if attachments:
+                    source_issues_with_attachments.append(source_issue)
+
+        if not source_issues_with_attachments:
+            pytest.skip("No attachments found in source project issues")
+
+        # Check that GitHub issues have updated attachment URLs
+        for source_issue in source_issues_with_attachments[:3]:  # Check first 3
+            github_issue = github_repo.get_issue(source_issue.iid)
+            if github_issue.body:
+                # GitLab URLs should be replaced with GitHub release asset URLs
+                remaining_gitlab_urls = re.findall(attachment_pattern, github_issue.body)
+                github_urls = re.findall(r"github\.com/.*/releases/download/", github_issue.body)
+                assert len(remaining_gitlab_urls) == 0 or len(github_urls) > 0, (
+                    f"Issue #{source_issue.iid}: attachments not migrated"
                 )
 
-                # Verify issue number preservation
-                for source_issue in gitlab_issues:
-                    matching = [i for i in github_issues if i.number == source_issue.iid]
-                    assert len(matching) == 1, f"GitLab issue #{source_issue.iid} not found in GitHub"
-                for github_issue in github_issues:
-                    matching = [i for i in gitlab_issues if i.iid == github_issue.number]
-                    assert len(matching) == 1, f"GitHub issue #{github_issue.number} has no matching GitLab issue"
+        # Verify attachments release exists (use cached value from migration)
+        if migrator.attachment_handler._release is None:
+            pytest.skip("No attachments release found (downloads may have failed)")
 
-                # Verify issue state preservation
-                gitlab_open = {i.iid for i in gitlab_issues if i.state == "opened"}
-                github_open = {i.number for i in github_issues if i.state == "open"}
-                assert gitlab_open == github_open, (
-                    f"Open issue mismatch: {sorted(github_open)} != {sorted(gitlab_open)}"
-                )
-                gitlab_closed = {i.iid for i in gitlab_issues if i.state == "closed"}
-                github_closed = {i.number for i in github_issues if i.state == "closed"}
-                assert github_closed == gitlab_closed, (
-                    f"Closed issue mismatch: {sorted(github_closed)} != {sorted(gitlab_closed)}"
-                )
+        assets = list(migrator.attachment_handler._release.get_assets())
 
-                print(f"✓ Verified {len(gitlab_issues)} issues with number preservation")
+        # Verify at least one asset is downloadable via API
+        # (private/draft release assets require API with Accept: application/octet-stream)
+        if assets:
+            import requests
 
-                # Verify some issues have comments
-                # TODO extended verification of all comments on all issues
-                issues_with_comments = 0
-                for github_issue in github_issues:
-                    comments = list(github_issue.get_comments())
-                    if comments:
-                        issues_with_comments += 1
-                        # Verify comment format
-                        for comment in comments:
-                            assert "**" in comment.body or "System note:" in comment.body
+            asset = assets[0]
+            # Use GitHub API endpoint with asset ID, not browser_download_url
+            api_url = f"https://api.github.com/repos/{repo_path}/releases/assets/{asset.id}"
+            response = requests.head(
+                api_url,
+                headers={
+                    "Authorization": f"Bearer {github_token}",
+                    "Accept": "application/octet-stream",
+                },
+                allow_redirects=True,
+                timeout=10,
+            )
+            assert response.status_code == 200, f"Asset {asset.name} not accessible via API: {response.status_code}"
 
-                if issues_with_comments > 0:
-                    print(f"✓ Verified comments on {issues_with_comments} issues")
-
-                # Verify parent-child relationships (sub-issues)
-                # Dynamically get parent-child relationships from GitLab and verify they exist in GitHub
-                gitlab_relationship_count = 0
-                relationships_verified = 0
-                for gitlab_issue in gitlab_issues:
-                    child_iids = glu.get_work_item_children(
-                        gitlab_graphql_client, gitlab_project_path, gitlab_issue.iid
-                    )
-                    if child_iids:
-                        gitlab_relationship_count += len(child_iids)
-
-                        # Get corresponding GitHub issue
-                        parent_github_issue = github_repo.get_issue(int(gitlab_issue.iid))
-
-                        # Get sub-issues directly from PyGithub
-                        github_sub_issues = list(parent_github_issue.get_sub_issues())
-                        github_sub_issue_numbers = {sub.number for sub in github_sub_issues}
-
-                        with subtests.test(f"Parent #{gitlab_issue.iid} has children {child_iids}"):
-                            # Verify all children exist in GitHub
-                            missing_children = set(child_iids) - github_sub_issue_numbers
-                            assert not missing_children, (
-                                f"Parent issue #{gitlab_issue.iid} missing sub-issues {missing_children} in GitHub"
-                            )
-                            relationships_verified += len(child_iids)
-
-                if not gitlab_relationship_count:
-                    # TODO Skip rather than fail if no relationships exist.
-                    #       However, we should not skip the entire full migration test, so we should rather isolate
-                    #       this into its own test case. Or use subtests.
-                    print("⚠️  No parent-child relationships found in GitLab project")
-                else:
-                    assert relationships_verified > 0, (
-                        f"Failed to verify any parent-child relationships. "
-                        f"Expected to verify {gitlab_relationship_count} relationships."
-                    )
-
-                    print(
-                        f"\n✓ Verified {relationships_verified} parent-child relationships "
-                        f"(out of {gitlab_relationship_count} total)"
-                    )
-
-                # Verify attachment migration
-                attachment_pattern = r"/uploads/[a-f0-9]{32}/[^)\s]+"
-                source_issues_with_attachments = []
-                for source_issue in gitlab_issues:
-                    if source_issue.description:
-                        attachments = re.findall(attachment_pattern, source_issue.description)
-                        if attachments:
-                            source_issues_with_attachments.append(source_issue)
-
-                if source_issues_with_attachments:
-                    # Check that GitHub issues have updated attachment URLs
-                    for source_issue in source_issues_with_attachments[:3]:  # Check first 3
-                        github_issue = github_repo.get_issue(source_issue.iid)
-                        if github_issue.body:
-                            # GitLab URLs should be replaced with GitHub release asset URLs
-                            remaining_gitlab_urls = re.findall(attachment_pattern, github_issue.body)
-                            github_urls = re.findall(r"github\.com/.*/releases/download/", github_issue.body)
-                            assert len(remaining_gitlab_urls) == 0 or len(github_urls) > 0, (
-                                f"Issue #{source_issue.iid}: attachments not migrated"
-                            )
-
-                    # Verify attachments release exists (use cached value from migration)
-                    if migrator.attachment_handler._release is None:
-                        print("⚠️  No attachments release found (downloads may have failed)")
-                    else:
-                        assets = list(migrator.attachment_handler._release.get_assets())
-
-                        # Verify at least one asset is downloadable via API
-                        # (private/draft release assets require API with Accept: application/octet-stream)
-                        if assets:
-                            import requests
-
-                            asset = assets[0]
-                            # Use GitHub API endpoint with asset ID, not browser_download_url
-                            api_url = f"https://api.github.com/repos/{repo_path}/releases/assets/{asset.id}"
-                            response = requests.head(
-                                api_url,
-                                headers={
-                                    "Authorization": f"Bearer {github_token}",
-                                    "Accept": "application/octet-stream",
-                                },
-                                allow_redirects=True,
-                                timeout=10,
-                            )
-                            assert response.status_code == 200, (
-                                f"Asset {asset.name} not accessible via API: {response.status_code}"
-                            )
-
-                        print(f"✓ Verified attachment migration ({len(assets)} files in release, URLs accessible)")
-
-        finally:
-            # Cleanup - only if repo was created
-            if migrator._github_repo is not None:
-                print(f"\n⚠️  Did not delete test repository {repo_path} so that you can inspect it manually.")
-                print("   To clean up all test repos, run: uv run delete-test-repos")
+        print(f"Verified attachment migration ({len(assets)} files in release, URLs accessible)")
 
 
 if __name__ == "__main__":

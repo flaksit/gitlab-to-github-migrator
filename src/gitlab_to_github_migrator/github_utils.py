@@ -139,7 +139,7 @@ def delete_issue(github_token: str, issue_node_id: str) -> None:
         "Authorization": f"Bearer {github_token}",
         "Content-Type": "application/json",
     }
-    
+
     mutation = """
     mutation DeleteIssue($input: DeleteIssueInput!) {
       deleteIssue(input: $input) {
@@ -147,35 +147,35 @@ def delete_issue(github_token: str, issue_node_id: str) -> None:
       }
     }
     """
-    
+
     payload = {
         "query": mutation,
         "variables": {
             "input": {
                 "issueId": issue_node_id,
             }
-        }
+        },
     }
-    
+
     response = requests.post(graphql_url, headers=headers, data=json.dumps(payload), timeout=30)
-    
+
     if response.status_code != 200:
         msg = f"GraphQL request failed with status {response.status_code}: {response.text}"
         raise MigrationError(msg)
-    
+
     result = response.json()
-    
+
     # Check for GraphQL errors
     if "errors" in result:
         error_msg = json.dumps(result["errors"])
         msg = f"GraphQL errors: {error_msg}"
         raise MigrationError(msg)
-    
+
     # Verify successful deletion
     if not (result.get("data") and "deleteIssue" in result["data"]):
         msg = f"Unexpected GraphQL response when deleting issue {issue_node_id}: {result}"
         raise MigrationError(msg)
-    
+
     logger.debug(f"Deleted issue with node ID {issue_node_id}")
 
 
