@@ -346,14 +346,19 @@ class TestDeleteIssue:
         from gitlab_to_github_migrator.github_utils import delete_issue
 
         mock_client = Mock()
-        mock_client._Github__requester.requestGraphql.return_value = {
-            "deleteIssue": {"deletedIssueId": "gid_123"}
-        }
+        mock_client._Github__requester.graphql_named_mutation.return_value = (
+            {},
+            {"deleteIssue": {"deletedIssueId": "gid_123"}},
+        )
 
         # Should not raise any exception
         delete_issue(mock_client, "gid_123")
 
-        mock_client._Github__requester.requestGraphql.assert_called_once()
+        mock_client._Github__requester.graphql_named_mutation.assert_called_once_with(
+            mutation_name="deleteIssue",
+            mutation_input={"issueId": "gid_123"},
+            output_schema="deletedIssueId",
+        )
 
     def test_raises_exception_on_graphql_exception(self) -> None:
         from unittest.mock import Mock
@@ -361,7 +366,7 @@ class TestDeleteIssue:
         from gitlab_to_github_migrator.github_utils import delete_issue
 
         mock_client = Mock()
-        mock_client._Github__requester.requestGraphql.side_effect = GithubException(
+        mock_client._Github__requester.graphql_named_mutation.side_effect = GithubException(
             404, {"message": "Not found"}, headers={}
         )
 
@@ -376,7 +381,7 @@ class TestDeleteIssue:
         from gitlab_to_github_migrator.github_utils import delete_issue
 
         mock_client = Mock()
-        mock_client._Github__requester.requestGraphql.return_value = {"unexpected": "response"}
+        mock_client._Github__requester.graphql_named_mutation.return_value = ({}, {"unexpected": "response"})
 
         # Should raise MigrationError for unexpected response
         with pytest.raises(MigrationError):
