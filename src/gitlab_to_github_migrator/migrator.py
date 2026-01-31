@@ -317,7 +317,7 @@ class GitlabToGithubMigrator:
 
         for issue in github_placeholder_issues:
             # Delete placeholder issues using GraphQL API
-            ghu.delete_issue(self.github_client, issue.node_id)
+            ghu.delete_issue(self.github_token, issue.node_id)
             logger.debug(f"Deleted placeholder issue #{issue.number}")
 
         return gitlab_to_github_issue_map, gitlab_blocks_links

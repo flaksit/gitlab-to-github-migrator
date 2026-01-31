@@ -341,51 +341,70 @@ class TestCreateIssueDependency:
 @pytest.mark.unit
 class TestDeleteIssue:
     def test_deletes_issue_successfully(self) -> None:
-        from unittest.mock import Mock
+        from unittest.mock import Mock, patch
 
         from gitlab_to_github_migrator.github_utils import delete_issue
 
-        mock_client = Mock()
-        mock_client._Github__requester.graphql_named_mutation.return_value = (
-            {},
-            {"deleteIssue": {"clientMutationId": None}},
-        )
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "data": {"deleteIssue": {"clientMutationId": None}}
+        }
 
-        # Should not raise any exception
-        delete_issue(mock_client, "gid_123")
+        with patch("gitlab_to_github_migrator.github_utils.requests.post", return_value=mock_response) as mock_post:
+            # Should not raise any exception
+            delete_issue("fake_token", "gid_123")
 
-        mock_client._Github__requester.graphql_named_mutation.assert_called_once_with(
-            mutation_name="deleteIssue",
-            mutation_input={"issueId": "gid_123"},
-            output_schema="clientMutationId",
-        )
+            # Verify the request was made correctly
+            mock_post.assert_called_once()
+            call_args = mock_post.call_args
+            assert call_args[0][0] == "https://api.github.com/graphql"
+            assert call_args[1]["headers"]["Authorization"] == "Bearer fake_token"
 
-    def test_raises_exception_on_graphql_exception(self) -> None:
-        from unittest.mock import Mock
+    def test_raises_exception_on_http_error(self) -> None:
+        from unittest.mock import Mock, patch
 
         from gitlab_to_github_migrator.github_utils import delete_issue
 
-        mock_client = Mock()
-        mock_client._Github__requester.graphql_named_mutation.side_effect = GithubException(
-            404, {"message": "Not found"}, headers={}
-        )
+        mock_response = Mock()
+        mock_response.status_code = 404
+        mock_response.text = "Not found"
 
-        # Should propagate the exception
-        with pytest.raises(GithubException):
-            delete_issue(mock_client, "gid_123")
+        with patch("gitlab_to_github_migrator.github_utils.requests.post", return_value=mock_response):
+            # Should raise GithubException
+            with pytest.raises(GithubException):
+                delete_issue("fake_token", "gid_123")
+
+    def test_raises_exception_on_graphql_error(self) -> None:
+        from unittest.mock import Mock, patch
+
+        from gitlab_to_github_migrator.github_utils import delete_issue
+
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "errors": [{"message": "Issue not found"}]
+        }
+
+        with patch("gitlab_to_github_migrator.github_utils.requests.post", return_value=mock_response):
+            # Should raise GithubException for GraphQL errors
+            with pytest.raises(GithubException):
+                delete_issue("fake_token", "gid_123")
 
     def test_raises_error_on_unexpected_response(self) -> None:
-        from unittest.mock import Mock
+        from unittest.mock import Mock, patch
 
         from gitlab_to_github_migrator.exceptions import MigrationError
         from gitlab_to_github_migrator.github_utils import delete_issue
 
-        mock_client = Mock()
-        mock_client._Github__requester.graphql_named_mutation.return_value = ({}, {"unexpected": "response"})
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"data": {"unexpected": "response"}}
 
-        # Should raise MigrationError for unexpected response
-        with pytest.raises(MigrationError):
-            delete_issue(mock_client, "gid_123")
+        with patch("gitlab_to_github_migrator.github_utils.requests.post", return_value=mock_response):
+            # Should raise MigrationError for unexpected response
+            with pytest.raises(MigrationError):
+                delete_issue("fake_token", "gid_123")
 
 
 @pytest.mark.unit
