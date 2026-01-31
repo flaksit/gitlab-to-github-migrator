@@ -348,7 +348,7 @@ class TestDeleteIssue:
         mock_client = Mock()
         mock_client._Github__requester.graphql_named_mutation.return_value = (
             {},
-            {"deleteIssue": {"deletedIssueId": "gid_123"}},
+            {"deleteIssue": {"clientMutationId": None}},
         )
 
         # Should not raise any exception
@@ -357,7 +357,7 @@ class TestDeleteIssue:
         mock_client._Github__requester.graphql_named_mutation.assert_called_once_with(
             mutation_name="deleteIssue",
             mutation_input={"issueId": "gid_123"},
-            output_schema="deletedIssueId",
+            output_schema="clientMutationId",
         )
 
     def test_raises_exception_on_graphql_exception(self) -> None:

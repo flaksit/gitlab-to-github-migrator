@@ -134,9 +134,9 @@ def delete_issue(client: Github, issue_node_id: str) -> None:
     _headers, response = client._Github__requester.graphql_named_mutation(  # noqa: SLF001 - PyGithub doesn't expose GraphQL API publicly  # pyright: ignore[reportAttributeAccessIssue, reportUnknownVariableType]
         mutation_name="deleteIssue",
         mutation_input={"issueId": issue_node_id},
-        output_schema="deletedIssueId",
+        output_schema="clientMutationId",
     )
-    if not (response and "deleteIssue" in response and response["deleteIssue"].get("deletedIssueId")):
+    if not (response and "deleteIssue" in response):
         msg = f"Unexpected response when deleting issue {issue_node_id}: {response}"
         raise MigrationError(msg)
     logger.debug(f"Deleted issue with node ID {issue_node_id}")
