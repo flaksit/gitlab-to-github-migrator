@@ -88,3 +88,21 @@ def get_pass_value(pass_path: str) -> str:
             raise PassError(msg) from e
 
     return result.stdout.strip()
+
+
+def inject_token_into_url(url: str, token: str | None, token_prefix: str = "") -> str:
+    """Inject authentication token into HTTPS URL.
+
+    Args:
+        url: The HTTPS URL to inject token into
+        token: The authentication token
+        token_prefix: Optional prefix for the token (e.g., "oauth2:")
+
+    Returns:
+        URL with token injected, or original URL if no token or not HTTPS
+    """
+    if token and url.startswith("https://"):
+        if token_prefix:
+            return url.replace("https://", f"https://{token_prefix}:{token}@")
+        return url.replace("https://", f"https://{token}@")
+    return url
