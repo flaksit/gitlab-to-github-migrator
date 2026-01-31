@@ -492,7 +492,7 @@ class TestFullMigration:
                 # Verify parent-child relationships (sub-issues)
                 # Dynamically get parent-child relationships from GitLab and verify they exist in GitHub
                 gitlab_parent_children = glu.get_parent_child_relationships(
-                    gitlab_client, migrator.graphql_client, source_gitlab_project
+                    gitlab_client, migrator.gitlab_graphql_client, source_gitlab_project
                 )
 
                 if not gitlab_parent_children:
