@@ -161,14 +161,15 @@ def delete_issue(github_token: str, issue_node_id: str) -> None:
     
     if response.status_code != 200:
         msg = f"GraphQL request failed with status {response.status_code}: {response.text}"
-        raise GithubException(response.status_code, {"message": msg}, headers={})
+        raise MigrationError(msg)
     
     result = response.json()
     
     # Check for GraphQL errors
     if "errors" in result:
         error_msg = json.dumps(result["errors"])
-        raise GithubException(400, {"message": f"GraphQL errors: {error_msg}"}, headers={})
+        msg = f"GraphQL errors: {error_msg}"
+        raise MigrationError(msg)
     
     # Verify successful deletion
     if not (result.get("data") and "deleteIssue" in result["data"]):

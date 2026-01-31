@@ -316,7 +316,6 @@ class GitlabToGithubMigrator:
                 github_placeholder_issues.append(github_issue)
 
         for issue in github_placeholder_issues:
-            # Delete placeholder issues using GraphQL API
             ghu.delete_issue(self.github_token, issue.node_id)
             logger.debug(f"Deleted placeholder issue #{issue.number}")
 
@@ -440,7 +439,6 @@ class GitlabToGithubMigrator:
             gitlab_labels = self.gitlab_project.labels.list(get_all=True)
 
             # Count GitHub items with state breakdown
-            # No need to filter placeholders since they are now deleted via GraphQL
             github_issues = list(self.github_repo.get_issues(state="all"))
             github_issues_open = [i for i in github_issues if i.state == "open"]
             github_issues_closed = [i for i in github_issues if i.state == "closed"]

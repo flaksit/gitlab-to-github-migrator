@@ -364,6 +364,7 @@ class TestDeleteIssue:
     def test_raises_exception_on_http_error(self) -> None:
         from unittest.mock import Mock, patch
 
+        from gitlab_to_github_migrator.exceptions import MigrationError
         from gitlab_to_github_migrator.github_utils import delete_issue
 
         mock_response = Mock()
@@ -371,13 +372,14 @@ class TestDeleteIssue:
         mock_response.text = "Not found"
 
         with patch("gitlab_to_github_migrator.github_utils.requests.post", return_value=mock_response):
-            # Should raise GithubException
-            with pytest.raises(GithubException):
+            # Should raise MigrationError
+            with pytest.raises(MigrationError):
                 delete_issue("fake_token", "gid_123")
 
     def test_raises_exception_on_graphql_error(self) -> None:
         from unittest.mock import Mock, patch
 
+        from gitlab_to_github_migrator.exceptions import MigrationError
         from gitlab_to_github_migrator.github_utils import delete_issue
 
         mock_response = Mock()
@@ -387,8 +389,8 @@ class TestDeleteIssue:
         }
 
         with patch("gitlab_to_github_migrator.github_utils.requests.post", return_value=mock_response):
-            # Should raise GithubException for GraphQL errors
-            with pytest.raises(GithubException):
+            # Should raise MigrationError for GraphQL errors
+            with pytest.raises(MigrationError):
                 delete_issue("fake_token", "gid_123")
 
     def test_raises_error_on_unexpected_response(self) -> None:
