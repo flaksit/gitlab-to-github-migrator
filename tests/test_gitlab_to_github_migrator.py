@@ -621,7 +621,7 @@ class TestGetWorkItemChildren:
     def test_returns_empty_list_when_no_children(self) -> None:
         from unittest.mock import Mock
 
-        from gitlab_to_github_migrator.gitlab_utils import get_work_item_children
+        from gitlab_to_github_migrator.relationships import get_work_item_children
 
         mock_graphql = Mock()
         mock_graphql.execute.return_value = {
@@ -639,8 +639,7 @@ class TestGetWorkItemChildren:
     def test_returns_children_when_present(self) -> None:
         from unittest.mock import Mock
 
-        from gitlab_to_github_migrator.gitlab_utils import get_work_item_children
-        from gitlab_to_github_migrator.relationships import WorkItemChild
+        from gitlab_to_github_migrator.relationships import WorkItemChild, get_work_item_children
 
         mock_graphql = Mock()
         mock_graphql.execute.return_value = {
