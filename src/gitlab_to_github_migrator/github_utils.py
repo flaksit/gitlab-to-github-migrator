@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import json
 import logging
 import os
 import re
 from typing import TYPE_CHECKING, Final, Literal, overload
 
+import requests
 from github import Auth, Github, GithubException, UnknownObjectException
 from github.AuthenticatedUser import AuthenticatedUser
 
@@ -116,6 +118,65 @@ def get_repo(client: Github, repo_path: str) -> Repository | None:
             return None
         msg = f"Error checking repository existence: {e}"
         raise MigrationError(msg) from e
+
+
+def delete_issue(github_token: str, issue_node_id: str) -> None:
+    """Delete a GitHub issue using GraphQL API.
+
+    Uses direct GraphQL API call since PyGithub doesn't support issue deletion.
+
+    Args:
+        github_token: GitHub authentication token
+        issue_node_id: The global node ID of the issue (issue.node_id)
+
+    Raises:
+        GithubException: If the GraphQL mutation fails
+        MigrationError: If the response is unexpected
+    """
+    # Make GraphQL request directly
+    graphql_url = "https://api.github.com/graphql"
+    headers = {
+        "Authorization": f"Bearer {github_token}",
+        "Content-Type": "application/json",
+    }
+    
+    mutation = """
+    mutation DeleteIssue($input: DeleteIssueInput!) {
+      deleteIssue(input: $input) {
+        clientMutationId
+      }
+    }
+    """
+    
+    payload = {
+        "query": mutation,
+        "variables": {
+            "input": {
+                "issueId": issue_node_id,
+            }
+        }
+    }
+    
+    response = requests.post(graphql_url, headers=headers, data=json.dumps(payload), timeout=30)
+    
+    if response.status_code != 200:
+        msg = f"GraphQL request failed with status {response.status_code}: {response.text}"
+        raise MigrationError(msg)
+    
+    result = response.json()
+    
+    # Check for GraphQL errors
+    if "errors" in result:
+        error_msg = json.dumps(result["errors"])
+        msg = f"GraphQL errors: {error_msg}"
+        raise MigrationError(msg)
+    
+    # Verify successful deletion
+    if not (result.get("data") and "deleteIssue" in result["data"]):
+        msg = f"Unexpected GraphQL response when deleting issue {issue_node_id}: {result}"
+        raise MigrationError(msg)
+    
+    logger.debug(f"Deleted issue with node ID {issue_node_id}")
 
 
 def create_issue_dependency(

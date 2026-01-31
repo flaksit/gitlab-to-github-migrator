@@ -440,29 +440,27 @@ class TestFullMigration:
             # Verify issues
             if gitlab_issues:
                 github_issues = list(github_repo.get_issues(state="all"))
-                # Placeholders remain (GitHub doesn't allow issue deletion) but are closed
-                # TODO # 64 Migrator should delete placeholders via GraphQL API
-                real_issues = [i for i in github_issues if i.title != "Placeholder"]
-                assert len(real_issues) == len(gitlab_issues), (
-                    f"Issue count mismatch: {len(real_issues)} != {len(gitlab_issues)}"
+                # Placeholders are now deleted via GraphQL API, so all issues should be real
+                assert len(github_issues) == len(gitlab_issues), (
+                    f"Issue count mismatch: {len(github_issues)} != {len(gitlab_issues)}"
                 )
 
                 # Verify issue number preservation
                 for source_issue in gitlab_issues:
                     matching = [i for i in github_issues if i.number == source_issue.iid]
                     assert len(matching) == 1, f"GitLab issue #{source_issue.iid} not found in GitHub"
-                for github_issue in real_issues:
+                for github_issue in github_issues:
                     matching = [i for i in gitlab_issues if i.iid == github_issue.number]
                     assert len(matching) == 1, f"GitHub issue #{github_issue.number} has no matching GitLab issue"
 
                 # Verify issue state preservation
                 gitlab_open = {i.iid for i in gitlab_issues if i.state == "opened"}
-                github_open = {i.number for i in real_issues if i.state == "open"}
+                github_open = {i.number for i in github_issues if i.state == "open"}
                 assert gitlab_open == github_open, (
                     f"Open issue mismatch: {sorted(github_open)} != {sorted(gitlab_open)}"
                 )
                 gitlab_closed = {i.iid for i in gitlab_issues if i.state == "closed"}
-                github_closed = {i.number for i in real_issues if i.state == "closed"}
+                github_closed = {i.number for i in github_issues if i.state == "closed"}
                 assert github_closed == gitlab_closed, (
                     f"Closed issue mismatch: {sorted(github_closed)} != {sorted(gitlab_closed)}"
                 )
@@ -472,7 +470,7 @@ class TestFullMigration:
                 # Verify some issues have comments
                 # TODO extended verification of all comments on all issues
                 issues_with_comments = 0
-                for github_issue in real_issues:
+                for github_issue in github_issues:
                     comments = list(github_issue.get_comments())
                     if comments:
                         issues_with_comments += 1

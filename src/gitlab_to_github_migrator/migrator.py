@@ -312,9 +312,8 @@ class GitlabToGithubMigrator:
                 github_placeholder_issues.append(github_issue)
 
         for issue in github_placeholder_issues:
-            # GitHub API doesn't allow deleting issues, so we'll leave them closed
-            # TODO #64 Delete via GraphQL API
-            logger.debug(f"Placeholder issue #{issue.number} left closed (cannot delete)")
+            ghu.delete_issue(self.github_token, issue.node_id)
+            logger.debug(f"Deleted placeholder issue #{issue.number}")
 
         return gitlab_to_github_issue_map, gitlab_blocks_links
 
@@ -435,9 +434,8 @@ class GitlabToGithubMigrator:
 
             gitlab_labels = self.gitlab_project.labels.list(get_all=True)
 
-            # Count GitHub items (excluding placeholders) with state breakdown
-            github_issues_all = list(self.github_repo.get_issues(state="all"))
-            github_issues = [i for i in github_issues_all if i.title != "Placeholder"]
+            # Count GitHub items with state breakdown
+            github_issues = list(self.github_repo.get_issues(state="all"))
             github_issues_open = [i for i in github_issues if i.state == "open"]
             github_issues_closed = [i for i in github_issues if i.state == "closed"]
 
