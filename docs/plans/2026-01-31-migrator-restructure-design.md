@@ -28,19 +28,18 @@ Two methods have `# noqa: PLR0912, PLR0915` suppressions:
 
 ```text
 src/gitlab_to_github_migrator/
-├── migrator.py           # Orchestration + metadata migration (~650 lines)
+├── migrator.py           # Orchestration + metadata migration (~600 lines)
 ├── git_migration.py      # Git mirroring function (~80 lines)
 ├── attachments.py        # AttachmentHandler class (~150 lines)
 ├── relationships.py      # Dataclasses + cross-link detection (~120 lines)
+├── issue_builder.py      # Build issue body from GitLab data (~40 lines)
 ├── gitlab_utils.py       # + get_work_item_children() (~350 lines)
 ├── github_utils.py       # + create_issue_dependency() (~200 lines)
 ├── label_translator.py   # (unchanged)
 ├── exceptions.py         # (unchanged)
-├── utils.py              # + format_timestamp()
+├── utils.py              # (unchanged)
 └── cli.py                # (unchanged)
 ```
-
-Note: `issue_builder.py` was considered but dropped - issue body construction is just a header plus concatenation (~7 lines), not worth a separate module.
 
 ## Module Details
 
@@ -142,15 +141,26 @@ def get_issue_cross_links(
     """Get cross-linked issues separated by relationship type."""
 ```
 
-### utils.py additions
+### issue_builder.py
 
-Move `format_timestamp()` from migrator (it's a general utility):
+Functions for constructing GitHub issue content from GitLab data.
 
 ```python
 def format_timestamp(iso_timestamp: str) -> str:
     """Format ISO 8601 timestamp to human-readable format.
 
     Returns "2024-01-15 10:30:45Z" for UTC, keeps original if parsing fails.
+    """
+
+def build_issue_body(
+    gitlab_issue: GitlabProjectIssue,
+    processed_description: str,
+    cross_links_text: str,
+) -> str:
+    """Build complete GitHub issue body with migration header.
+
+    Includes: migration notice, original author, created date, GitLab URL,
+    separator, processed description, and cross-links section.
     """
 ```
 
@@ -259,7 +269,7 @@ class GitlabToGithubMigrator:
 
 ## Expected Outcomes
 
-- `migrator.py` reduced from ~1184 to ~650 lines
+- `migrator.py` reduced from ~1184 to ~600 lines
 - All `# noqa: PLR0912, PLR0915` suppressions removed
 - Each module has single, clear responsibility
 - Easier to test individual components
