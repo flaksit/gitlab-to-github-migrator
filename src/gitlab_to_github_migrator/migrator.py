@@ -7,7 +7,6 @@ from __future__ import annotations
 import datetime as dt
 import logging
 import subprocess
-from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import github.Issue
@@ -42,13 +41,11 @@ class GitlabToGithubMigrator:
         github_repo_path: str,
         *,
         label_translations: list[str] | None = None,
-        local_clone_path: str | None = None,
         gitlab_token: str | None = None,
         github_token: str,
     ) -> None:
         self.gitlab_project_path: str = gitlab_project_path
         self.github_repo_path: str = github_repo_path
-        self.local_clone_path: Path | None = Path(local_clone_path) if local_clone_path else None
 
         # Store tokens for direct API access
         self.gitlab_token: str | None = gitlab_token
@@ -127,7 +124,6 @@ class GitlabToGithubMigrator:
             target_clone_url=self.github_repo.clone_url,
             source_token=self.gitlab_token,
             target_token=self.github_token,
-            local_clone_path=self.local_clone_path,
         )
 
     def migrate_labels(self) -> None:

@@ -51,16 +51,16 @@ def migrate_git_content(
     target_clone_url: str,
     source_token: str | None,
     target_token: str,
-    local_clone_path: Path | None = None,
 ) -> None:
     """Mirror git repository from source to target.
+
+    Always creates a temporary mirror clone to ensure all branches and tags are included.
 
     Args:
         source_http_url: Source repository HTTPS URL (e.g., GitLab)
         target_clone_url: Target repository HTTPS URL (e.g., GitHub)
         source_token: Authentication token for source (may be None for public repos)
         target_token: Authentication token for target
-        local_clone_path: Optional existing local clone to use
 
     Raises:
         MigrationError: If cloning or pushing fails
@@ -69,27 +69,21 @@ def migrate_git_content(
     tokens = [source_token, target_token]
 
     try:
-        if local_clone_path:
-            clone_path: Path | str = local_clone_path
-            if not local_clone_path.exists():
-                msg = f"Local clone path does not exist: {local_clone_path}"
-                raise MigrationError(msg)
-        else:
-            temp_clone_path = tempfile.mkdtemp(prefix="gitlab_migration_")
-            clone_path = temp_clone_path
+        temp_clone_path = tempfile.mkdtemp(prefix="gitlab_migration_")
+        clone_path = temp_clone_path
 
-            source_url = _inject_token(source_http_url, source_token, prefix="oauth2:")
+        source_url = _inject_token(source_http_url, source_token, prefix="oauth2:")
 
-            result = subprocess.run(  # noqa: S603
-                ["git", "clone", "--mirror", source_url, temp_clone_path],
-                check=False,
-                capture_output=True,
-                text=True,
-            )
+        result = subprocess.run(  # noqa: S603
+            ["git", "clone", "--mirror", source_url, temp_clone_path],
+            check=False,
+            capture_output=True,
+            text=True,
+        )
 
-            if result.returncode != 0:
-                msg = f"Failed to clone repository: {_sanitize_error(result.stderr, tokens)}"
-                raise MigrationError(msg)
+        if result.returncode != 0:
+            msg = f"Failed to clone repository: {_sanitize_error(result.stderr, tokens)}"
+            raise MigrationError(msg)
 
         # Add target remote with token
         target_url = _inject_token(target_clone_url, target_token, prefix="")
