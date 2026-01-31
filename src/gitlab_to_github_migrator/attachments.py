@@ -112,7 +112,10 @@ class AttachmentHandler:
             full_url = f"{self._gitlab_project.web_url}{short_url}"
             try:
                 attachment_content, content_type = glu.download_attachment(
-                    self._gitlab_client, self._gitlab_project, secret, filename
+                    self._gitlab_client,
+                    self._gitlab_project,  # pyright: ignore[reportUnknownArgumentType]
+                    secret,
+                    filename,
                 )
 
                 if attachment_content:
@@ -126,8 +129,7 @@ class AttachmentHandler:
                     )
                 else:
                     logger.warning(
-                        f"GitLab returned empty content for attachment {short_url} "
-                        f"(Content-Type: {content_type})"
+                        f"GitLab returned empty content for attachment {short_url} (Content-Type: {content_type})"
                     )
 
             except Exception as e:
@@ -135,9 +137,7 @@ class AttachmentHandler:
 
         return downloaded_files, updated_content
 
-    def _upload_files(
-        self, files: list[DownloadedFile], content: str, context: str
-    ) -> str:
+    def _upload_files(self, files: list[DownloadedFile], content: str, context: str) -> str:
         """Upload files to GitHub release, update content with new URLs."""
         if not files:
             return content
@@ -174,9 +174,7 @@ class AttachmentHandler:
                 download_url = asset.browser_download_url
 
                 self._uploaded_cache[file_info.short_gitlab_url] = download_url
-                updated_content = updated_content.replace(
-                    file_info.short_gitlab_url, download_url
-                )
+                updated_content = updated_content.replace(file_info.short_gitlab_url, download_url)
                 logger.debug(f"Uploaded {file_info.filename}: {download_url}")
 
             except (GithubException, OSError):

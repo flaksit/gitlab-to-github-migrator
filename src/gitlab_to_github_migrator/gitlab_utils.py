@@ -294,5 +294,3 @@ def get_parent_child_relationships(
         logger.exception("Failed to get parent-child relationships")
 
     return parent_to_children
-
-

@@ -6,26 +6,24 @@ from __future__ import annotations
 
 import datetime as dt
 import logging
-import re
-import shutil
 import subprocess
-import tempfile
-from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-import github.GitRelease
 import github.Issue
 import github.Repository
 import gitlab  # noqa: TC002 - used at runtime, not just for type hints
-import requests
 from github import Github, GithubException
 from gitlab.exceptions import GitlabAuthenticationError, GitlabError
 
+from . import git_migration
 from . import github_utils as ghu
 from . import gitlab_utils as glu
+from .attachments import AttachmentHandler
 from .exceptions import MigrationError, NumberVerificationError
+from .issue_builder import build_issue_body, format_timestamp
 from .label_translator import LabelTranslator
+from .relationships import IssueLinkInfo, get_issue_cross_links
 
 if TYPE_CHECKING:
     from gitlab.v4.objects import ProjectIssue as GitlabProjectIssue
@@ -33,49 +31,6 @@ if TYPE_CHECKING:
 
 # Module-wide logger
 logger: logging.Logger = logging.getLogger(__name__)
-
-
-@dataclass
-class DownloadedFile:
-    """Represents a downloaded file from GitLab."""
-
-    filename: str
-    content: bytes
-    short_gitlab_url: str
-    full_gitlab_url: str
-
-
-@dataclass
-class WorkItemChild:
-    """Child work item from GraphQL Work Items API."""
-
-    iid: int
-    title: str
-    state: str
-    type: str
-    web_url: str
-
-
-@dataclass
-class IssueLinkInfo:
-    """Information about a linked issue (used for both parent-child and blocking relationships)."""
-
-    type: str
-    target_iid: int
-    target_title: str
-    target_project_path: str
-    target_web_url: str
-    is_same_project: bool
-    source: str = "rest_api"
-
-
-@dataclass
-class IssueCrossLinks:
-    """Cross-linked issues separated by relationship type."""
-
-    cross_links_text: str
-    parent_child_relations: list[IssueLinkInfo]
-    blocking_relations: list[IssueLinkInfo]
 
 
 class GitlabToGithubMigrator:
@@ -110,10 +65,7 @@ class GitlabToGithubMigrator:
         self.gitlab_graphql_client: gitlab.GraphQL = glu.get_graphql_client(token=gitlab_token)
 
         self._github_repo: github.Repository.Repository | None = None
-        self._attachments_release: github.GitRelease.GitRelease | None = None
-
-        # Cache for uploaded attachments: GitLab short URL -> GitHub download URL
-        self._uploaded_attachments: dict[str, str] = {}
+        self._attachment_handler: AttachmentHandler | None = None
 
         # Initialize label translator
         self.label_translator: LabelTranslator = LabelTranslator(label_translations)
@@ -139,31 +91,16 @@ class GitlabToGithubMigrator:
     def github_repo(self, value: github.Repository.Repository) -> None:
         self._github_repo = value
 
-    @staticmethod
-    def _format_timestamp(iso_timestamp: str) -> str:
-        """Format ISO 8601 timestamp to a human-readable format.
-
-        Args:
-            iso_timestamp: ISO 8601 formatted timestamp string (e.g., "2024-01-15T10:30:45.123Z")
-
-        Returns:
-            Formatted timestamp string (e.g., "2024-01-15 10:30:45Z" for UTC, "2024-01-15 10:30:45+05:30" for other timezones).
-            If the timestamp cannot be parsed, returns the original value unchanged.
-        """
-        if not iso_timestamp:
-            # Return empty string as-is if provided
-            return iso_timestamp
-
-        try:
-            # Parse the ISO format string to datetime
-            timestamp_dt = dt.datetime.fromisoformat(iso_timestamp)
-            # Format with space separator and seconds precision
-            formatted = timestamp_dt.isoformat(sep=" ", timespec="seconds")
-            # Replace +00:00 with Z for cleaner UTC representation
-            return formatted.replace("+00:00", "Z")
-        except (ValueError, AttributeError):
-            # If parsing fails, return the original timestamp unchanged
-            return iso_timestamp
+    @property
+    def attachment_handler(self) -> AttachmentHandler:
+        """Get or create the attachment handler for this migration (cached)."""
+        if self._attachment_handler is None:
+            self._attachment_handler = AttachmentHandler(
+                self.gitlab_client,
+                self.gitlab_project,
+                self.github_repo,
+            )
+        return self._attachment_handler
 
     def validate_api_access(self) -> None:
         """Validate GitLab and GitHub API access."""
@@ -183,205 +120,15 @@ class GitlabToGithubMigrator:
             msg = f"GitHub API access failed: {e}"
             raise MigrationError(msg) from e
 
-    def _make_graphql_request(self, query: str, variables: dict[str, Any] | None = None) -> dict[str, Any]:
-        """Make a GraphQL request to GitLab API using python-gitlab's native GraphQL support."""
-        try:
-            # Use python-gitlab's native GraphQL support via the dedicated GraphQL client
-            # Note: gql's HTTPXTransport expects 'variable_values' not 'variables'
-            response = self.gitlab_graphql_client.execute(query, variable_values=variables or {})
-
-            # Check for errors in the response
-            if "errors" in response:
-                msg = f"GraphQL errors: {response['errors']}"
-                raise MigrationError(msg)
-
-        except GitlabError as e:
-            msg = f"GraphQL request failed: {e}"
-            raise MigrationError(msg) from e
-
-        # gitlab.GraphQL.execute() returns the data directly, not wrapped in {"data": ...}
-        return response
-
-    def get_work_item_children(self, issue_iid: int) -> list[WorkItemChild]:
-        """Get child work items for a given issue using GraphQL Work Items API.
-
-        Args:
-            issue_iid: The internal ID of the issue
-
-        Returns:
-            List of child work item information including IID, title, and relationship type
-        """
-        # Get the project's full path for GraphQL query
-        project_path = self.gitlab_project_path
-
-        # GraphQL query to get work item with its children
-        # Note: workItem is under namespace, not project
-        query = """
-        query GetWorkItemWithChildren($fullPath: ID!, $iid: String!) {
-            namespace(fullPath: $fullPath) {
-                workItem(iid: $iid) {
-                    id
-                    iid
-                    title
-                    workItemType {
-                        name
-                    }
-                    widgets {
-                        type
-                        ... on WorkItemWidgetHierarchy {
-                            children {
-                                nodes {
-                                    id
-                                    iid
-                                    title
-                                    state
-                                    workItemType {
-                                        name
-                                    }
-                                    webUrl
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        """
-
-        variables = {"fullPath": project_path, "iid": str(issue_iid)}
-
-        try:
-            data = self._make_graphql_request(query, variables)
-
-            namespace = data.get("namespace")
-            if not namespace:
-                logger.debug(f"Namespace {project_path} not found in GraphQL response")
-                return []
-
-            work_item = namespace.get("workItem")
-            if not work_item:
-                logger.debug(f"Work item {issue_iid} not found in project {project_path}")
-                return []
-
-            # Find the hierarchy widget to get children
-            children: list[WorkItemChild] = []
-            widgets = work_item.get("widgets", [])
-
-            for widget in widgets:
-                if widget.get("type") == "HIERARCHY":
-                    child_nodes = widget.get("children", {}).get("nodes", [])
-
-                    for child in child_nodes:
-                        child_info = WorkItemChild(
-                            iid=int(child.get("iid")),
-                            title=child.get("title"),
-                            state=child.get("state"),
-                            type=child.get("workItemType", {}).get("name"),
-                            web_url=child.get("webUrl"),
-                        )
-                        children.append(child_info)
-
-            logger.debug(f"Found {len(children)} child work items for issue #{issue_iid}")
-
-        except GitlabError as e:
-            msg = f"Failed to get work item children for issue #{issue_iid}: {e}"
-            raise MigrationError(msg) from e
-        else:
-            return children
-
-    def migrate_git_content(self) -> None:  # noqa: PLR0912, PLR0915
-        """Migrate git repository content from GitLab to GitHub using HTTPS with token authentication."""
-        temp_clone_path: str | None = None
-        try:
-            if self.local_clone_path:
-                # Use existing local clone
-                clone_path = self.local_clone_path
-                if not clone_path.exists():
-                    msg = f"Local clone path does not exist: {self.local_clone_path}"
-                    raise MigrationError(msg)
-            else:
-                # Create temporary clone
-                temp_clone_path = tempfile.mkdtemp(prefix="gitlab_migration_")
-                clone_path = temp_clone_path
-
-                # Clone from GitLab using HTTPS with authentication token
-                gitlab_http_url = str(self.gitlab_project.http_url_to_repo)  # pyright: ignore[reportUnknownArgumentType]
-                # Inject GitLab token into URL for authentication: https://oauth2:TOKEN@gitlab.com/...
-                if self.gitlab_token and gitlab_http_url.startswith("https://"):
-                    gitlab_url = gitlab_http_url.replace("https://", f"https://oauth2:{self.gitlab_token}@")
-                else:
-                    gitlab_url = gitlab_http_url
-
-                result = subprocess.run(  # noqa: S603
-                    [
-                        "git",
-                        "clone",
-                        "--mirror",
-                        gitlab_url,
-                        temp_clone_path,
-                    ],
-                    check=False,
-                    capture_output=True,
-                    text=True,
-                )
-
-                if result.returncode != 0:
-                    # Sanitize error message to remove potential token exposure
-                    error_msg = result.stderr
-                    if self.gitlab_token:
-                        error_msg = error_msg.replace(self.gitlab_token, "***TOKEN***")
-                    msg = f"Failed to clone GitLab repository: {error_msg}"
-                    raise MigrationError(msg)
-
-            # Add GitHub remote using HTTPS with authentication token
-            github_clone_url = self.github_repo.clone_url
-            # Inject GitHub token into URL for authentication: https://TOKEN@github.com/...
-            if self.github_token and github_clone_url.startswith("https://"):
-                github_url = github_clone_url.replace("https://", f"https://{self.github_token}@")
-            else:
-                github_url = github_clone_url
-
-            try:
-                _ = subprocess.run(  # noqa: S603
-                    ["git", "remote", "add", "github", github_url],
-                    cwd=clone_path,
-                    check=True,
-                    capture_output=True,
-                    text=True,
-                )
-            except subprocess.CalledProcessError as e:
-                # Sanitize error to prevent token leakage
-                error_msg = str(e)
-                if self.github_token:
-                    error_msg = error_msg.replace(self.github_token, "***TOKEN***")
-                msg = f"Failed to add GitHub remote: {error_msg}"
-                raise MigrationError(msg) from e
-
-            # Push all branches and tags
-            _ = subprocess.run(["git", "push", "--mirror", "github"], cwd=clone_path, check=True)
-
-            # Clean up the github remote to avoid leaving tokens in git config
-            try:
-                subprocess.run(["git", "remote", "remove", "github"], cwd=clone_path, check=True, capture_output=True)
-            except subprocess.CalledProcessError:
-                # Ignore errors during cleanup
-                pass
-
-            logger.info("Repository content migrated successfully")
-
-        except (subprocess.CalledProcessError, OSError) as e:
-            # Sanitize error message to remove potential token exposure
-            error_msg = str(e)
-            if self.gitlab_token:
-                error_msg = error_msg.replace(self.gitlab_token, "***GITLAB_TOKEN***")
-            if self.github_token:
-                error_msg = error_msg.replace(self.github_token, "***GITHUB_TOKEN***")
-            msg = f"Failed to migrate repository content: {error_msg}"
-            raise MigrationError(msg) from e
-        finally:
-            # Cleanup temporary clone if created
-            if temp_clone_path and Path(temp_clone_path).exists():
-                shutil.rmtree(temp_clone_path)
+    def migrate_git_content(self) -> None:
+        """Migrate git repository content from GitLab to GitHub."""
+        git_migration.migrate_git_content(
+            source_http_url=str(self.gitlab_project.http_url_to_repo),  # pyright: ignore[reportUnknownArgumentType]
+            target_clone_url=self.github_repo.clone_url,
+            source_token=self.gitlab_token,
+            target_token=self.github_token,
+            local_clone_path=self.local_clone_path,
+        )
 
     def migrate_labels(self) -> None:
         """Migrate and translate labels from GitLab to GitHub.
@@ -489,331 +236,222 @@ class GitlabToGithubMigrator:
             msg = f"Failed to migrate milestones: {e}"
             raise MigrationError(msg) from e
 
-    def download_gitlab_attachments(self, content: str) -> tuple[list[DownloadedFile], str]:
-        """Download GitLab attachments and return files plus content with cached URLs replaced.
-
-        Uses the GitLab REST API endpoint (GitLab 17.4+) to download uploads
-        by secret and filename, avoiding Cloudflare blocks on web URLs.
-
-        Returns:
-            Tuple of (list of newly downloaded files, content with cached URLs replaced)
-        """
-        # Find attachment URLs in content: /uploads/<secret>/<filename>
-        attachment_pattern = r"/uploads/([a-f0-9]{32})/([^)\s]+)"
-        attachments = re.findall(attachment_pattern, content)
-
-        downloaded_files: list[DownloadedFile] = []
-        updated_content = content
-
-        for secret, filename in attachments:
-            short_url = f"/uploads/{secret}/{filename}"
-
-            # If already uploaded, just replace the URL in content (skip download)
-            if short_url in self._uploaded_attachments:
-                github_url = self._uploaded_attachments[short_url]
-                updated_content = updated_content.replace(short_url, github_url)
-                logger.debug(f"Reusing cached attachment {filename}: {github_url}")
-                continue
-
-            full_url = f"{self.gitlab_project.web_url}{short_url}"
-            try:
-                attachment_content, content_type = glu.download_attachment(
-                    self.gitlab_client, self.gitlab_project, secret, filename
-                )
-
-                if attachment_content:
-                    downloaded_files.append(
-                        DownloadedFile(
-                            filename=filename,
-                            content=attachment_content,
-                            short_gitlab_url=short_url,
-                            full_gitlab_url=full_url,
-                        )
-                    )
-                else:
-                    logger.warning(
-                        f"GitLab returned empty content for attachment {short_url} (Content-Type: {content_type})"
-                    )
-
-            except (requests.RequestException, OSError) as e:
-                msg = f"Failed to download attachment {short_url}: {e}"
-                raise MigrationError(msg) from e
-
-        return downloaded_files, updated_content
-
-    @property
-    def attachments_release(self) -> github.GitRelease.GitRelease:
-        """Get or create the 'gitlab-issue-attachments' release for storing attachment files (cached)."""
-        if self._attachments_release is None:
-            release_tag = "gitlab-issue-attachments"
-            release_name = "GitLab issue attachments"
-
-            # Draft releases can't be found by tag, so list all releases and find by name
-            release = None
-            for r in self.github_repo.get_releases():
-                if r.name == release_name:
-                    release = r
-                    logger.debug(f"Using existing attachments release: {release.name}")
-                    break
-
-            if release is None:
-                # Release doesn't exist, create it
-                logger.info(f"Creating new '{release_name}' release for storing attachment files")
-                release = self.github_repo.create_git_release(
-                    tag=release_tag,
-                    name=release_name,
-                    message="Storage for migrated GitLab attachments. Do not delete.",
-                    draft=True,  # Keep it as a draft to minimize visibility
-                )
-                logger.info(f"Created attachments release: {release.name}")
-
-            self._attachments_release = release
-
-        return self._attachments_release
-
-    def upload_github_attachments(self, files: list[DownloadedFile], content: str, context: str = "") -> str:
-        """Upload files to GitHub release assets and update content with new URLs.
-
-        Args:
-            files: List of downloaded files to upload.
-            content: The content containing attachment URLs to replace.
-            context: Context string for log messages (e.g., "issue #5" or "issue #5 note 123").
-
-        Files are cached by their GitLab URL to avoid duplicate uploads when the
-        same attachment appears in multiple issues or comments.
-        """
-        if not files:
-            return content
-
-        updated_content = content
-
-        # Get or create the attachments release (cached property)
-        release = self.attachments_release
-
-        for file_info in files:
-            # Check if this file was already uploaded (same GitLab URL)
-            if file_info.short_gitlab_url in self._uploaded_attachments:
-                download_url = self._uploaded_attachments[file_info.short_gitlab_url]
-                updated_content = updated_content.replace(file_info.short_gitlab_url, download_url)
-                logger.debug(f"Reusing cached attachment {file_info.filename}: {download_url}")
-                continue
-
-            # Skip empty files - GitHub rejects uploads with 0 bytes (Bad Content-Length error)
-            if not file_info.content:
-                ctx = f" in {context}" if context else ""
-                logger.warning(
-                    f"Skipping empty attachment {file_info.filename} (0 bytes){ctx} - "
-                    f"GitLab URL: {file_info.full_gitlab_url}"
-                )
-                continue
-
-            temp_path = None
-            try:
-                # Create a temporary file for GitHub API
-                # Use only the file extension for the suffix to avoid filesystem issues
-                file_ext = Path(file_info.filename).suffix if file_info.filename else ""
-                with tempfile.NamedTemporaryFile(delete=False, suffix=file_ext) as temp_file:
-                    temp_path = temp_file.name
-                    temp_file.write(file_info.content)
-
-                # Make filename unique by prepending the GitLab secret hash
-                # This handles different files with the same filename
-                # Extract secret from short_gitlab_url: /uploads/<secret>/<filename>
-                url_parts = file_info.short_gitlab_url.split("/")
-                secret = url_parts[2] if len(url_parts) >= 3 else ""
-                unique_filename = f"{secret[:8]}_{file_info.filename}" if secret else file_info.filename
-
-                # Upload file as release asset
-                asset = release.upload_asset(path=temp_path, name=unique_filename)
-                # Get the download URL for the asset
-                download_url = asset.browser_download_url
-
-                # Cache the URL for future references to the same file
-                self._uploaded_attachments[file_info.short_gitlab_url] = download_url
-
-                # Replace the GitLab URL with the GitHub URL in content
-                updated_content = updated_content.replace(file_info.short_gitlab_url, download_url)
-                logger.debug(f"Uploaded {file_info.filename} to release assets: {download_url}")
-
-            except (GithubException, OSError):
-                logger.exception(f"Failed to process attachment {file_info.filename}")
-                raise
-            finally:
-                # Clean up temp file
-                if temp_path:
-                    temp_file_path = Path(temp_path)
-                    if temp_file_path.exists():
-                        temp_file_path.unlink()
-
-        return updated_content
-
-    def create_github_issue_dependency(self, blocked_issue_number: int, blocking_issue_id: int) -> bool:
-        """Create a GitHub issue dependency using PyGithub's requester.
-
-        GitHub's issue dependencies API (August 2025) is not yet supported by PyGithub's
-        classes, so we use the requester to make raw API calls while benefiting from
-        PyGithub's authentication and rate limiting.
-
-        Args:
-            blocked_issue_number: The issue number that is blocked
-            blocking_issue_id: The issue ID (not number) that is blocking
-
-        Returns:
-            True if successful, False otherwise
-        """
-        # Parse owner and repo from github_repo_path
-        owner, repo = self.github_repo_path.split("/")
-
-        # The API endpoint adds a "blocked by" relationship to an issue.
-        # POST /repos/{owner}/{repo}/issues/{issue_number}/dependencies/blocked_by
-        # with body: {"issue_id": <blocking_issue_id>}
-        endpoint = f"/repos/{owner}/{repo}/issues/{blocked_issue_number}/dependencies/blocked_by"
-        payload = {"issue_id": blocking_issue_id}
-
-        try:
-            # Use PyGithub's requester for consistent auth and rate limiting
-            status, _, data = self.github_client.requester.requestJson("POST", endpoint, input=payload)
-        except GithubException as e:
-            if e.status == 422:
-                # Dependency may already exist or be invalid
-                logger.debug(f"Could not create dependency (may already exist): {e.status} - {e.data}")
-                return False
-            # Re-raise other GitHub exceptions as they represent real errors
-            raise
-
-        if status == 201:
-            logger.debug(
-                f"Created issue dependency: issue #{blocked_issue_number} blocked by issue ID {blocking_issue_id}"
-            )
-            return True
-
-        msg = f"Failed to create issue dependency: {status} - {data}"
-        raise MigrationError(msg)
-
-    def get_issue_cross_links(  # noqa: PLR0912 - complex categorization logic
+    def _create_migrated_issue(
         self,
-        gitlab_issue: Any,  # noqa: ANN401 - gitlab has no type stubs
-    ) -> IssueCrossLinks:
-        """Get cross-linked issues and separate different relationship types.
-
-        This method uses both GitLab's Work Items GraphQL API and REST API to properly
-        detect and categorize issue relationships:
-        - Parent-child relationships (work item hierarchy) -> GitHub sub-issues
-        - Blocking relationships (blocks/is_blocked_by) -> GitHub issue dependencies
-        - Other relationships (relates_to) -> Text in issue description
+        gitlab_issue: GitlabProjectIssue,
+        pending_parent_child_relations: dict[int, list[IssueLinkInfo]],
+        pending_blocking_relations: list[dict[str, Any]],
+    ) -> github.Issue.Issue:
+        """Create a GitHub issue from a GitLab issue.
 
         Returns:
-            IssueCrossLinks dataclass containing:
-                cross_links_text: str - For relates_to links in description,
-                parent_child_relations: list[IssueLinkInfo] - For GitHub sub-issues,
-                blocking_relations: list[IssueLinkInfo] - For GitHub issue dependencies
+            The created GitHub issue
         """
-        # Step 1: Get child tasks using GraphQL Work Items API (using python-gitlab's native GraphQL support)
-        child_work_items: list[WorkItemChild] = self.get_work_item_children(gitlab_issue.iid)
-        logger.debug(f"Found {len(child_work_items)} tasks via GraphQL for issue #{gitlab_issue.iid}")
+        # Process description with attachments
+        processed_description = ""
+        if gitlab_issue.description:
+            processed_description = self.attachment_handler.process_content(
+                gitlab_issue.description,
+                context=f"issue #{gitlab_issue.iid}",
+            )
 
-        # Step 2: Get regular issue links from REST API
-        regular_links: list[IssueLinkInfo] = []
-        links = gitlab_issue.links.list(get_all=True)
+        # Get cross-linked issues and collect relationships
+        cross_links = get_issue_cross_links(
+            gitlab_issue,
+            self.gitlab_project_path,
+            self.gitlab_graphql_client,
+        )
 
-        for link in links:
-            # Determine the relationship type and target
-            if hasattr(link, "link_type"):
-                link_type = link.link_type
-            else:
-                link_type = "relates_to"  # Default
-
-            # Get target issue information (data is directly on link object, not in nested dict)
-            target_issue_iid = link.iid
-            target_issue_title = getattr(link, "title", "Unknown Title")
-            # Extract project path from references or web_url
-            references = getattr(link, "references", {})
-            target_project_path = references.get("full", "").rsplit("#", 1)[0] if references else None
-            target_web_url = getattr(link, "web_url", "")
-
-            # Log the link type for debugging
+        # Store parent-child relations for second pass
+        if cross_links.parent_child_relations:
+            pending_parent_child_relations[gitlab_issue.iid] = cross_links.parent_child_relations
             logger.debug(
-                f"Issue #{gitlab_issue.iid} has link_type '{link_type}' to issue #{target_issue_iid} from project {target_project_path}"
+                f"Stored {len(cross_links.parent_child_relations)} parent-child relations for issue #{gitlab_issue.iid}"
             )
-            target_project_path = target_project_path or self.gitlab_project_path
 
-            link_info = IssueLinkInfo(
-                type=link_type,
-                target_iid=target_issue_iid,
-                target_title=target_issue_title,
-                target_project_path=target_project_path,
-                target_web_url=target_web_url,
-                is_same_project=target_project_path == self.gitlab_project_path,
+        # Store blocking relations for second pass
+        if cross_links.blocking_relations:
+            pending_blocking_relations.extend(
+                {"source_gitlab_iid": gitlab_issue.iid, "relation": relation}
+                for relation in cross_links.blocking_relations
             )
-            regular_links.append(link_info)
 
-        # Step 3: Categorize relationships into three groups
-        parent_child_relations: list[IssueLinkInfo] = []
-        blocking_relations: list[IssueLinkInfo] = []
-        relates_to_links: list[tuple[str, IssueLinkInfo]] = []
+        # Build issue body using the issue_builder module
+        issue_body = build_issue_body(
+            iid=gitlab_issue.iid,
+            author_name=gitlab_issue.author["name"],
+            author_username=gitlab_issue.author["username"],
+            created_at=gitlab_issue.created_at,
+            web_url=gitlab_issue.web_url,
+            processed_description=processed_description,
+            cross_links_text=cross_links.cross_links_text,
+        )
 
-        # Add child work items as parent-child relationships
-        parent_child_relations = [
-            IssueLinkInfo(
-                type="child_of",
-                target_iid=child.iid,
-                target_title=child.title,
-                target_project_path=self.gitlab_project_path,
-                target_web_url=child.web_url,
-                is_same_project=True,
-                source="graphql_work_items",
-            )
-            for child in child_work_items
+        # Prepare labels
+        issue_labels = [
+            self.label_mapping[label_name] for label_name in gitlab_issue.labels if label_name in self.label_mapping
         ]
 
-        # Process regular issue links (blocks, is_blocked_by, relates_to)
-        for link_info in regular_links:
-            link_type = link_info.type
+        # Prepare milestone
+        milestone = None
+        if gitlab_issue.milestone and gitlab_issue.milestone["id"] in self.milestone_mapping:
+            milestone_number = self.milestone_mapping[gitlab_issue.milestone["id"]]
+            milestone = self.github_repo.get_milestone(milestone_number)
 
-            # Categorize by relationship type
-            if link_type in ("blocks", "is_blocked_by"):
-                # Blocking relationships - will be migrated to GitHub issue dependencies
-                # Only same-project links can be migrated natively
-                if link_info.is_same_project:
-                    blocking_relations.append(link_info)
-                else:
-                    # Cross-project blocking links fall back to description text
-                    relates_to_links.append(("Blocked by" if link_type == "is_blocked_by" else "Blocks", link_info))
-            elif link_type == "relates_to":
-                relates_to_links.append(("Related to", link_info))
+        # Create GitHub issue
+        if milestone:
+            github_issue = self.github_repo.create_issue(
+                title=gitlab_issue.title, body=issue_body, labels=issue_labels, milestone=milestone
+            )
+        else:
+            github_issue = self.github_repo.create_issue(
+                title=gitlab_issue.title, body=issue_body, labels=issue_labels
+            )
+
+        return github_issue
+
+    def _create_placeholder_issue(self, expected_number: int) -> None:
+        """Create a placeholder issue to preserve issue numbering."""
+        placeholder_issue = self.github_repo.create_issue(
+            title="Placeholder", body="Placeholder to preserve issue numbering - will be deleted"
+        )
+
+        if placeholder_issue.number != expected_number:
+            msg = f"Placeholder issue number mismatch: expected {expected_number}, got {placeholder_issue.number}"
+            raise NumberVerificationError(msg)
+
+        placeholder_issue.edit(state="closed")
+        logger.debug(f"Created placeholder issue #{expected_number}")
+
+    def _create_issues_first_pass(
+        self,
+        gitlab_issue_dict: dict[int, GitlabProjectIssue],
+        max_issue_number: int,
+    ) -> tuple[dict[int, github.Issue.Issue], dict[int, list[IssueLinkInfo]], list[dict[str, Any]]]:
+        """First pass: Create issues maintaining number sequence.
+
+        Returns:
+            Tuple of (github_issue_dict, pending_parent_child_relations, pending_blocking_relations)
+        """
+        github_issue_dict: dict[int, github.Issue.Issue] = {}
+        pending_parent_child_relations: dict[int, list[IssueLinkInfo]] = {}
+        pending_blocking_relations: list[dict[str, Any]] = []
+
+        for issue_number in range(1, max_issue_number + 1):
+            if issue_number in gitlab_issue_dict:
+                gitlab_issue = gitlab_issue_dict[issue_number]
+
+                github_issue = self._create_migrated_issue(
+                    gitlab_issue,
+                    pending_parent_child_relations,
+                    pending_blocking_relations,
+                )
+
+                # Verify issue number
+                if github_issue.number != issue_number:
+                    msg = f"Issue number mismatch: expected {issue_number}, got {github_issue.number}"
+                    raise NumberVerificationError(msg)
+
+                github_issue_dict[gitlab_issue.iid] = github_issue
+                logger.debug(f"Added issue #{gitlab_issue.iid} to github_issue_dict")
+
+                # Migrate comments
+                self.migrate_issue_comments(gitlab_issue, github_issue)
+
+                # Close issue if needed
+                if gitlab_issue.state == "closed":
+                    github_issue.edit(state="closed")
+
+                logger.debug(f"Created issue #{issue_number}: {gitlab_issue.title}")
             else:
-                relates_to_links.append((f"Linked ({link_type})", link_info))
+                self._create_placeholder_issue(issue_number)
 
-        # Step 4: Format cross-links text for relates_to relationships only
-        # (blocking relationships are handled natively via GitHub API)
-        cross_links_text = ""
-        if relates_to_links:
-            cross_links_text = "\n\n---\n\n**Cross-linked Issues:**\n\n"
+        return github_issue_dict, pending_parent_child_relations, pending_blocking_relations
 
-            for relationship, link_info in relates_to_links:
-                if link_info.is_same_project:
-                    # Same project - will be migrated to GitHub issue numbers
-                    cross_links_text += f"- **{relationship}**: #{link_info.target_iid} - {link_info.target_title}\n"
-                else:
-                    # External project - keep GitLab reference
-                    cross_links_text += f"- **{relationship}**: [{link_info.target_project_path}#{link_info.target_iid}]({link_info.target_web_url}) - {link_info.target_title}\n"
+    def _create_parent_child_relations(
+        self,
+        pending_relations: dict[int, list[IssueLinkInfo]],
+        github_issue_dict: dict[int, github.Issue.Issue],
+    ) -> None:
+        """Second pass: Create parent-child relationships as GitHub sub-issues."""
+        if not pending_relations:
+            return
 
-        # Log summary
-        logger.debug(
-            f"Issue #{gitlab_issue.iid} summary: {len(parent_child_relations)} parent-child, "
-            f"{len(blocking_relations)} blocking, {len(relates_to_links)} relates_to links"
-        )
+        logger.info(f"Processing {len(pending_relations)} parent-child relationships...")
+        logger.debug(f"Available GitHub issues in dict: {sorted(github_issue_dict.keys())}")
 
-        return IssueCrossLinks(
-            cross_links_text=cross_links_text,
-            parent_child_relations=parent_child_relations,
-            blocking_relations=blocking_relations,
-        )
+        for parent_gitlab_iid, child_relations in pending_relations.items():
+            if parent_gitlab_iid not in github_issue_dict:
+                logger.warning(f"Parent issue #{parent_gitlab_iid} not found for parent-child relationship")
+                continue
 
-    def migrate_issues_with_number_preservation(self) -> None:  # noqa: PLR0912, PLR0915
+            parent_github_issue = github_issue_dict[parent_gitlab_iid]
+
+            for child_relation in child_relations:
+                child_gitlab_iid = int(child_relation.target_iid)
+                logger.debug(f"Looking for child issue #{child_gitlab_iid}")
+
+                if child_gitlab_iid not in github_issue_dict:
+                    logger.warning(f"Child issue #{child_gitlab_iid} not found for parent #{parent_gitlab_iid}")
+                    continue
+
+                child_github_issue = github_issue_dict[child_gitlab_iid]
+
+                try:
+                    parent_github_issue.add_sub_issue(child_github_issue.id)
+                    logger.debug(f"Linked issue #{child_gitlab_iid} as sub-issue of #{parent_gitlab_iid}")
+                except GithubException as e:
+                    logger.warning(
+                        f"Failed to create sub-issue relationship: #{child_gitlab_iid} -> #{parent_gitlab_iid}: {e}"
+                    )
+
+    def _create_blocking_relations(
+        self,
+        pending_relations: list[dict[str, Any]],
+        github_issue_dict: dict[int, github.Issue.Issue],
+    ) -> None:
+        """Third pass: Create blocking relationships as GitHub issue dependencies."""
+        if not pending_relations:
+            return
+
+        logger.info(f"Processing {len(pending_relations)} blocking relationships...")
+        owner, repo = self.github_repo_path.split("/")
+
+        for pending_relation in pending_relations:
+            source_gitlab_iid = pending_relation["source_gitlab_iid"]
+            relation = pending_relation["relation"]
+            link_type = relation.type
+            target_gitlab_iid = int(relation.target_iid)
+
+            if source_gitlab_iid not in github_issue_dict:
+                logger.warning(f"Source issue #{source_gitlab_iid} not found for blocking relationship")
+                continue
+            if target_gitlab_iid not in github_issue_dict:
+                logger.warning(f"Target issue #{target_gitlab_iid} not found for blocking relationship")
+                continue
+
+            source_github_issue = github_issue_dict[source_gitlab_iid]
+            target_github_issue = github_issue_dict[target_gitlab_iid]
+
+            # GitLab "blocks" means: source blocks target -> target is blocked by source
+            # GitLab "is_blocked_by" means: source is blocked by target
+            if link_type == "blocks":
+                blocked_issue_number = target_github_issue.number
+                blocking_issue_id = source_github_issue.id
+            else:  # is_blocked_by
+                blocked_issue_number = source_github_issue.number
+                blocking_issue_id = target_github_issue.id
+
+            success = ghu.create_issue_dependency(
+                self.github_client, owner, repo, blocked_issue_number, blocking_issue_id
+            )
+
+            if success:
+                logger.debug(f"Created blocking relationship: #{source_gitlab_iid} {link_type} #{target_gitlab_iid}")
+
+    def migrate_issues_with_number_preservation(self) -> None:
         """Migrate issues while preserving GitLab issue numbers."""
         try:
-            # Get all GitLab issues sorted by IID
             gitlab_issues = self.gitlab_project.issues.list(get_all=True, state="all")
             gitlab_issues.sort(key=lambda i: i.iid)
 
@@ -823,186 +461,17 @@ class GitlabToGithubMigrator:
 
             max_issue_number = max(i.iid for i in gitlab_issues)
             gitlab_issue_dict: dict[int, GitlabProjectIssue] = {i.iid: i for i in gitlab_issues}
-            github_issue_dict: dict[int, github.Issue.Issue] = {}  # Maps GitLab IID to GitHub issue
-            pending_parent_child_relations: dict[int, list[IssueLinkInfo]] = {}  # Gitlab IID -> [IssueLinkInfo, ...]
-            pending_blocking_relations: list[dict[str, Any]] = []  # Store blocking relations for second pass
 
-            # First pass: Create issues maintaining number sequence
-            for issue_number in range(1, max_issue_number + 1):
-                if issue_number in gitlab_issue_dict:
-                    # Real issue exists
-                    gitlab_issue = gitlab_issue_dict[issue_number]
+            # First pass: Create issues
+            github_issue_dict, pending_parent_child, pending_blocking = self._create_issues_first_pass(
+                gitlab_issue_dict, max_issue_number
+            )
 
-                    # Prepare issue content
-                    issue_body = f"**Migrated from GitLab issue #{gitlab_issue.iid}**\n"
-                    issue_body += (
-                        f"**Original Author:** {gitlab_issue.author['name']} (@{gitlab_issue.author['username']})\n"
-                    )
-                    issue_body += f"**Created:** {self._format_timestamp(gitlab_issue.created_at)}\n"
-                    issue_body += f"**GitLab URL:** {gitlab_issue.web_url}\n\n"
-                    issue_body += "---\n\n"
+            # Second pass: Parent-child relationships
+            self._create_parent_child_relations(pending_parent_child, github_issue_dict)
 
-                    if gitlab_issue.description:
-                        # Download and process attachments (cached URLs already replaced)
-                        files, description_with_cached = self.download_gitlab_attachments(gitlab_issue.description)
-                        updated_description = self.upload_github_attachments(
-                            files, description_with_cached, context=f"issue #{gitlab_issue.iid}"
-                        )
-                        issue_body += updated_description
-
-                    # Add cross-linked issues to the description and collect relationships
-                    cross_links = self.get_issue_cross_links(gitlab_issue)
-                    if cross_links.cross_links_text:
-                        issue_body += cross_links.cross_links_text
-
-                    # Store parent-child relations for second pass (after all issues are created)
-                    if cross_links.parent_child_relations:
-                        pending_parent_child_relations[gitlab_issue.iid] = cross_links.parent_child_relations
-                        logger.debug(
-                            f"Stored {len(cross_links.parent_child_relations)} parent-child relations for issue #{gitlab_issue.iid}"
-                        )
-
-                    # Store blocking relations for second pass
-                    if cross_links.blocking_relations:
-                        pending_blocking_relations.extend(
-                            {"source_gitlab_iid": gitlab_issue.iid, "relation": relation}
-                            for relation in cross_links.blocking_relations
-                        )
-
-                    # Prepare labels
-                    issue_labels = [
-                        self.label_mapping[label_name]
-                        for label_name in gitlab_issue.labels
-                        if label_name in self.label_mapping
-                    ]
-
-                    # Prepare milestone
-                    milestone = None
-                    if gitlab_issue.milestone and gitlab_issue.milestone["id"] in self.milestone_mapping:
-                        milestone_number = self.milestone_mapping[gitlab_issue.milestone["id"]]
-                        milestone = self.github_repo.get_milestone(milestone_number)
-
-                    # Create GitHub issue (only pass milestone if it exists)
-                    if milestone:
-                        github_issue = self.github_repo.create_issue(
-                            title=gitlab_issue.title, body=issue_body, labels=issue_labels, milestone=milestone
-                        )
-                    else:
-                        github_issue = self.github_repo.create_issue(
-                            title=gitlab_issue.title, body=issue_body, labels=issue_labels
-                        )
-
-                    # Verify issue number
-                    if github_issue.number != issue_number:
-                        msg = f"Issue number mismatch: expected {issue_number}, got {github_issue.number}"
-                        raise NumberVerificationError(msg)
-
-                    # Store GitHub issue for parent-child relationship handling
-                    github_issue_dict[gitlab_issue.iid] = github_issue
-                    logger.debug(
-                        f"Added issue #{gitlab_issue.iid} to github_issue_dict (now has {len(github_issue_dict)} issues)"
-                    )
-
-                    # Migrate comments
-                    self.migrate_issue_comments(gitlab_issue, github_issue)
-
-                    # Close issue if needed
-                    if gitlab_issue.state == "closed":
-                        github_issue.edit(state="closed")
-
-                    logger.debug(f"Created issue #{issue_number}: {gitlab_issue.title}")
-
-                else:
-                    # Create placeholder issue
-                    placeholder_issue = self.github_repo.create_issue(
-                        title="Placeholder", body="Placeholder to preserve issue numbering - will be deleted"
-                    )
-
-                    # Verify placeholder number
-                    if placeholder_issue.number != issue_number:
-                        msg = f"Placeholder issue number mismatch: expected {issue_number}, got {placeholder_issue.number}"
-                        raise NumberVerificationError(msg)
-
-                    # Close placeholder immediately
-                    placeholder_issue.edit(state="closed")
-                    logger.debug(f"Created placeholder issue #{issue_number}")
-
-            # Second pass: Create parent-child relationships as GitHub sub-issues
-            if pending_parent_child_relations:
-                logger.info(f"Processing {len(pending_parent_child_relations)} parent-child relationships...")
-                logger.debug(f"Available GitHub issues in dict: {sorted(github_issue_dict.keys())}")
-
-                for parent_gitlab_iid, child_relations in pending_parent_child_relations.items():
-                    # Get the parent GitHub issue
-                    if parent_gitlab_iid in github_issue_dict:
-                        parent_github_issue = github_issue_dict[parent_gitlab_iid]
-                    else:
-                        logger.warning(f"Parent issue #{parent_gitlab_iid} not found for parent-child relationship")
-                        continue
-
-                    for child_relation in child_relations:
-                        # Get the child issue info
-                        # GraphQL API may return IID as string; ensure it's int to match dictionary keys
-                        child_gitlab_iid = int(child_relation.target_iid)
-                        logger.debug(f"Looking for child issue #{child_gitlab_iid}")
-                        if child_gitlab_iid in github_issue_dict:
-                            child_github_issue = github_issue_dict[child_gitlab_iid]
-
-                            try:
-                                # Link existing child issue to parent using GitHub's sub-issues API
-                                # Note: PyGithub requires the issue ID (not number) for sub-issue operations
-                                parent_github_issue.add_sub_issue(child_github_issue.id)
-                                logger.debug(f"Linked issue #{child_gitlab_iid} as sub-issue of #{parent_gitlab_iid}")
-                            except GithubException as e:
-                                # Log warning but continue migration - sub-issue relationship is non-critical
-                                logger.warning(
-                                    f"Failed to create sub-issue relationship: #{child_gitlab_iid} -> #{parent_gitlab_iid}: {e}"
-                                )
-                        else:
-                            logger.warning(
-                                f"Child issue #{child_gitlab_iid} not found for parent-child relationship of parent #{parent_gitlab_iid}"
-                            )
-
-            # Third pass: Create blocking relationships as GitHub issue dependencies
-            if pending_blocking_relations:
-                logger.info(f"Processing {len(pending_blocking_relations)} blocking relationships...")
-
-                for pending_relation in pending_blocking_relations:
-                    source_gitlab_iid = pending_relation["source_gitlab_iid"]
-                    relation = pending_relation["relation"]
-                    link_type = relation.type
-                    # Ensure IID is int to match dictionary keys
-                    target_gitlab_iid = int(relation.target_iid)
-
-                    # Get both GitHub issues
-                    if source_gitlab_iid not in github_issue_dict:
-                        logger.warning(f"Source issue #{source_gitlab_iid} not found for blocking relationship")
-                        continue
-                    if target_gitlab_iid not in github_issue_dict:
-                        logger.warning(f"Target issue #{target_gitlab_iid} not found for blocking relationship")
-                        continue
-
-                    source_github_issue = github_issue_dict[source_gitlab_iid]
-                    target_github_issue = github_issue_dict[target_gitlab_iid]
-
-                    # Determine which issue is blocked and which is blocking based on GitLab link type
-                    # GitLab "blocks" means: source blocks target -> target is blocked by source
-                    # GitLab "is_blocked_by" means: source is blocked by target -> source is blocked by target
-                    if link_type == "blocks":
-                        # Source blocks target: target is blocked by source
-                        blocked_issue_number = target_github_issue.number
-                        blocking_issue_id = source_github_issue.id
-                    else:  # is_blocked_by
-                        # Source is blocked by target: source is blocked by target
-                        blocked_issue_number = source_github_issue.number
-                        blocking_issue_id = target_github_issue.id
-
-                    success = self.create_github_issue_dependency(blocked_issue_number, blocking_issue_id)
-
-                    if success:
-                        logger.debug(
-                            f"Created blocking relationship: #{source_gitlab_iid} {link_type} #{target_gitlab_iid}"
-                        )
+            # Third pass: Blocking relationships
+            self._create_blocking_relations(pending_blocking, github_issue_dict)
 
             logger.info(f"Migrated {len(gitlab_issues)} issues")
 
@@ -1012,28 +481,26 @@ class GitlabToGithubMigrator:
 
     def migrate_issue_comments(self, gitlab_issue: GitlabProjectIssue, github_issue: github.Issue.Issue) -> None:
         """Migrate comments for an issue."""
-        # Get all notes/comments
         notes = gitlab_issue.notes.list(get_all=True)
         notes.sort(key=lambda n: n.created_at)
 
         for note in notes:
             if note.system:
-                # System note - convert to regular comment
                 comment_body = f"**System note:** {note.body}"
             else:
-                # Regular comment
-                comment_body = f"**Comment by** {note.author['name']} (@{note.author['username']}) **on** {self._format_timestamp(note.created_at)}\n\n"
+                comment_body = (
+                    f"**Comment by** {note.author['name']} (@{note.author['username']}) "
+                    f"**on** {format_timestamp(note.created_at)}\n\n"
+                )
                 comment_body += "---\n\n"
 
                 if note.body:
-                    # Process attachments in comment (cached URLs already replaced)
-                    files, body_with_cached = self.download_gitlab_attachments(note.body)
-                    updated_body = self.upload_github_attachments(
-                        files, body_with_cached, context=f"issue #{gitlab_issue.iid} note {note.id}"
+                    updated_body = self.attachment_handler.process_content(
+                        note.body,
+                        context=f"issue #{gitlab_issue.iid} note {note.id}",
                     )
                     comment_body += updated_body
 
-            # Create GitHub comment
             github_issue.create_comment(comment_body)
             logger.debug(f"Migrated comment by {note.author['username']}")
 
