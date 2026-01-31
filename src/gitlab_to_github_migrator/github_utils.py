@@ -5,7 +5,7 @@ import os
 import re
 from typing import TYPE_CHECKING, Final, Literal, overload
 
-from github import Auth, Github, UnknownObjectException
+from github import Auth, Github, GithubException, UnknownObjectException
 from github.AuthenticatedUser import AuthenticatedUser
 
 from .exceptions import MigrationError
@@ -116,6 +116,47 @@ def get_repo(client: Github, repo_path: str) -> Repository | None:
             return None
         msg = f"Error checking repository existence: {e}"
         raise MigrationError(msg) from e
+
+
+def create_issue_dependency(
+    client: Github,
+    owner: str,
+    repo: str,
+    blocked_issue_number: int,
+    blocking_issue_id: int,
+) -> bool:
+    """Create GitHub issue dependency (blocked-by relationship).
+
+    Uses raw API call since PyGithub doesn't support this yet (August 2025 API).
+
+    Args:
+        client: PyGithub client
+        owner: Repository owner
+        repo: Repository name
+        blocked_issue_number: The issue number that is blocked
+        blocking_issue_id: The issue ID (not number) that is blocking
+
+    Returns:
+        True if created, False if already exists or invalid
+    """
+    endpoint = f"/repos/{owner}/{repo}/issues/{blocked_issue_number}/dependencies/blocked_by"
+    payload = {"issue_id": blocking_issue_id}
+
+    try:
+        status, _, _ = client.requester.requestJson("POST", endpoint, input=payload)
+    except GithubException as e:
+        if e.status == 422:
+            logger.debug(f"Could not create dependency (may already exist): {e.status} - {e.data}")
+            return False
+        raise
+
+    if status == 201:
+        logger.debug(
+            f"Created issue dependency: issue #{blocked_issue_number} blocked by issue ID {blocking_issue_id}"
+        )
+        return True
+
+    return False
 
 
 def create_repo(client: Github, repo_path: str, description: str | None) -> Repository:

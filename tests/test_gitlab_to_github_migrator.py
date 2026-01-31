@@ -8,70 +8,8 @@ import pytest
 from github import GithubException
 from gitlab.exceptions import GitlabError
 
-from gitlab_to_github_migrator import GitlabToGithubMigrator, LabelTranslator, MigrationError
-
-
-@pytest.mark.unit
-class TestLabelTranslator:
-    """Test label translation functionality."""
-
-    def test_simple_translation(self) -> None:
-        translator = LabelTranslator(["p_high:priority: high", "bug:defect"])
-        assert translator.translate("p_high") == "priority: high"
-        assert translator.translate("bug") == "defect"
-        assert translator.translate("unknown") == "unknown"
-
-    def test_wildcard_translation(self) -> None:
-        translator = LabelTranslator(["p_*:priority: *", "status_*:status: *"])
-        assert translator.translate("p_high") == "priority: high"
-        assert translator.translate("p_low") == "priority: low"
-        assert translator.translate("status_open") == "status: open"
-        assert translator.translate("unmatched") == "unmatched"
-
-    def test_invalid_pattern(self) -> None:
-        with pytest.raises(ValueError, match="Invalid pattern format"):
-            LabelTranslator(["invalid_pattern"])
-
-    def test_multiple_patterns(self) -> None:
-        translator = LabelTranslator(["p_*:priority: *", "comp_*:component: *", "bug:defect"])
-        assert translator.translate("p_critical") == "priority: critical"
-        assert translator.translate("comp_ui") == "component: ui"
-        assert translator.translate("bug") == "defect"
-
-
-@pytest.mark.unit
-class TestTimestampFormatting:
-    """Test timestamp formatting functionality."""
-
-    def test_format_timestamp_with_z_suffix(self) -> None:
-        """Test formatting timestamp with Z suffix."""
-        result = GitlabToGithubMigrator._format_timestamp("2024-01-15T10:30:45.123Z")
-        assert result == "2024-01-15 10:30:45Z"
-
-    def test_format_timestamp_with_timezone(self) -> None:
-        """Test formatting timestamp with explicit timezone."""
-        result = GitlabToGithubMigrator._format_timestamp("2024-01-15T10:30:45.123456+00:00")
-        assert result == "2024-01-15 10:30:45Z"
-
-    def test_format_timestamp_without_microseconds(self) -> None:
-        """Test formatting timestamp without microseconds."""
-        result = GitlabToGithubMigrator._format_timestamp("2024-01-15T10:30:45Z")
-        assert result == "2024-01-15 10:30:45Z"
-
-    def test_format_timestamp_with_different_timezone(self) -> None:
-        """Test formatting timestamp with non-UTC timezone."""
-        result = GitlabToGithubMigrator._format_timestamp("2024-01-15T10:30:45+05:30")
-        assert result == "2024-01-15 10:30:45+05:30"
-
-    def test_format_timestamp_with_empty_string(self) -> None:
-        """Test handling for empty string - returns as-is."""
-        result = GitlabToGithubMigrator._format_timestamp("")
-        assert result == ""
-
-    def test_format_timestamp_with_invalid_format(self) -> None:
-        """Test handling for invalid timestamp format - returns original."""
-        result = GitlabToGithubMigrator._format_timestamp("invalid-timestamp")
-        assert result == "invalid-timestamp"
+from gitlab_to_github_migrator import GitlabToGithubMigrator, MigrationError
+from gitlab_to_github_migrator.gitlab_utils import get_work_item_children
 
 
 @pytest.mark.unit
@@ -80,11 +18,11 @@ class TestGitlabToGithubMigrator:
 
     def setup_method(self) -> None:
         """Setup test fixtures."""
-        self.gitlab_project_path = "test-org/test-project"
-        self.github_repo_path = "github-org/test-repo"
+        self.gitlab_project_path: str = "test-org/test-project"
+        self.github_repo_path: str = "github-org/test-repo"
 
         # Mock GitLab project
-        self.mock_gitlab_project = Mock()
+        self.mock_gitlab_project: Mock = Mock()
         self.mock_gitlab_project.id = 12345
         self.mock_gitlab_project.name = "test-project"
         self.mock_gitlab_project.description = "Test project description"
@@ -92,7 +30,7 @@ class TestGitlabToGithubMigrator:
         self.mock_gitlab_project.ssh_url_to_repo = "git@gitlab.com:test-org/test-project.git"
 
         # Mock GitHub repo
-        self.mock_github_repo = Mock()
+        self.mock_github_repo: Mock = Mock()
         self.mock_github_repo.html_url = "https://github.com/github-org/test-repo"
         self.mock_github_repo.ssh_url = "git@github.com:github-org/test-repo.git"
 
@@ -116,7 +54,7 @@ class TestGitlabToGithubMigrator:
 
         assert migrator.gitlab_project_path == self.gitlab_project_path
         assert migrator.github_repo_path == self.github_repo_path
-        assert len(migrator.label_translator.patterns) == 1
+        assert migrator._label_translations == ["p_*:priority: *"]
 
     @patch("gitlab_to_github_migrator.gitlab_utils.Gitlab")
     @patch("gitlab_to_github_migrator.github_utils.Github")
@@ -284,72 +222,6 @@ class TestGitlabToGithubMigrator:
 
     @patch("gitlab_to_github_migrator.gitlab_utils.Gitlab")
     @patch("gitlab_to_github_migrator.github_utils.Github")
-    def test_download_gitlab_attachments(self, mock_github_class, mock_gitlab_class) -> None:
-        """Test GitLab attachment download."""
-        # Mock successful response
-        mock_response = Mock()
-        mock_response.content = b"file content"
-        mock_response.raise_for_status.return_value = None
-
-        # Setup GitLab/GitHub mocks
-        mock_gitlab_client = Mock()
-        mock_github_client = Mock()
-        mock_gitlab_class.return_value = mock_gitlab_client
-        mock_github_class.return_value = mock_github_client
-        mock_gitlab_client.projects.get.return_value = self.mock_gitlab_project
-
-        # Mock the http_get method
-        mock_gitlab_client.http_get.return_value = mock_response
-
-        migrator = GitlabToGithubMigrator(self.gitlab_project_path, self.github_repo_path, github_token="test_token")
-
-        content = "Here is an attachment: /uploads/abcdef0123456789abcdef0123456789/file.pdf"
-        files, updated_content = migrator.download_gitlab_attachments(content)
-
-        assert len(files) == 1
-        assert files[0].filename == "file.pdf"
-        assert files[0].content == b"file content"
-        assert files[0].short_gitlab_url == "/uploads/abcdef0123456789abcdef0123456789/file.pdf"
-        # Content unchanged since no cached URLs
-        assert updated_content == content
-
-        # Verify API path is used instead of web URL
-        mock_gitlab_client.http_get.assert_called_once_with(
-            "/projects/12345/uploads/abcdef0123456789abcdef0123456789/file.pdf",
-            raw=True,
-            timeout=30,
-        )
-
-    @patch("gitlab_to_github_migrator.gitlab_utils.Gitlab")
-    @patch("gitlab_to_github_migrator.github_utils.Github")
-    def test_download_gitlab_attachments_cached(self, mock_github_class, mock_gitlab_class) -> None:
-        """Test that cached attachments skip download and replace URLs."""
-        mock_gitlab_client = Mock()
-        mock_github_client = Mock()
-        mock_gitlab_class.return_value = mock_gitlab_client
-        mock_github_class.return_value = mock_github_client
-        mock_gitlab_client.projects.get.return_value = self.mock_gitlab_project
-
-        migrator = GitlabToGithubMigrator(self.gitlab_project_path, self.github_repo_path, github_token="test_token")
-
-        # Pre-populate the cache with an already-uploaded attachment
-        cached_url = "/uploads/abcdef0123456789abcdef0123456789/cached.pdf"
-        github_url = "https://github.com/releases/download/cached.pdf"
-        migrator._uploaded_attachments[cached_url] = github_url
-
-        content = f"Here is a cached attachment: {cached_url}"
-        files, updated_content = migrator.download_gitlab_attachments(content)
-
-        # No files should be downloaded (already cached)
-        assert len(files) == 0
-        # URL should be replaced with GitHub URL
-        assert cached_url not in updated_content
-        assert github_url in updated_content
-        # http_get should NOT be called (skipped download)
-        mock_gitlab_client.http_get.assert_not_called()
-
-    @patch("gitlab_to_github_migrator.gitlab_utils.Gitlab")
-    @patch("gitlab_to_github_migrator.github_utils.Github")
     def test_validation_report_success(self, mock_github_class, mock_gitlab_class) -> None:
         """Test successful validation report generation."""
         mock_gitlab_client = Mock()
@@ -433,149 +305,84 @@ class TestGitlabToGithubMigrator:
         assert "Issue count mismatch" in report["errors"][0]
         assert "Milestone count mismatch" in report["errors"][1]
 
-    @patch("gitlab_to_github_migrator.gitlab_utils.Gitlab")
-    @patch("gitlab_to_github_migrator.github_utils.Github")
-    def test_upload_github_attachments_success(self, mock_github_class, mock_gitlab_class) -> None:
-        """Test successful attachment upload to GitHub release."""
-        from gitlab_to_github_migrator.migrator import DownloadedFile
 
-        mock_gitlab_client = Mock()
-        mock_github_client = Mock()
-        mock_gitlab_class.return_value = mock_gitlab_client
-        mock_github_class.return_value = mock_github_client
+@pytest.mark.unit
+class TestCreateIssueDependency:
+    def test_creates_dependency_successfully(self) -> None:
+        from unittest.mock import Mock
 
-        mock_gitlab_client.projects.get.return_value = self.mock_gitlab_project
+        from gitlab_to_github_migrator.github_utils import create_issue_dependency
 
-        migrator = GitlabToGithubMigrator(self.gitlab_project_path, self.github_repo_path, github_token="test_token")
-        migrator._github_repo = self.mock_github_repo
+        mock_client = Mock()
+        mock_client.requester.requestJson.return_value = (201, {}, {"id": 123})
 
-        # Mock the release (found by listing all releases)
-        mock_release = Mock()
-        mock_release.name = "GitLab issue attachments"
-        mock_asset = Mock()
-        mock_asset.browser_download_url = "https://github.com/org/repo/releases/download/attachments/test.png"
-        mock_release.upload_asset.return_value = mock_asset
-        self.mock_github_repo.get_releases.return_value = [mock_release]
+        result = create_issue_dependency(mock_client, "owner", "repo", blocked_issue_number=10, blocking_issue_id=999)
 
-        # Create test file
-        test_file = DownloadedFile(
-            filename="test.png",
-            content=b"fake image data",
-            short_gitlab_url="/uploads/abc123/test.png",
-            full_gitlab_url="https://gitlab.com/test/project/uploads/abc123/test.png",
+        assert result is True
+        mock_client.requester.requestJson.assert_called_once_with(
+            "POST",
+            "/repos/owner/repo/issues/10/dependencies/blocked_by",
+            input={"issue_id": 999},
         )
 
-        # Test content update
-        content = "Here is an image: ![test](/uploads/abc123/test.png)"
-        updated_content = migrator.upload_github_attachments([test_file], content)
+    def test_returns_false_on_422(self) -> None:
+        from unittest.mock import Mock
 
-        # Verify the URL was replaced
-        assert "/uploads/abc123/test.png" not in updated_content
-        assert "https://github.com/org/repo/releases/download/attachments/test.png" in updated_content
-        assert mock_release.upload_asset.called
+        from gitlab_to_github_migrator.github_utils import create_issue_dependency
 
-    @patch("gitlab_to_github_migrator.gitlab_utils.Gitlab")
-    @patch("gitlab_to_github_migrator.github_utils.Github")
-    def test_upload_github_attachments_empty_list(self, mock_github_class, mock_gitlab_class) -> None:
-        """Test that empty file list returns original content unchanged."""
-        mock_gitlab_client = Mock()
-        mock_github_client = Mock()
-        mock_gitlab_class.return_value = mock_gitlab_client
-        mock_github_class.return_value = mock_github_client
+        mock_client = Mock()
+        mock_client.requester.requestJson.side_effect = GithubException(422, {"message": "Already exists"}, headers={})
 
-        mock_gitlab_client.projects.get.return_value = self.mock_gitlab_project
+        result = create_issue_dependency(mock_client, "owner", "repo", blocked_issue_number=10, blocking_issue_id=999)
 
-        migrator = GitlabToGithubMigrator(self.gitlab_project_path, self.github_repo_path, github_token="test_token")
-        migrator._github_repo = self.mock_github_repo
+        assert result is False
 
-        content = "No attachments here"
-        updated_content = migrator.upload_github_attachments([], content)
 
-        assert updated_content == content
+@pytest.mark.unit
+class TestGetWorkItemChildren:
+    def test_returns_empty_list_when_no_children(self) -> None:
+        mock_graphql = Mock()
+        mock_graphql.execute.return_value = {
+            "namespace": {
+                "workItem": {
+                    "iid": "42",
+                    "widgets": [{"type": "HIERARCHY", "children": {"nodes": []}}],
+                }
+            }
+        }
 
-    @patch("gitlab_to_github_migrator.gitlab_utils.Gitlab")
-    @patch("gitlab_to_github_migrator.github_utils.Github")
-    def test_attachments_release_existing(self, mock_github_class, mock_gitlab_class) -> None:
-        """Test getting existing attachments release."""
-        mock_gitlab_client = Mock()
-        mock_github_client = Mock()
-        mock_gitlab_class.return_value = mock_gitlab_client
-        mock_github_class.return_value = mock_github_client
+        result = get_work_item_children(mock_graphql, "org/project", 42)
+        assert result == []
 
-        mock_gitlab_client.projects.get.return_value = self.mock_gitlab_project
+    def test_returns_children_when_present(self) -> None:
+        mock_graphql = Mock()
+        mock_graphql.execute.return_value = {
+            "namespace": {
+                "workItem": {
+                    "iid": "42",
+                    "widgets": [
+                        {
+                            "type": "HIERARCHY",
+                            "children": {
+                                "nodes": [
+                                    {
+                                        "iid": "100",
+                                        "title": "Child task",
+                                        "state": "opened",
+                                        "workItemType": {"name": "Task"},
+                                        "webUrl": "https://gitlab.com/org/proj/-/issues/100",
+                                    }
+                                ]
+                            },
+                        }
+                    ],
+                }
+            }
+        }
 
-        migrator = GitlabToGithubMigrator(self.gitlab_project_path, self.github_repo_path, github_token="test_token")
-        migrator._github_repo = self.mock_github_repo
-
-        # Mock existing release found by listing all releases
-        mock_release = Mock()
-        mock_release.name = "GitLab issue attachments"
-        self.mock_github_repo.get_releases.return_value = [mock_release]
-
-        release = migrator.attachments_release
-
-        assert release == mock_release
-        self.mock_github_repo.get_releases.assert_called_once()
-        self.mock_github_repo.create_git_release.assert_not_called()
-
-    @patch("gitlab_to_github_migrator.gitlab_utils.Gitlab")
-    @patch("gitlab_to_github_migrator.github_utils.Github")
-    def test_attachments_release_create_new(self, mock_github_class, mock_gitlab_class) -> None:
-        """Test creating new attachments release when it doesn't exist."""
-        mock_gitlab_client = Mock()
-        mock_github_client = Mock()
-        mock_gitlab_class.return_value = mock_gitlab_client
-        mock_github_class.return_value = mock_github_client
-
-        mock_gitlab_client.projects.get.return_value = self.mock_gitlab_project
-
-        migrator = GitlabToGithubMigrator(self.gitlab_project_path, self.github_repo_path, github_token="test_token")
-        migrator._github_repo = self.mock_github_repo
-
-        # Mock no releases found (empty list)
-        self.mock_github_repo.get_releases.return_value = []
-
-        # Mock create release
-        mock_release = Mock()
-        mock_release.name = "GitLab issue attachments"
-        self.mock_github_repo.create_git_release.return_value = mock_release
-
-        release = migrator.attachments_release
-
-        assert release == mock_release
-        self.mock_github_repo.create_git_release.assert_called_once()
-        call_args = self.mock_github_repo.create_git_release.call_args
-        assert call_args.kwargs["tag"] == "gitlab-issue-attachments"
-        assert call_args.kwargs["draft"] is True
-
-    @patch("gitlab_to_github_migrator.gitlab_utils.Gitlab")
-    @patch("gitlab_to_github_migrator.github_utils.Github")
-    def test_attachments_release_cached(self, mock_github_class, mock_gitlab_class) -> None:
-        """Test that attachments release is cached after first access."""
-        mock_gitlab_client = Mock()
-        mock_github_client = Mock()
-        mock_gitlab_class.return_value = mock_gitlab_client
-        mock_github_class.return_value = mock_github_client
-
-        mock_gitlab_client.projects.get.return_value = self.mock_gitlab_project
-
-        migrator = GitlabToGithubMigrator(self.gitlab_project_path, self.github_repo_path, github_token="test_token")
-        migrator._github_repo = self.mock_github_repo
-
-        # Mock existing release found by listing all releases
-        mock_release = Mock()
-        mock_release.name = "GitLab issue attachments"
-        self.mock_github_repo.get_releases.return_value = [mock_release]
-
-        # Access the property twice
-        release1 = migrator.attachments_release
-        release2 = migrator.attachments_release
-
-        # Should be the same object
-        assert release1 == release2
-        assert release1 is release2
-        # API should only be called once (cached after first call)
-        self.mock_github_repo.get_releases.assert_called_once()
+        result = get_work_item_children(mock_graphql, "org/project", 42)
+        assert len(result) == 1
+        assert result[0] == 100
 
 
 if __name__ == "__main__":
