@@ -579,6 +579,44 @@ class TestGitlabToGithubMigrator:
 
 
 @pytest.mark.unit
+class TestCreateIssueDependency:
+    def test_creates_dependency_successfully(self) -> None:
+        from unittest.mock import Mock
+
+        from gitlab_to_github_migrator.github_utils import create_issue_dependency
+
+        mock_client = Mock()
+        mock_client.requester.requestJson.return_value = (201, {}, {"id": 123})
+
+        result = create_issue_dependency(
+            mock_client, "owner", "repo", blocked_issue_number=10, blocking_issue_id=999
+        )
+
+        assert result is True
+        mock_client.requester.requestJson.assert_called_once_with(
+            "POST",
+            "/repos/owner/repo/issues/10/dependencies/blocked_by",
+            input={"issue_id": 999},
+        )
+
+    def test_returns_false_on_422(self) -> None:
+        from unittest.mock import Mock
+
+        from gitlab_to_github_migrator.github_utils import create_issue_dependency
+
+        mock_client = Mock()
+        mock_client.requester.requestJson.side_effect = GithubException(
+            422, {"message": "Already exists"}, headers={}
+        )
+
+        result = create_issue_dependency(
+            mock_client, "owner", "repo", blocked_issue_number=10, blocking_issue_id=999
+        )
+
+        assert result is False
+
+
+@pytest.mark.unit
 class TestGetWorkItemChildren:
     def test_returns_empty_list_when_no_children(self) -> None:
         from unittest.mock import Mock
