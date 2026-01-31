@@ -339,6 +339,50 @@ class TestCreateIssueDependency:
 
 
 @pytest.mark.unit
+class TestDeleteIssue:
+    def test_deletes_issue_successfully(self) -> None:
+        from unittest.mock import Mock
+
+        from gitlab_to_github_migrator.github_utils import delete_issue
+
+        mock_client = Mock()
+        mock_client._Github__requester.requestGraphql.return_value = {
+            "deleteIssue": {"deletedIssueId": "gid_123"}
+        }
+
+        result = delete_issue(mock_client, "gid_123")
+
+        assert result is True
+        mock_client._Github__requester.requestGraphql.assert_called_once()
+
+    def test_returns_false_on_graphql_exception(self) -> None:
+        from unittest.mock import Mock
+
+        from gitlab_to_github_migrator.github_utils import delete_issue
+
+        mock_client = Mock()
+        mock_client._Github__requester.requestGraphql.side_effect = GithubException(
+            404, {"message": "Not found"}, headers={}
+        )
+
+        result = delete_issue(mock_client, "gid_123")
+
+        assert result is False
+
+    def test_returns_false_on_unexpected_response(self) -> None:
+        from unittest.mock import Mock
+
+        from gitlab_to_github_migrator.github_utils import delete_issue
+
+        mock_client = Mock()
+        mock_client._Github__requester.requestGraphql.return_value = {"unexpected": "response"}
+
+        result = delete_issue(mock_client, "gid_123")
+
+        assert result is False
+
+
+@pytest.mark.unit
 class TestGetWorkItemChildren:
     def test_returns_empty_list_when_no_children(self) -> None:
         mock_graphql = Mock()

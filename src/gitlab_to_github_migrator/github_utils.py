@@ -118,6 +118,41 @@ def get_repo(client: Github, repo_path: str) -> Repository | None:
         raise MigrationError(msg) from e
 
 
+def delete_issue(client: Github, issue_node_id: str) -> bool:
+    """Delete a GitHub issue using GraphQL API.
+
+    Uses GraphQL mutation since PyGithub and REST API don't support issue deletion.
+
+    Args:
+        client: PyGithub client
+        issue_node_id: The global node ID of the issue (issue.node_id)
+
+    Returns:
+        True if deleted successfully, False otherwise
+    """
+    mutation = """
+    mutation($input: DeleteIssueInput!) {
+      deleteIssue(input: $input) {
+        deletedIssueId
+      }
+    }
+    """
+    variables = {"input": {"issueId": issue_node_id}}
+
+    try:
+        response = client._Github__requester.requestGraphql(  # noqa: SLF001 - PyGithub doesn't expose GraphQL API publicly  # pyright: ignore[reportAttributeAccessIssue, reportUnknownVariableType]
+            query=mutation, variables=variables
+        )
+        if response and "deleteIssue" in response and response["deleteIssue"].get("deletedIssueId"):
+            logger.debug(f"Deleted issue with node ID {issue_node_id}")
+            return True
+        logger.warning(f"Unexpected response when deleting issue: {response}")
+        return False  # noqa: TRY300 - Early return pattern is clearer
+    except GithubException:
+        logger.exception(f"Failed to delete issue {issue_node_id}")
+        return False
+
+
 def create_issue_dependency(
     client: Github,
     owner: str,

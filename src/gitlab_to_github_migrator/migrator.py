@@ -316,9 +316,11 @@ class GitlabToGithubMigrator:
                 github_placeholder_issues.append(github_issue)
 
         for issue in github_placeholder_issues:
-            # GitHub API doesn't allow deleting issues, so we'll leave them closed
-            # TODO #64 Delete via GraphQL API
-            logger.debug(f"Placeholder issue #{issue.number} left closed (cannot delete)")
+            # Delete placeholder issues using GraphQL API
+            if ghu.delete_issue(self.github_client, issue.node_id):
+                logger.debug(f"Deleted placeholder issue #{issue.number}")
+            else:
+                logger.warning(f"Failed to delete placeholder issue #{issue.number}")
 
         return gitlab_to_github_issue_map, gitlab_blocks_links
 
