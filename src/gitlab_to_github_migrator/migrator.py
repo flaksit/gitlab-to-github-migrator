@@ -16,13 +16,12 @@ import gitlab  # noqa: TC002 - used at runtime, not just for type hints
 from github import Github, GithubException
 from gitlab.exceptions import GitlabAuthenticationError, GitlabError
 
-from . import git_migration
+from . import git_migration, labels
 from . import github_utils as ghu
 from . import gitlab_utils as glu
 from .attachments import AttachmentHandler
 from .exceptions import MigrationError, NumberVerificationError
 from .issue_builder import build_issue_body, format_timestamp
-from .label_translator import LabelTranslator
 from .relationships import IssueLinkInfo, get_issue_cross_links
 
 if TYPE_CHECKING:
@@ -67,8 +66,8 @@ class GitlabToGithubMigrator:
         self._github_repo: github.Repository.Repository | None = None
         self._attachment_handler: AttachmentHandler | None = None
 
-        # Initialize label translator
-        self.label_translator: LabelTranslator = LabelTranslator(label_translations)
+        # Store label translations for later use
+        self._label_translations: list[str] | None = label_translations
 
         # Mappings for migration
         self.label_mapping: dict[str, str] = {}
@@ -131,51 +130,14 @@ class GitlabToGithubMigrator:
         )
 
     def migrate_labels(self) -> None:
-        """Migrate and translate labels from GitLab to GitHub.
-
-        Matching with existing GitHub labels is case-insensitive (GitHub treats
-        "Bug" and "bug" as the same label). When a translated label matches an
-        existing label, the existing label's name is used in the mapping.
-
-        Handles race condition where GitHub organization default labels may be
-        applied asynchronously after repository creation.
-        """
-        try:
-            # Get existing GitHub labels (case-insensitive lookup: lowercase -> actual name)
-            self.initial_github_labels = {label.name.lower(): label.name for label in self.github_repo.get_labels()}
-
-            # Get GitLab labels
-            gitlab_labels = self.gitlab_project.labels.list(get_all=True)
-
-            for gitlab_label in gitlab_labels:
-                # Translate label name
-                translated_name = self.label_translator.translate(gitlab_label.name)
-
-                # Skip if label already exists (case-insensitive, as GitHub labels are)
-                existing_label = self.initial_github_labels.get(translated_name.lower())
-                if existing_label is not None:
-                    self.label_mapping[gitlab_label.name] = existing_label
-                    logger.debug(f"Using existing label: {gitlab_label.name} -> {existing_label}")
-                    continue
-
-                # Create new label
-                try:
-                    github_label = self.github_repo.create_label(
-                        name=translated_name,
-                        color=gitlab_label.color.lstrip("#"),
-                        description=gitlab_label.description or "",
-                    )
-                    self.label_mapping[gitlab_label.name] = github_label.name
-                    logger.debug(f"Created label: {gitlab_label.name} -> {translated_name}")
-                except GithubException as e:
-                    msg = f"Failed to create label {translated_name}"
-                    raise MigrationError(msg) from e
-
-            logger.info(f"Migrated {len(self.label_mapping)} labels")
-
-        except (GitlabError, GithubException) as e:
-            msg = f"Failed to migrate labels: {e}"
-            raise MigrationError(msg) from e
+        """Migrate and translate labels from GitLab to GitHub."""
+        result = labels.migrate_labels(
+            self.gitlab_project,
+            self.github_repo,
+            self._label_translations,
+        )
+        self.label_mapping = result.label_mapping
+        self.initial_github_labels = result.initial_github_labels
 
     def migrate_milestones_with_number_preservation(self) -> None:
         """Migrate milestones while preserving GitLab milestone numbers."""
@@ -453,12 +415,11 @@ class GitlabToGithubMigrator:
         """Migrate issues while preserving GitLab issue numbers."""
         try:
             gitlab_issues = self.gitlab_project.issues.list(get_all=True, state="all")
-            gitlab_issues.sort(key=lambda i: i.iid)
-
             if not gitlab_issues:
                 logger.info("No issues to migrate")
                 return
 
+            gitlab_issues.sort(key=lambda i: i.iid)
             max_issue_number = max(i.iid for i in gitlab_issues)
             gitlab_issue_dict: dict[int, GitlabProjectIssue] = {i.iid: i for i in gitlab_issues}
 

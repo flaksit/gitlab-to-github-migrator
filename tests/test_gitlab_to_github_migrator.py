@@ -81,7 +81,7 @@ class TestGitlabToGithubMigrator:
 
         assert migrator.gitlab_project_path == self.gitlab_project_path
         assert migrator.github_repo_path == self.github_repo_path
-        assert len(migrator.label_translator.patterns) == 1
+        assert migrator._label_translations == ["p_*:priority: *"]
 
     @patch("gitlab_to_github_migrator.gitlab_utils.Gitlab")
     @patch("gitlab_to_github_migrator.github_utils.Github")
