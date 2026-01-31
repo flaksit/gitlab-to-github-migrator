@@ -441,9 +441,9 @@ class GitlabToGithubMigrator:
 
             gitlab_labels = self.gitlab_project.labels.list(get_all=True)
 
-            # Count GitHub items (excluding placeholders) with state breakdown
-            github_issues_all = list(self.github_repo.get_issues(state="all"))
-            github_issues = [i for i in github_issues_all if i.title != "Placeholder"]
+            # Count GitHub items with state breakdown
+            # No need to filter placeholders since they are now deleted via GraphQL
+            github_issues = list(self.github_repo.get_issues(state="all"))
             github_issues_open = [i for i in github_issues if i.state == "open"]
             github_issues_closed = [i for i in github_issues if i.state == "closed"]
 
