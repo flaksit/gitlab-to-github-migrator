@@ -27,12 +27,11 @@ A Python tool for migrating GitLab projects to GitHub with full metadata preserv
 ### Quick Install
 
 ```bash
-# Clone the repository
-git clone git@github.com:flaksit/gitlab-to-github-migrator.git
-cd gitlab-to-github-migrator
+# Bleeding edge
+uv tool install git+https://github.com/flaksit/pc-switcher@
 
-# Install dependencies
-uv sync --no-dev
+# Specific version, e.g., v0.1.0
+uv tool install git+https://github.com/flaksit/pc-switcher@v0.1.0
 
 # The tool is now ready to use
 uv run gitlab-to-github-migrator --help
@@ -362,6 +361,18 @@ gitlab-to-github-migrator/
 - `validate_migration()`: Generate migration report
 
 ### Contributing
+
+```bash
+# Clone the repository
+git clone git@github.com:flaksit/gitlab-to-github-migrator.git
+cd gitlab-to-github-migrator
+
+# If you have direnv, allow it. Then the following is not necessary
+direnv allow
+
+# Install dependencies
+uv sync
+```
 
 #### Code Quality Tools
 
