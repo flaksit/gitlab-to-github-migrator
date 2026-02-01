@@ -32,8 +32,6 @@ classifiers = [
 
 [project.scripts]
 gitlab-to-github-migrator = "gitlab_to_github_migrator:main"
-delete-test-repos = "gitlab_to_github_migrator.delete_test_repos:main"
-create-gitlab-test-project = "gitlab_to_github_migrator.create_gitlab_test_project:main"
 
 [dependency-groups]
 dev = [

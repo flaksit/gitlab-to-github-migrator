@@ -28,7 +28,7 @@ A Python tool for migrating GitLab projects to GitHub with full metadata preserv
 
 ```bash
 # Bleeding edge
-uv tool install git+https://github.com/flaksit/pc-switcher@
+uv tool install git+https://github.com/flaksit/pc-switcher
 
 # Specific version, e.g., v0.1.0
 uv tool install git+https://github.com/flaksit/pc-switcher@v0.1.0
@@ -36,6 +36,8 @@ uv tool install git+https://github.com/flaksit/pc-switcher@v0.1.0
 # The tool is now ready to use
 uv run gitlab-to-github-migrator --help
 ```
+
+Note: Only the main `gitlab-to-github-migrator` CLI is installed. Developer-only tools are run from a checkout (see Development).
 
 ## Authentication Setup
 
@@ -189,8 +191,8 @@ export TARGET_GITHUB_TEST_OWNER="your-org-or-username"
 # Run all tests (unit and integration), with default tokens from `pass` (see below)
 uv run pytest -v
 
-# If the GitHub token doesn't have repository deletion rights, run test repo cleanup script
-uv run delete_test_repos github/admin_token
+# Cleanup all test repos that were created under the GitHub owner
+uv run python -m gitlab_to_github_migrator.delete_test_repos github/admin_token
 
 # Run just unit tests
 uv run pytest -m "not integration" -v
@@ -256,7 +258,7 @@ uv run pytest -m integration tests/test_integration_real.py::TestRealAPIIntegrat
 
 #### Creating a GitLab Test Project
 
-The `create-gitlab-test-project` command creates a GitLab project with test data covering all migration edge cases: labels, milestones (with gaps in numbering), issues (with gaps), issue relationships (parent-child, blocking, related), comments, attachments, branches, and tags.
+The `create_gitlab_test_project` module creates a GitLab project with test data covering all migration edge cases: labels, milestones (with gaps in numbering), issues (with gaps), issue relationships (parent-child, blocking, related), comments, attachments, branches, and tags.
 
 **Prerequisites:**
 - GitLab token with write access: set `SOURCE_GITLAB_TOKEN` env var or store in `pass` at `gitlab/api/rw_token`
@@ -265,10 +267,10 @@ The `create-gitlab-test-project` command creates a GitLab project with test data
 **Usage:**
 ```bash
 # Run the script with the project path
-uv run create-gitlab-test-project namespace/project-name
+uv run python -m gitlab_to_github_migrator.create_gitlab_test_project namespace/project-name
 
 # For nested groups
-uv run create-gitlab-test-project group/subgroup/project-name
+uv run python -m gitlab_to_github_migrator.create_gitlab_test_project group/subgroup/project-name
 
 # Then follow the manual instructions printed at the end for adding attachments
 # (attachments cannot be uploaded via API)
@@ -283,11 +285,11 @@ The script is idempotent - it can be run multiple times and will skip resources 
 
 #### Cleanup of Test Repositories
 
-Integration tests create temporary repositories in the GitHub organization or user account specified by `TARGET_GITHUB_TEST_OWNER`. If the GitHub token doesn't have delete permissions for repositories, these repositories require manual cleanup. In that case, the tests will display instructions like:
+Integration tests create temporary repositories in the GitHub organization or user account specified by `TARGET_GITHUB_TEST_OWNER`. These repositories require manual cleanup, because pytest deliberately does not delete them so you can inspect them manually after the test. The tests will display instructions like:
 ```text
 ⚠️  Cannot delete test repository <owner>/gl2ghmigr-full-migration-test-abc123: insufficient permissions
    To clean up test repositories, run:
-   uv run delete_test_repos <github_owner> <pass_path>
+  uv run python -m gitlab_to_github_migrator.delete_test_repos <github_owner> <pass_path>
    where <github_owner> is the GitHub organization or user
    and <pass_path> is a 'pass' path containing a GitHub token with repository deletion rights.
 ```
@@ -296,11 +298,11 @@ Integration tests create temporary repositories in the GitHub organization or us
 ```bash
 # Using the cleanup script with TARGET_GITHUB_TEST_OWNER environment variable
 export TARGET_GITHUB_TEST_OWNER="your-org-or-username"
-uv run delete_test_repos github/admin/token
+uv run python -m gitlab_to_github_migrator.delete_test_repos github/admin/token
 
 # Or specify the owner explicitly
-uv run delete_test_repos your-org github/admin/token
-uv run delete_test_repos your-username github/admin/token
+uv run python -m gitlab_to_github_migrator.delete_test_repos your-org github/admin/token
+uv run python -m gitlab_to_github_migrator.delete_test_repos your-username github/admin/token
 
 # List what would be cleaned up without actually deleting
 # TODO add a dry-run option to the cleanup script

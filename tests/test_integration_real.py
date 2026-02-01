@@ -250,7 +250,7 @@ def migration_result(
 
     # Cleanup message (don't delete for manual inspection)
     print(f"\n Did not delete test repository {repo_path} so that you can inspect it manually.")
-    print("   To clean up all test repos, run: uv run delete-test-repos")
+    print("   To clean up all test repos, run: uv run python -m gitlab_to_github_migrator.delete_test_repos")
 
 
 @pytest.mark.integration
