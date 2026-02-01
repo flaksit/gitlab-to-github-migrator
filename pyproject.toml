@@ -48,6 +48,14 @@ dev = [
     "ruff>=0.14.4",
 ]
 
+[tool.hatch.version]
+source = "uv-dynamic-versioning"
+
+[tool.uv-dynamic-versioning]
+enable = true
+vcs = "git"
+style = "pep440"
+
 [tool.ruff]
 # Set as desired, typically 88 (black standard) or 100 (wide).
 line-length = 119
