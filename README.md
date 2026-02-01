@@ -28,10 +28,10 @@ A Python tool for migrating GitLab projects to GitHub with full metadata preserv
 
 ```bash
 # Bleeding edge
-uv tool install git+https://github.com/flaksit/pc-switcher
+uv tool install git+https://github.com/flaksit/gitlab-to-github-migrator
 
 # Specific version, e.g., v0.1.0
-uv tool install git+https://github.com/flaksit/pc-switcher@v0.1.0
+uv tool install git+https://github.com/flaksit/gitlab-to-github-migrator@v0.1.0
 
 # The tool is now ready to use
 uv run gitlab-to-github-migrator --help
