@@ -465,7 +465,7 @@ class TestCommentMigration:
         self.github_repo_path: str = "github-org/test-repo"
 
     def _create_mock_note(
-        self, created_at: str, body: str, *, system: bool = False, author: dict[str, str] | None = None
+        self, created_at: str, body: str | None, *, system: bool = False, author: dict[str, str] | None = None
     ) -> Mock:
         """Create a mock GitLab note."""
         note = Mock()
@@ -698,6 +698,56 @@ class TestCommentMigration:
         assert third_comment.startswith("### System notes\n")
         assert "removed label priority:high" in third_comment
         assert "marked this issue as closed" in third_comment
+
+    @patch("gitlab_to_github_migrator.gitlab_utils.Gitlab")
+    @patch("gitlab_to_github_migrator.github_utils.Github")
+    def test_empty_system_note_body(self, mock_github_class, mock_gitlab_class) -> None:
+        """Test that empty system note bodies are handled with '(empty note)' placeholder."""
+        # Setup mocks
+        mock_gitlab_client = Mock()
+        mock_github_client = Mock()
+        mock_gitlab_class.return_value = mock_gitlab_client
+        mock_github_class.return_value = mock_github_client
+
+        mock_gitlab_project = Mock()
+        mock_gitlab_project.id = 12345
+        mock_gitlab_project.name = "test-project"
+        mock_gitlab_client.projects.get.return_value = mock_gitlab_project
+
+        # Create migrator
+        migrator = GitlabToGithubMigrator(
+            self.gitlab_project_path,
+            self.github_repo_path,
+            github_token="test_token",
+        )
+
+        # Mock issue
+        mock_gitlab_issue = Mock()
+        mock_github_issue = Mock()
+        mock_gitlab_issue.iid = 1
+
+        # System notes with empty bodies
+        notes = [
+            self._create_mock_note("2026-01-27T20:18:55Z", "", system=True),  # Empty string
+            self._create_mock_note("2026-01-27T20:19:10Z", None, system=True),  # None
+            self._create_mock_note("2026-01-27T20:19:22Z", "marked this issue as closed", system=True),
+        ]
+        mock_gitlab_issue.notes.list.return_value = notes
+
+        # Execute
+        migrator.migrate_issue_comments(mock_gitlab_issue, mock_github_issue)
+
+        # Verify - single comment with grouped format
+        mock_github_issue.create_comment.assert_called_once()
+        comment_body = mock_github_issue.create_comment.call_args[0][0]
+
+        # Should have markdown header
+        assert comment_body.startswith("### System notes\n")
+
+        # Empty notes should show "(empty note)"
+        assert "2026-01-27 20:18:55Z: (empty note)" in comment_body
+        assert "2026-01-27 20:19:10Z: (empty note)" in comment_body
+        assert "2026-01-27 20:19:22Z: marked this issue as closed" in comment_body
 
 
 if __name__ == "__main__":

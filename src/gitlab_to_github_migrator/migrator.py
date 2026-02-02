@@ -398,26 +398,26 @@ class GitlabToGithubMigrator:
             if note.system:
                 # Collect consecutive system notes
                 system_notes = [note]
-                next_index = note_index + 1
-                while next_index < len(notes) and notes[next_index].system:
-                    system_notes.append(notes[next_index])
-                    next_index += 1
+                note_index += 1
+                while note_index < len(notes) and notes[note_index].system:
+                    system_notes.append(notes[note_index])
+                    note_index += 1
 
                 # Format system notes
                 if len(system_notes) == 1:
                     # Single system note: use compact format
-                    comment_body = f"**System note** on {format_timestamp(note.created_at)}: {note.body.strip()}"
+                    body_text = note.body.strip() if note.body else "(empty note)"
+                    comment_body = f"**System note** on {format_timestamp(note.created_at)}: {body_text}"
                 else:
                     # Multiple consecutive system notes: use grouped format
                     note_lines = [
-                        f"{format_timestamp(sys_note.created_at)}: {sys_note.body.strip()}"
+                        f"{format_timestamp(sys_note.created_at)}: {sys_note.body.strip() if sys_note.body else '(empty note)'}"
                         for sys_note in system_notes
                     ]
                     comment_body = "### System notes\n" + "\n\n".join(note_lines) + "\n"
 
                 github_issue.create_comment(comment_body)
                 logger.debug(f"Migrated {len(system_notes)} system note(s)")
-                note_index = next_index  # Skip all processed system notes
             else:
                 # Regular user comment
                 comment_body = (
