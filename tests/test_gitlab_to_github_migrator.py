@@ -461,5 +461,304 @@ class TestGetWorkItemChildren:
         assert result[0] == 100
 
 
+@pytest.mark.unit
+class TestCommentMigration:
+    """Test comment migration functionality."""
+
+    def setup_method(self) -> None:
+        """Setup test fixtures."""
+        self.gitlab_project_path: str = "test-org/test-project"
+        self.github_repo_path: str = "github-org/test-repo"
+
+    def _create_mock_note(
+        self, created_at: str, body: str | None, *, system: bool = False, author: dict[str, str] | None = None
+    ) -> Mock:
+        """Create a mock GitLab note."""
+        note = Mock()
+        note.created_at = created_at
+        note.updated_at = created_at  # Default to same as created_at
+        note.body = body
+        note.system = system
+        note.id = 1
+        if author is None:
+            author = {"name": "Test User", "username": "testuser"}
+        note.author = author
+        return note
+
+    @patch("gitlab_to_github_migrator.gitlab_utils.Gitlab")
+    @patch("gitlab_to_github_migrator.github_utils.Github")
+    def test_single_system_note_compact_format(self, mock_github_class, mock_gitlab_class) -> None:
+        """Test that a single system note uses compact format."""
+        # Setup mocks
+        mock_gitlab_client = Mock()
+        mock_github_client = Mock()
+        mock_gitlab_class.return_value = mock_gitlab_client
+        mock_github_class.return_value = mock_github_client
+
+        mock_gitlab_project = Mock()
+        mock_gitlab_project.id = 12345
+        mock_gitlab_project.name = "test-project"
+        mock_gitlab_client.projects.get.return_value = mock_gitlab_project
+
+        # Create migrator
+        migrator = GitlabToGithubMigrator(
+            self.gitlab_project_path,
+            self.github_repo_path,
+            github_token="test_token",
+        )
+
+        # Mock issue
+        mock_gitlab_issue = Mock()
+        mock_github_issue = Mock()
+
+        # Single system note
+        system_note = self._create_mock_note("2026-01-27T20:18:55Z", "marked this issue as related to #1", system=True)
+        mock_gitlab_issue.notes.list.return_value = [system_note]
+
+        # Execute
+        migrator.migrate_issue_comments(mock_gitlab_issue, mock_github_issue)
+
+        # Verify - single system note should use compact format
+        mock_github_issue.create_comment.assert_called_once()
+        comment_body = mock_github_issue.create_comment.call_args[0][0]
+        assert comment_body.startswith("**System note**")
+        assert "2026-01-27 20:18:55Z by testuser" in comment_body
+        assert "marked this issue as related to #1" in comment_body
+
+    @patch("gitlab_to_github_migrator.gitlab_utils.Gitlab")
+    @patch("gitlab_to_github_migrator.github_utils.Github")
+    def test_consecutive_system_notes_grouped_format(self, mock_github_class, mock_gitlab_class) -> None:
+        """Test that consecutive system notes are grouped with markdown header."""
+        # Setup mocks
+        mock_gitlab_client = Mock()
+        mock_github_client = Mock()
+        mock_gitlab_class.return_value = mock_gitlab_client
+        mock_github_class.return_value = mock_github_client
+
+        mock_gitlab_project = Mock()
+        mock_gitlab_project.id = 12345
+        mock_gitlab_project.name = "test-project"
+        mock_gitlab_client.projects.get.return_value = mock_gitlab_project
+
+        # Create migrator
+        migrator = GitlabToGithubMigrator(
+            self.gitlab_project_path,
+            self.github_repo_path,
+            github_token="test_token",
+        )
+
+        # Mock issue
+        mock_gitlab_issue = Mock()
+        mock_github_issue = Mock()
+        mock_gitlab_issue.iid = 1
+
+        # Three consecutive system notes
+        system_notes = [
+            self._create_mock_note("2026-01-27T20:18:55Z", "marked this issue as related to #1", system=True),
+            self._create_mock_note(
+                "2026-01-27T20:19:10Z", "This is a long system note\n- that spans\n- multiple lines", system=True
+            ),
+            self._create_mock_note("2026-01-27T20:19:22Z", "marked this issue as closed", system=True),
+        ]
+        mock_gitlab_issue.notes.list.return_value = system_notes
+
+        # Execute
+        migrator.migrate_issue_comments(mock_gitlab_issue, mock_github_issue)
+
+        # Verify - single comment with grouped format
+        mock_github_issue.create_comment.assert_called_once()
+        comment_body = mock_github_issue.create_comment.call_args[0][0]
+
+        # Should have markdown header
+        assert comment_body.startswith("### System notes\n")
+
+        # Should have all three notes with timestamps and authors
+        assert "2026-01-27 20:18:55Z by testuser: marked this issue as related to #1" in comment_body
+        assert (
+            "2026-01-27 20:19:10Z by testuser: This is a long system note\n- that spans\n- multiple lines"
+            in comment_body
+        )
+        assert "2026-01-27 20:19:22Z by testuser: marked this issue as closed" in comment_body
+
+        # Should have empty lines between notes (double newlines)
+        assert "\n\n" in comment_body
+
+    @patch("gitlab_to_github_migrator.gitlab_utils.Gitlab")
+    @patch("gitlab_to_github_migrator.github_utils.Github")
+    def test_non_consecutive_system_notes_separate_comments(self, mock_github_class, mock_gitlab_class) -> None:
+        """Test that non-consecutive system notes create separate comments."""
+        # Setup mocks
+        mock_gitlab_client = Mock()
+        mock_github_client = Mock()
+        mock_gitlab_class.return_value = mock_gitlab_client
+        mock_github_class.return_value = mock_github_client
+
+        mock_gitlab_project = Mock()
+        mock_gitlab_project.id = 12345
+        mock_gitlab_project.name = "test-project"
+        mock_gitlab_client.projects.get.return_value = mock_gitlab_project
+
+        # Create migrator
+        migrator = GitlabToGithubMigrator(
+            self.gitlab_project_path,
+            self.github_repo_path,
+            github_token="test_token",
+        )
+
+        # Mock attachment handler
+        mock_attachment_handler = Mock()
+        mock_attachment_handler.process_content.return_value = "This is a user comment"
+        migrator._attachment_handler = mock_attachment_handler
+
+        # Mock issue
+        mock_gitlab_issue = Mock()
+        mock_github_issue = Mock()
+        mock_gitlab_issue.iid = 1
+
+        # System note, user comment, system note
+        notes = [
+            self._create_mock_note("2026-01-27T20:18:55Z", "marked this issue as related to #1", system=True),
+            self._create_mock_note("2026-01-27T20:19:00Z", "This is a user comment", system=False),
+            self._create_mock_note("2026-01-27T20:19:22Z", "marked this issue as closed", system=True),
+        ]
+        mock_gitlab_issue.notes.list.return_value = notes
+
+        # Execute
+        migrator.migrate_issue_comments(mock_gitlab_issue, mock_github_issue)
+
+        # Verify - should create 3 separate comments
+        assert mock_github_issue.create_comment.call_count == 3
+
+        # First comment: single system note (compact format)
+        first_comment = mock_github_issue.create_comment.call_args_list[0][0][0]
+        assert first_comment.startswith("**System note**")
+        assert "marked this issue as related to #1" in first_comment
+
+        # Second comment: user comment
+        second_comment = mock_github_issue.create_comment.call_args_list[1][0][0]
+        assert "**Comment by**" in second_comment
+        assert "This is a user comment" in second_comment
+
+        # Third comment: single system note (compact format)
+        third_comment = mock_github_issue.create_comment.call_args_list[2][0][0]
+        assert third_comment.startswith("**System note**")
+        assert "marked this issue as closed" in third_comment
+
+    @patch("gitlab_to_github_migrator.gitlab_utils.Gitlab")
+    @patch("gitlab_to_github_migrator.github_utils.Github")
+    def test_mixed_consecutive_and_non_consecutive_system_notes(self, mock_github_class, mock_gitlab_class) -> None:
+        """Test mixed scenario: consecutive system notes, user comment, more consecutive system notes."""
+        # Setup mocks
+        mock_gitlab_client = Mock()
+        mock_github_client = Mock()
+        mock_gitlab_class.return_value = mock_gitlab_client
+        mock_github_class.return_value = mock_github_client
+
+        mock_gitlab_project = Mock()
+        mock_gitlab_project.id = 12345
+        mock_gitlab_project.name = "test-project"
+        mock_gitlab_client.projects.get.return_value = mock_gitlab_project
+
+        # Create migrator
+        migrator = GitlabToGithubMigrator(
+            self.gitlab_project_path,
+            self.github_repo_path,
+            github_token="test_token",
+        )
+
+        # Mock attachment handler
+        mock_attachment_handler = Mock()
+        mock_attachment_handler.process_content.return_value = "Great work!"
+        migrator._attachment_handler = mock_attachment_handler
+
+        # Mock issue
+        mock_gitlab_issue = Mock()
+        mock_github_issue = Mock()
+        mock_gitlab_issue.iid = 1
+
+        # Two system notes, user comment, two more system notes
+        notes = [
+            self._create_mock_note("2026-01-27T20:18:55Z", "marked this issue as related to #1", system=True),
+            self._create_mock_note("2026-01-27T20:19:10Z", "added label priority:high", system=True),
+            self._create_mock_note("2026-01-27T20:19:15Z", "Great work!", system=False),
+            self._create_mock_note("2026-01-27T20:19:20Z", "removed label priority:high", system=True),
+            self._create_mock_note("2026-01-27T20:19:22Z", "marked this issue as closed", system=True),
+        ]
+        mock_gitlab_issue.notes.list.return_value = notes
+
+        # Execute
+        migrator.migrate_issue_comments(mock_gitlab_issue, mock_github_issue)
+
+        # Verify - should create 3 comments
+        assert mock_github_issue.create_comment.call_count == 3
+
+        # First comment: grouped system notes (2 consecutive)
+        first_comment = mock_github_issue.create_comment.call_args_list[0][0][0]
+        assert first_comment.startswith("### System notes\n")
+        assert "marked this issue as related to #1" in first_comment
+        assert "added label priority:high" in first_comment
+
+        # Second comment: user comment
+        second_comment = mock_github_issue.create_comment.call_args_list[1][0][0]
+        assert "**Comment by**" in second_comment
+        assert "Great work!" in second_comment
+
+        # Third comment: grouped system notes (2 consecutive)
+        third_comment = mock_github_issue.create_comment.call_args_list[2][0][0]
+        assert third_comment.startswith("### System notes\n")
+        assert "removed label priority:high" in third_comment
+        assert "marked this issue as closed" in third_comment
+
+    @patch("gitlab_to_github_migrator.gitlab_utils.Gitlab")
+    @patch("gitlab_to_github_migrator.github_utils.Github")
+    def test_empty_system_note_body(self, mock_github_class, mock_gitlab_class) -> None:
+        """Test that empty system note bodies are handled with '(empty note)' placeholder."""
+        # Setup mocks
+        mock_gitlab_client = Mock()
+        mock_github_client = Mock()
+        mock_gitlab_class.return_value = mock_gitlab_client
+        mock_github_class.return_value = mock_github_client
+
+        mock_gitlab_project = Mock()
+        mock_gitlab_project.id = 12345
+        mock_gitlab_project.name = "test-project"
+        mock_gitlab_client.projects.get.return_value = mock_gitlab_project
+
+        # Create migrator
+        migrator = GitlabToGithubMigrator(
+            self.gitlab_project_path,
+            self.github_repo_path,
+            github_token="test_token",
+        )
+
+        # Mock issue
+        mock_gitlab_issue = Mock()
+        mock_github_issue = Mock()
+        mock_gitlab_issue.iid = 1
+
+        # System notes with empty bodies
+        notes = [
+            self._create_mock_note("2026-01-27T20:18:55Z", "", system=True),  # Empty string
+            self._create_mock_note("2026-01-27T20:19:10Z", None, system=True),  # None
+            self._create_mock_note("2026-01-27T20:19:22Z", "marked this issue as closed", system=True),
+        ]
+        mock_gitlab_issue.notes.list.return_value = notes
+
+        # Execute
+        migrator.migrate_issue_comments(mock_gitlab_issue, mock_github_issue)
+
+        # Verify - single comment with grouped format
+        mock_github_issue.create_comment.assert_called_once()
+        comment_body = mock_github_issue.create_comment.call_args[0][0]
+
+        # Should have markdown header
+        assert comment_body.startswith("### System notes\n")
+
+        # Empty notes should show "(empty note)" with author
+        assert "2026-01-27 20:18:55Z by testuser: (empty note)" in comment_body
+        assert "2026-01-27 20:19:10Z by testuser: (empty note)" in comment_body
+        assert "2026-01-27 20:19:22Z by testuser: marked this issue as closed" in comment_body
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
