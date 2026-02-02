@@ -15,6 +15,7 @@ import logging
 import subprocess
 import sys
 import tempfile
+import time
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -382,6 +383,108 @@ def add_comments_and_close_issue(project: Project) -> None:
         logger.info("    Issue #1 already closed")
 
 
+def update_test_data_for_last_edited(project: Project) -> None:
+    """Update milestones, issues, and comments to test last edited timestamp feature.
+    
+    Updates must be made with a delay >1 minute after creation to ensure the
+    last edited timestamp is different enough from the creation timestamp.
+    """
+    logger.info("\n[6.5/8] Updating test data for last edited timestamp tests...")
+    
+    _update_milestone_title(project)
+    _update_milestone_description(project)
+    _update_issue_title(project)
+    _update_issue_description(project)
+    _update_issue_comment(project)
+
+
+def _update_milestone_title(project: Project) -> None:
+    """Update milestone #1 title."""
+    ms1 = project.milestones.get(1)
+    if "EDITED" not in ms1.title:
+        logger.info("    Waiting 65 seconds before updating milestone #1 title...")
+        time.sleep(65)
+        ms1.title = "v1.0 EDITED"
+        ms1.save()
+        logger.info("    Updated milestone #1 title")
+    else:
+        logger.info("    Milestone #1 title already updated")
+
+
+def _update_milestone_description(project: Project) -> None:
+    """Update milestone #3 description."""
+    ms3 = project.milestones.get(3)
+    if not ms3.description or "EDITED" not in ms3.description:
+        logger.info("    Waiting 65 seconds before updating milestone #3 description...")
+        time.sleep(65)
+        ms3.description = "EDITED: This milestone description was edited after creation."
+        ms3.save()
+        logger.info("    Updated milestone #3 description")
+    else:
+        logger.info("    Milestone #3 description already updated")
+
+
+def _update_issue_title(project: Project) -> None:
+    """Update issue #2 title."""
+    issue2 = project.issues.get(2)
+    if "EDITED" not in issue2.title:
+        logger.info("    Waiting 65 seconds before updating issue #2 title...")
+        time.sleep(65)
+        issue2.title = "Issue with attachments EDITED"
+        issue2.save()
+        logger.info("    Updated issue #2 title")
+    else:
+        logger.info("    Issue #2 title already updated")
+
+
+def _update_issue_description(project: Project) -> None:
+    """Update issue #3 description."""
+    issue3 = project.issues.get(3)
+    if not issue3.description or "EDITED" not in issue3.description:
+        logger.info("    Waiting 65 seconds before updating issue #3 description...")
+        time.sleep(65)
+        issue3.description = (
+            issue3.description + "\n\nEDITED: This description was edited after creation."
+        )
+        issue3.save()
+        logger.info("    Updated issue #3 description")
+    else:
+        logger.info("    Issue #3 description already updated")
+
+
+def _update_issue_comment(project: Project) -> None:
+    """Add and update a comment on issue #7."""
+    issue7 = project.issues.get(7)
+    notes = issue7.notes.list(get_all=True)
+    # Check if we already have a comment
+    has_test_comment = any("Test comment for editing" in (n.body or "") for n in notes if not n.system)
+    if not has_test_comment:
+        # Add a new comment first
+        note = issue7.notes.create({"body": "Test comment for editing"})
+        logger.info("    Added comment to issue #7")
+        
+        logger.info("    Waiting 65 seconds before updating comment on issue #7...")
+        time.sleep(65)
+        
+        # Update the comment
+        note.body = "Test comment for editing - EDITED after creation"
+        note.save()
+        logger.info("    Updated comment on issue #7")
+    else:
+        # Find the comment and check if it's already edited
+        for note in notes:
+            if not note.system and "Test comment for editing" in (note.body or ""):
+                if "EDITED" not in note.body:
+                    logger.info("    Waiting 65 seconds before updating comment on issue #7...")
+                    time.sleep(65)
+                    note.body = "Test comment for editing - EDITED after creation"
+                    note.save()
+                    logger.info("    Updated comment on issue #7")
+                else:
+                    logger.info("    Comment on issue #7 already updated")
+                break
+
+
 def create_git_content(project_path: str) -> None:
     """Create a feature branch and tag in the repository."""
     logger.info("\n[7/8] Creating git content (branch and tag)...")
@@ -564,6 +667,7 @@ def create_test_project(project_path: str, gitlab_token_pass_path: str | None = 
     create_issues(project, gql, project_path, ms1_id, ms3_id)
     setup_issue_relationships(project)
     add_comments_and_close_issue(project)
+    update_test_data_for_last_edited(project)
     create_git_content(project_path)
     print_manual_instructions(project_path)
 
