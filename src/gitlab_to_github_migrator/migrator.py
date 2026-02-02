@@ -22,7 +22,7 @@ from . import gitlab_utils as glu
 from .attachments import AttachmentHandler
 from .exceptions import MigrationError, NumberVerificationError
 from .gitlab_utils import get_normal_issue_cross_links
-from .issue_builder import build_issue_body, format_timestamp
+from .issue_builder import build_issue_body, format_timestamp, should_show_last_edited
 
 if TYPE_CHECKING:
     from gitlab.v4.objects import ProjectIssue as GitlabProjectIssue
@@ -156,11 +156,32 @@ class GitlabToGithubMigrator:
                 # Real milestone exists
                 gitlab_milestone = gitlab_milestone_map[milestone_number]
 
+                # Build description with migration info
+                description = ""
+                if gitlab_milestone.description:
+                    description = gitlab_milestone.description
+
+                # Add last edited info if applicable
+                if should_show_last_edited(gitlab_milestone.created_at, gitlab_milestone.updated_at):
+                    migration_info = (
+                        f"\n\n---\n\n"
+                        f"**Migrated from GitLab milestone %{milestone_number}**\n"
+                        f"**Last Edited:** {format_timestamp(gitlab_milestone.updated_at)}"
+                    )
+                    if description:
+                        description = description + migration_info
+                    else:
+                        # Remove leading newlines if no description
+                        description = (
+                            f"**Migrated from GitLab milestone %{milestone_number}**\n"
+                            f"**Last Edited:** {format_timestamp(gitlab_milestone.updated_at)}"
+                        )
+
                 # Create milestone parameters, only include due_on if it exists
                 milestone_params = {
                     "title": gitlab_milestone.title,
                     "state": "open" if gitlab_milestone.state == "active" else "closed",
-                    "description": gitlab_milestone.description or "",
+                    "description": description,
                 }
                 if gitlab_milestone.due_date:
                     milestone_params["due_on"] = dt.datetime.strptime(gitlab_milestone.due_date, "%Y-%m-%d").date()  # noqa: DTZ007
@@ -396,9 +417,11 @@ class GitlabToGithubMigrator:
             else:
                 comment_body = (
                     f"**Comment by** {note.author['name']} (@{note.author['username']}) "
-                    f"**on** {format_timestamp(note.created_at)}\n\n"
+                    f"**on** {format_timestamp(note.created_at)}\n"
                 )
-                comment_body += "---\n\n"
+                if should_show_last_edited(note.created_at, note.updated_at):
+                    comment_body += f"**Last Edited:** {format_timestamp(note.updated_at)}\n"
+                comment_body += "\n---\n\n"
 
                 if note.body:
                     updated_body = self.attachment_handler.process_content(

@@ -30,6 +30,29 @@ def format_timestamp(iso_timestamp: str) -> str:
         return iso_timestamp
 
 
+def should_show_last_edited(created_at: str, updated_at: str) -> bool:
+    """Check if last edited timestamp should be shown.
+
+    Args:
+        created_at: ISO 8601 formatted creation timestamp
+        updated_at: ISO 8601 formatted update timestamp
+
+    Returns:
+        True if updated_at differs from created_at by more than 1 minute
+    """
+    if not created_at or not updated_at:
+        return False
+
+    try:
+        created_dt = dt.datetime.fromisoformat(created_at)
+        updated_dt = dt.datetime.fromisoformat(updated_at)
+        diff = abs((updated_dt - created_dt).total_seconds())
+    except (ValueError, AttributeError):
+        return False
+    else:
+        return diff > 60
+
+
 def build_issue_body(
     gitlab_issue: ProjectIssue,
     *,
@@ -49,6 +72,8 @@ def build_issue_body(
     body = f"**Migrated from GitLab issue #{gitlab_issue.iid}**\n"
     body += f"**Original Author:** {gitlab_issue.author['name']} (@{gitlab_issue.author['username']})\n"
     body += f"**Created:** {format_timestamp(gitlab_issue.created_at)}\n"
+    if should_show_last_edited(gitlab_issue.created_at, gitlab_issue.updated_at):
+        body += f"**Last Edited:** {format_timestamp(gitlab_issue.updated_at)}\n"
     body += f"**GitLab URL:** {gitlab_issue.web_url}\n\n"
     body += "---\n\n"
     body += processed_description or gitlab_issue.description

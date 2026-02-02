@@ -6,7 +6,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from gitlab_to_github_migrator.issue_builder import build_issue_body, format_timestamp
+from gitlab_to_github_migrator.issue_builder import build_issue_body, format_timestamp, should_show_last_edited
 
 
 @pytest.mark.unit
@@ -37,12 +37,50 @@ class TestFormatTimestamp:
 
 
 @pytest.mark.unit
+class TestShouldShowLastEdited:
+    def test_no_difference(self) -> None:
+        created = "2024-01-15T10:30:45Z"
+        updated = "2024-01-15T10:30:45Z"
+        assert not should_show_last_edited(created, updated)
+
+    def test_difference_less_than_one_minute(self) -> None:
+        created = "2024-01-15T10:30:45Z"
+        updated = "2024-01-15T10:31:30Z"  # 45 seconds
+        assert not should_show_last_edited(created, updated)
+
+    def test_difference_exactly_one_minute(self) -> None:
+        created = "2024-01-15T10:30:45Z"
+        updated = "2024-01-15T10:31:45Z"  # exactly 60 seconds
+        assert not should_show_last_edited(created, updated)
+
+    def test_difference_more_than_one_minute(self) -> None:
+        created = "2024-01-15T10:30:45Z"
+        updated = "2024-01-15T10:32:00Z"  # 75 seconds
+        assert should_show_last_edited(created, updated)
+
+    def test_difference_hours(self) -> None:
+        created = "2024-01-15T10:30:45Z"
+        updated = "2024-01-15T12:30:45Z"  # 2 hours
+        assert should_show_last_edited(created, updated)
+
+    def test_empty_created_at(self) -> None:
+        assert not should_show_last_edited("", "2024-01-15T10:30:45Z")
+
+    def test_empty_updated_at(self) -> None:
+        assert not should_show_last_edited("2024-01-15T10:30:45Z", "")
+
+    def test_invalid_timestamps(self) -> None:
+        assert not should_show_last_edited("invalid", "also-invalid")
+
+
+@pytest.mark.unit
 class TestBuildIssueBody:
     def test_basic_issue_body(self) -> None:
         issue = MagicMock(
             iid=42,
             author={"name": "John Doe", "username": "johndoe"},
             created_at="2024-01-15T10:30:45Z",
+            updated_at="2024-01-15T10:30:45Z",
             web_url="https://gitlab.com/org/proj/-/issues/42",
             description="Issue description here",
         )
@@ -54,6 +92,28 @@ class TestBuildIssueBody:
         assert "**Migrated from GitLab issue #42**" in result
         assert "**Original Author:** John Doe (@johndoe)" in result
         assert "**Created:** 2024-01-15 10:30:45Z" in result
+        assert "**Last Edited:**" not in result  # No edit, so should not appear
+        assert "**GitLab URL:** https://gitlab.com/org/proj/-/issues/42" in result
+        assert "Issue description here" in result
+
+    def test_issue_body_with_last_edited(self) -> None:
+        issue = MagicMock(
+            iid=42,
+            author={"name": "John Doe", "username": "johndoe"},
+            created_at="2024-01-15T10:30:45Z",
+            updated_at="2024-01-15T12:45:30Z",  # 2+ hours later
+            web_url="https://gitlab.com/org/proj/-/issues/42",
+            description="Issue description here",
+        )
+        result = build_issue_body(
+            issue,
+            processed_description="Issue description here",
+            cross_links_text="",
+        )
+        assert "**Migrated from GitLab issue #42**" in result
+        assert "**Original Author:** John Doe (@johndoe)" in result
+        assert "**Created:** 2024-01-15 10:30:45Z" in result
+        assert "**Last Edited:** 2024-01-15 12:45:30Z" in result
         assert "**GitLab URL:** https://gitlab.com/org/proj/-/issues/42" in result
         assert "Issue description here" in result
 
@@ -62,6 +122,7 @@ class TestBuildIssueBody:
             iid=42,
             author={"name": "John Doe", "username": "johndoe"},
             created_at="2024-01-15T10:30:45Z",
+            updated_at="2024-01-15T10:30:45Z",
             web_url="https://gitlab.com/org/proj/-/issues/42",
             description="Description",
         )
@@ -77,6 +138,7 @@ class TestBuildIssueBody:
             iid=42,
             author={"name": "Jane", "username": "jane"},
             created_at="2024-01-15T10:30:45Z",
+            updated_at="2024-01-15T10:30:45Z",
             web_url="https://gitlab.com/org/proj/-/issues/42",
             description="",
         )
