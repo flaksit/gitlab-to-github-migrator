@@ -47,7 +47,7 @@ def build_issue_body(
         Complete issue body for GitHub
     """
     body = f"**Migrated from GitLab issue #{gitlab_issue.iid}**\n"
-    body += f"**Original Author:** {gitlab_issue.author['name']} (@{gitlab_issue.author['username']})\n"
+    body += f"**Original Author:** {gitlab_issue.author['name']} ({gitlab_issue.author['username']})\n"
     body += f"**Created:** {format_timestamp(gitlab_issue.created_at)}\n"
     body += f"**GitLab URL:** {gitlab_issue.web_url}\n\n"
     body += "---\n\n"

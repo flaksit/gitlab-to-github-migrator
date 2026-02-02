@@ -425,9 +425,16 @@ class TestFullMigration:
             comments = list(github_issue.get_comments())
             if comments:
                 issues_with_comments += 1
-                # Verify comment format (should have bold text or system note marker)
+                # Verify comment format
                 for comment in comments:
-                    assert "**" in comment.body or "System note:" in comment.body
+                    # System notes should have either compact format or grouped format
+                    has_system_note_format = "**System note**" in comment.body or "### System notes" in comment.body
+                    # User notes should have author line and horizontal separator
+                    has_user_note_format = "**Comment by**" in comment.body and "---" in comment.body
+
+                    assert has_system_note_format or has_user_note_format, (
+                        f"Comment does not match expected format:\n{comment.body}"
+                    )
 
         if issues_with_comments == 0:
             pytest.skip("No comments found in migrated issues")

@@ -52,7 +52,7 @@ class TestBuildIssueBody:
             cross_links_text="",
         )
         assert "**Migrated from GitLab issue #42**" in result
-        assert "**Original Author:** John Doe (@johndoe)" in result
+        assert "**Original Author:** John Doe (johndoe)" in result
         assert "**Created:** 2024-01-15 10:30:45Z" in result
         assert "**GitLab URL:** https://gitlab.com/org/proj/-/issues/42" in result
         assert "Issue description here" in result
