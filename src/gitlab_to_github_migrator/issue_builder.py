@@ -46,11 +46,11 @@ def should_show_last_edited(created_at: str, updated_at: str) -> bool:
     try:
         created_dt = dt.datetime.fromisoformat(created_at)
         updated_dt = dt.datetime.fromisoformat(updated_at)
-        diff = abs((updated_dt - created_dt).total_seconds())
     except (ValueError, AttributeError):
         return False
-    else:
-        return diff > 60
+
+    diff = abs((updated_dt - created_dt).total_seconds())
+    return diff > 60
 
 
 def build_issue_body(

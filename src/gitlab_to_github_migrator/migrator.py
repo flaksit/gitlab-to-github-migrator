@@ -415,13 +415,15 @@ class GitlabToGithubMigrator:
             if note.system:
                 comment_body = f"**System note** on {format_timestamp(note.created_at)}: {note.body.strip()}"
             else:
-                comment_body = (
+                # Build comment header with author and timestamp
+                header_parts = [
                     f"**Comment by** {note.author['name']} (@{note.author['username']}) "
-                    f"**on** {format_timestamp(note.created_at)}\n"
-                )
+                    f"**on** {format_timestamp(note.created_at)}"
+                ]
                 if should_show_last_edited(note.created_at, note.updated_at):
-                    comment_body += f"**Last Edited:** {format_timestamp(note.updated_at)}\n"
-                comment_body += "\n---\n\n"
+                    header_parts.append(f"**Last Edited:** {format_timestamp(note.updated_at)}")
+                
+                comment_body = "\n".join(header_parts) + "\n\n---\n\n"
 
                 if note.body:
                     updated_body = self.attachment_handler.process_content(
