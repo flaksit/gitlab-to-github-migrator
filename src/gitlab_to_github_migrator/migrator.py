@@ -390,10 +390,34 @@ class GitlabToGithubMigrator:
         notes = gitlab_issue.notes.list(get_all=True)
         notes.sort(key=lambda n: n.created_at)
 
-        for note in notes:
+        # Group consecutive system notes
+        i = 0
+        while i < len(notes):
+            note = notes[i]
+            
             if note.system:
-                comment_body = f"**System note** on {format_timestamp(note.created_at)}: {note.body.strip()}"
+                # Collect consecutive system notes
+                system_notes = [note]
+                j = i + 1
+                while j < len(notes) and notes[j].system:
+                    system_notes.append(notes[j])
+                    j += 1
+                
+                # Format system notes
+                if len(system_notes) == 1:
+                    # Single system note: use compact format
+                    comment_body = f"**System note** on {format_timestamp(note.created_at)}: {note.body.strip()}"
+                else:
+                    # Multiple consecutive system notes: use grouped format
+                    comment_body = "### System notes\n"
+                    for sys_note in system_notes:
+                        comment_body += f"{format_timestamp(sys_note.created_at)}: {sys_note.body.strip()}\n\n"
+                
+                github_issue.create_comment(comment_body)
+                logger.debug(f"Migrated {len(system_notes)} system note(s)")
+                i = j  # Skip all processed system notes
             else:
+                # Regular user comment
                 comment_body = (
                     f"**Comment by** {note.author['name']} (@{note.author['username']}) "
                     f"**on** {format_timestamp(note.created_at)}\n\n"
@@ -407,8 +431,9 @@ class GitlabToGithubMigrator:
                     )
                     comment_body += updated_body
 
-            github_issue.create_comment(comment_body)
-            logger.debug(f"Migrated comment by {note.author['username']}")
+                github_issue.create_comment(comment_body)
+                logger.debug(f"Migrated comment by {note.author['username']}")
+                i += 1
 
     def validate_migration(self) -> dict[str, Any]:
         """Validate migration results and generate report."""
