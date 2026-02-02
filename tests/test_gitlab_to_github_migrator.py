@@ -515,7 +515,7 @@ class TestCommentMigration:
         mock_github_issue.create_comment.assert_called_once()
         comment_body = mock_github_issue.create_comment.call_args[0][0]
         assert comment_body.startswith("**System note**")
-        assert "2026-01-27 20:18:55Z" in comment_body
+        assert "2026-01-27 20:18:55Z by testuser" in comment_body
         assert "marked this issue as related to #1" in comment_body
 
     @patch("gitlab_to_github_migrator.gitlab_utils.Gitlab")
@@ -565,10 +565,13 @@ class TestCommentMigration:
         # Should have markdown header
         assert comment_body.startswith("### System notes\n")
 
-        # Should have all three notes with timestamps
-        assert "2026-01-27 20:18:55Z: marked this issue as related to #1" in comment_body
-        assert "2026-01-27 20:19:10Z: This is a long system note\n- that spans\n- multiple lines" in comment_body
-        assert "2026-01-27 20:19:22Z: marked this issue as closed" in comment_body
+        # Should have all three notes with timestamps and authors
+        assert "2026-01-27 20:18:55Z by testuser: marked this issue as related to #1" in comment_body
+        assert (
+            "2026-01-27 20:19:10Z by testuser: This is a long system note\n- that spans\n- multiple lines"
+            in comment_body
+        )
+        assert "2026-01-27 20:19:22Z by testuser: marked this issue as closed" in comment_body
 
         # Should have empty lines between notes (double newlines)
         assert "\n\n" in comment_body
@@ -744,10 +747,10 @@ class TestCommentMigration:
         # Should have markdown header
         assert comment_body.startswith("### System notes\n")
 
-        # Empty notes should show "(empty note)"
-        assert "2026-01-27 20:18:55Z: (empty note)" in comment_body
-        assert "2026-01-27 20:19:10Z: (empty note)" in comment_body
-        assert "2026-01-27 20:19:22Z: marked this issue as closed" in comment_body
+        # Empty notes should show "(empty note)" with author
+        assert "2026-01-27 20:18:55Z by testuser: (empty note)" in comment_body
+        assert "2026-01-27 20:19:10Z by testuser: (empty note)" in comment_body
+        assert "2026-01-27 20:19:22Z by testuser: marked this issue as closed" in comment_body
 
 
 if __name__ == "__main__":

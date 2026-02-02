@@ -407,11 +407,14 @@ class GitlabToGithubMigrator:
                 if len(system_notes) == 1:
                     # Single system note: use compact format
                     body_text = note.body.strip() if note.body else "(empty note)"
-                    comment_body = f"**System note** on {format_timestamp(note.created_at)}: {body_text}"
+                    author_short = note.author["username"]
+                    comment_body = (
+                        f"**System note** on {format_timestamp(note.created_at)} by {author_short}: {body_text}"
+                    )
                 else:
                     # Multiple consecutive system notes: use grouped format
                     note_lines = [
-                        f"{format_timestamp(sys_note.created_at)}: {sys_note.body.strip() if sys_note.body else '(empty note)'}"
+                        f"{format_timestamp(sys_note.created_at)} by {sys_note.author['username']}: {sys_note.body.strip() if sys_note.body else '(empty note)'}"
                         for sys_note in system_notes
                     ]
                     comment_body = "### System notes\n" + "\n\n".join(note_lines) + "\n"
