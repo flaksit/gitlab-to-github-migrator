@@ -395,7 +395,7 @@ class GitlabToGithubMigrator:
                 comment_body = f"**System note** on {format_timestamp(note.created_at)}: {note.body.strip()}"
             else:
                 # Build compact comment header on single line
-                header = f"**Comment by** {note.author['name']} (@{note.author['username']}) **on** {format_timestamp(note.created_at)}"
+                header = f"**Comment by** {note.author['name']} ({note.author['username']}) **on** {format_timestamp(note.created_at)}"
                 if should_show_last_edited(note.created_at, note.updated_at):
                     header += f" — **Last Edited:** {format_timestamp(note.updated_at)}"
                 

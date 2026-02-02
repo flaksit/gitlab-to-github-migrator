@@ -23,6 +23,7 @@ from gitlab import Gitlab, GraphQL
 from gitlab.exceptions import GitlabCreateError, GitlabDeleteError, GitlabGetError
 
 from . import gitlab_utils as glu
+from .issue_builder import LAST_EDITED_THRESHOLD_SECONDS
 from .utils import setup_logging
 
 if TYPE_CHECKING:
@@ -400,13 +401,15 @@ def update_test_data_for_last_edited(project: Project) -> None:
         return dt.datetime.fromisoformat(timestamp)
     
     def wait_if_needed(created_at: str, item_name: str) -> None:
-        """Wait only if we need to reach >60 seconds since creation."""
+        """Wait only if we need to reach threshold + buffer seconds since creation."""
         created = parse_time(created_at)
         now = dt.datetime.now(dt.UTC)
         elapsed = (now - created).total_seconds()
         
-        if elapsed < 61:
-            wait_time = int(61 - elapsed) + 1
+        # Add 5 second buffer to ensure we're well past the threshold
+        required_elapsed = LAST_EDITED_THRESHOLD_SECONDS + 5
+        if elapsed < required_elapsed:
+            wait_time = int(required_elapsed - elapsed) + 1
             logger.info(f"    Waiting {wait_time} seconds before updating {item_name}...")
             time.sleep(wait_time)
         else:

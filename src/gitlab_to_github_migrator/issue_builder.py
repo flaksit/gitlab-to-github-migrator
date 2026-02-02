@@ -8,6 +8,9 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from gitlab.v4.objects import ProjectIssue
 
+# Minimum time difference (in seconds) to consider showing "last edited" timestamp
+LAST_EDITED_THRESHOLD_SECONDS = 60
+
 
 def format_timestamp(iso_timestamp: str) -> str:
     """Format ISO 8601 timestamp to human-readable format.
@@ -38,7 +41,7 @@ def should_show_last_edited(created_at: str, updated_at: str) -> bool:
         updated_at: ISO 8601 formatted update timestamp
 
     Returns:
-        True if updated_at differs from created_at by more than 1 minute
+        True if updated_at differs from created_at by more than LAST_EDITED_THRESHOLD_SECONDS
     """
     if not created_at or not updated_at:
         return False
@@ -50,7 +53,7 @@ def should_show_last_edited(created_at: str, updated_at: str) -> bool:
         return False
 
     diff = abs((updated_dt - created_dt).total_seconds())
-    return diff > 60
+    return diff > LAST_EDITED_THRESHOLD_SECONDS
 
 
 def build_issue_body(
