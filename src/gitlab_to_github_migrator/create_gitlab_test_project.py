@@ -386,7 +386,7 @@ def add_comments_and_close_issue(project: Project) -> None:
 
 
 def update_test_data_for_last_edited(project: Project) -> None:
-    """Update milestones, issues, and comments to test last edited timestamp feature.
+    """Update comments to test last edited timestamp feature.
     
     Updates are made with smart waiting - only waiting the minimum necessary time
     based on when objects were created to ensure >1 minute difference.
@@ -412,54 +412,9 @@ def update_test_data_for_last_edited(project: Project) -> None:
         else:
             logger.info(f"    No wait needed for {item_name} (created {int(elapsed)} seconds ago)")
     
-    # Update all test data
-    _update_milestones(project, wait_if_needed)
-    _update_issues(project, wait_if_needed)
+    # Update comment only (not milestones or issues)
     _update_comment(project, wait_if_needed)
 
-
-def _update_milestones(project: Project, wait_if_needed: Callable[[str, str], None]) -> None:
-    """Update milestone test data."""
-    ms1 = project.milestones.get(1)
-    if "EDITED" not in ms1.title:
-        wait_if_needed(ms1.created_at, "milestone #1 title")
-        ms1.title = "v1.0 EDITED"
-        ms1.save()
-        logger.info("    Updated milestone #1 title")
-    else:
-        logger.info("    Milestone #1 title already updated")
-    
-    ms3 = project.milestones.get(3)
-    if not ms3.description or "EDITED" not in ms3.description:
-        wait_if_needed(ms3.created_at, "milestone #3 description")
-        ms3.description = "EDITED: This milestone description was edited after creation."
-        ms3.save()
-        logger.info("    Updated milestone #3 description")
-    else:
-        logger.info("    Milestone #3 description already updated")
-
-
-def _update_issues(project: Project, wait_if_needed: Callable[[str, str], None]) -> None:
-    """Update issue test data."""
-    issue2 = project.issues.get(2)
-    if "EDITED" not in issue2.title:
-        wait_if_needed(issue2.created_at, "issue #2 title")
-        issue2.title = "Issue with attachments EDITED"
-        issue2.save()
-        logger.info("    Updated issue #2 title")
-    else:
-        logger.info("    Issue #2 title already updated")
-    
-    issue3 = project.issues.get(3)
-    if not issue3.description or "EDITED" not in issue3.description:
-        wait_if_needed(issue3.created_at, "issue #3 description")
-        issue3.description = (
-            issue3.description + "\n\nEDITED: This description was edited after creation."
-        )
-        issue3.save()
-        logger.info("    Updated issue #3 description")
-    else:
-        logger.info("    Issue #3 description already updated")
 
 
 def _update_comment(project: Project, wait_if_needed: Callable[[str, str], None]) -> None:

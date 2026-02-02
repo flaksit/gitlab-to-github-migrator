@@ -156,21 +156,11 @@ class GitlabToGithubMigrator:
                 # Real milestone exists
                 gitlab_milestone = gitlab_milestone_map[milestone_number]
 
-                # Build description with last edited info if applicable
-                description = gitlab_milestone.description or ""
-                if should_show_last_edited(gitlab_milestone.created_at, gitlab_milestone.updated_at):
-                    separator = "\n\n---\n\n" if description else ""
-                    description = (
-                        f"{description}{separator}"
-                        f"**Migrated from GitLab milestone %{milestone_number}**\n"
-                        f"**Last Edited:** {format_timestamp(gitlab_milestone.updated_at)}"
-                    )
-
                 # Create milestone parameters, only include due_on if it exists
                 milestone_params = {
                     "title": gitlab_milestone.title,
                     "state": "open" if gitlab_milestone.state == "active" else "closed",
-                    "description": description,
+                    "description": gitlab_milestone.description or "",
                 }
                 if gitlab_milestone.due_date:
                     milestone_params["due_on"] = dt.datetime.strptime(gitlab_milestone.due_date, "%Y-%m-%d").date()  # noqa: DTZ007

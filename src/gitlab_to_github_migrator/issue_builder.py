@@ -72,8 +72,6 @@ def build_issue_body(
     body = f"**Migrated from GitLab issue #{gitlab_issue.iid}**\n"
     body += f"**Original Author:** {gitlab_issue.author['name']} (@{gitlab_issue.author['username']})\n"
     body += f"**Created:** {format_timestamp(gitlab_issue.created_at)}\n"
-    if should_show_last_edited(gitlab_issue.created_at, gitlab_issue.updated_at):
-        body += f"**Last Edited:** {format_timestamp(gitlab_issue.updated_at)}\n"
     body += f"**GitLab URL:** {gitlab_issue.web_url}\n\n"
     body += "---\n\n"
     body += processed_description or gitlab_issue.description
