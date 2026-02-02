@@ -171,6 +171,8 @@ class TestGitlabToGithubMigrator:
         mock_milestone1.state = "active"
         mock_milestone1.description = "First milestone"
         mock_milestone1.due_date = None
+        mock_milestone1.created_at = "2024-01-15T10:30:45Z"
+        mock_milestone1.updated_at = "2024-01-15T10:30:45Z"
 
         mock_milestone3 = Mock()
         mock_milestone3.iid = 3
@@ -179,6 +181,8 @@ class TestGitlabToGithubMigrator:
         mock_milestone3.state = "closed"
         mock_milestone3.description = "Third milestone"
         mock_milestone3.due_date = None
+        mock_milestone3.created_at = "2024-01-15T11:00:00Z"
+        mock_milestone3.updated_at = "2024-01-15T11:00:00Z"
 
         mock_milestone5 = Mock()
         mock_milestone5.iid = 5
@@ -187,6 +191,8 @@ class TestGitlabToGithubMigrator:
         mock_milestone5.state = "active"
         mock_milestone5.description = "Fifth milestone"
         mock_milestone5.due_date = None
+        mock_milestone5.created_at = "2024-01-15T12:00:00Z"
+        mock_milestone5.updated_at = "2024-01-15T12:00:00Z"
 
         self.mock_gitlab_project.milestones.list.return_value = [mock_milestone1, mock_milestone3, mock_milestone5]
 
@@ -470,6 +476,7 @@ class TestCommentMigration:
         """Create a mock GitLab note."""
         note = Mock()
         note.created_at = created_at
+        note.updated_at = created_at  # Default to same as created_at
         note.body = body
         note.system = system
         note.id = 1

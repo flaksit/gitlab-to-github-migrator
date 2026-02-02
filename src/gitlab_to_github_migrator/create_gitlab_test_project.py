@@ -15,6 +15,7 @@ import logging
 import subprocess
 import sys
 import tempfile
+import time
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -22,9 +23,12 @@ from gitlab import Gitlab, GraphQL
 from gitlab.exceptions import GitlabCreateError, GitlabDeleteError, GitlabGetError
 
 from . import gitlab_utils as glu
+from .issue_builder import LAST_EDITED_THRESHOLD_SECONDS
 from .utils import setup_logging
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from gitlab.v4.objects import Project
 
 GITLAB_URL = "https://gitlab.com"
@@ -382,6 +386,62 @@ def add_comments_and_close_issue(project: Project) -> None:
         logger.info("    Issue #1 already closed")
 
 
+def update_test_data_for_last_edited(project: Project) -> None:
+    """Update comments to test last edited timestamp feature.
+    
+    Updates are made with smart waiting - only waiting the minimum necessary time
+    based on when objects were created to ensure >1 minute difference.
+    """
+    import datetime as dt
+    
+    logger.info("\n[7.5/8] Updating test data for last edited timestamp tests...")
+    
+    def parse_time(timestamp: str) -> dt.datetime:
+        """Parse GitLab timestamp."""
+        return dt.datetime.fromisoformat(timestamp)
+    
+    def wait_if_needed(created_at: str, item_name: str) -> None:
+        """Wait only if we need to reach threshold + buffer seconds since creation."""
+        created = parse_time(created_at)
+        now = dt.datetime.now(dt.UTC)
+        elapsed = (now - created).total_seconds()
+        
+        # Add 5 second buffer to ensure we're well past the threshold
+        required_elapsed = LAST_EDITED_THRESHOLD_SECONDS + 5
+        if elapsed < required_elapsed:
+            wait_time = int(required_elapsed - elapsed) + 1
+            logger.info(f"    Waiting {wait_time} seconds before updating {item_name}...")
+            time.sleep(wait_time)
+        else:
+            logger.info(f"    No wait needed for {item_name} (created {int(elapsed)} seconds ago)")
+    
+    # Update comment only (not milestones or issues)
+    _update_comment(project, wait_if_needed)
+
+
+
+def _update_comment(project: Project, wait_if_needed: Callable[[str, str], None]) -> None:
+    """Update comment test data."""
+    issue1 = project.issues.get(1)
+    notes = issue1.notes.list(get_all=True)
+    existing_comment = None
+    for note in notes:
+        if not note.system and "This is a regular comment" in (note.body or ""):
+            existing_comment = note
+            break
+    
+    if existing_comment:
+        if "EDITED" not in existing_comment.body:
+            wait_if_needed(existing_comment.created_at, "comment on issue #1")
+            existing_comment.body = "This is a regular comment on the basic issue. EDITED after creation."
+            existing_comment.save()
+            logger.info("    Updated existing comment on issue #1")
+        else:
+            logger.info("    Comment on issue #1 already updated")
+    else:
+        logger.info("    No existing comment found on issue #1 to update")
+
+
 def create_git_content(project_path: str) -> None:
     """Create a feature branch and tag in the repository."""
     logger.info("\n[7/8] Creating git content (branch and tag)...")
@@ -565,6 +625,7 @@ def create_test_project(project_path: str, gitlab_token_pass_path: str | None = 
     setup_issue_relationships(project)
     add_comments_and_close_issue(project)
     create_git_content(project_path)
+    update_test_data_for_last_edited(project)
     print_manual_instructions(project_path)
 
 

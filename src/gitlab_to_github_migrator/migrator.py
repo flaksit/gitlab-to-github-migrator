@@ -22,7 +22,7 @@ from . import gitlab_utils as glu
 from .attachments import AttachmentHandler
 from .exceptions import MigrationError, NumberVerificationError
 from .gitlab_utils import get_normal_issue_cross_links
-from .issue_builder import build_issue_body, format_timestamp
+from .issue_builder import build_issue_body, format_timestamp, should_show_last_edited
 
 if TYPE_CHECKING:
     from gitlab.v4.objects import ProjectIssue as GitlabProjectIssue
@@ -422,12 +422,12 @@ class GitlabToGithubMigrator:
                 github_issue.create_comment(comment_body)
                 logger.debug(f"Migrated {len(system_notes)} system note(s)")
             else:
-                # Regular user comment
-                comment_body = (
-                    f"**Comment by** {note.author['name']} (@{note.author['username']}) "
-                    f"**on** {format_timestamp(note.created_at)}\n\n"
-                )
-                comment_body += "---\n\n"
+                # Build compact comment header on single line
+                header = f"**Comment by** {note.author['name']} ({note.author['username']}) **on** {format_timestamp(note.created_at)}"
+                if should_show_last_edited(note.created_at, note.updated_at):
+                    header += f" — **Last Edited:** {format_timestamp(note.updated_at)}"
+                
+                comment_body = header + "\n\n"
 
                 if note.body:
                     updated_body = self.attachment_handler.process_content(
