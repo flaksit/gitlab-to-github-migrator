@@ -394,7 +394,7 @@ class GitlabToGithubMigrator:
         i = 0
         while i < len(notes):
             note = notes[i]
-            
+
             if note.system:
                 # Collect consecutive system notes
                 system_notes = [note]
@@ -402,7 +402,7 @@ class GitlabToGithubMigrator:
                 while j < len(notes) and notes[j].system:
                     system_notes.append(notes[j])
                     j += 1
-                
+
                 # Format system notes
                 if len(system_notes) == 1:
                     # Single system note: use compact format
@@ -412,7 +412,7 @@ class GitlabToGithubMigrator:
                     comment_body = "### System notes\n"
                     for sys_note in system_notes:
                         comment_body += f"{format_timestamp(sys_note.created_at)}: {sys_note.body.strip()}\n\n"
-                
+
                 github_issue.create_comment(comment_body)
                 logger.debug(f"Migrated {len(system_notes)} system note(s)")
                 i = j  # Skip all processed system notes

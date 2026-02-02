@@ -464,7 +464,9 @@ class TestCommentMigration:
         self.gitlab_project_path: str = "test-org/test-project"
         self.github_repo_path: str = "github-org/test-repo"
 
-    def _create_mock_note(self, created_at: str, body: str, *, system: bool = False, author: dict[str, str] | None = None) -> Mock:
+    def _create_mock_note(
+        self, created_at: str, body: str, *, system: bool = False, author: dict[str, str] | None = None
+    ) -> Mock:
         """Create a mock GitLab note."""
         note = Mock()
         note.created_at = created_at
@@ -546,7 +548,9 @@ class TestCommentMigration:
         # Three consecutive system notes
         system_notes = [
             self._create_mock_note("2026-01-27T20:18:55Z", "marked this issue as related to #1", system=True),
-            self._create_mock_note("2026-01-27T20:19:10Z", "This is a long system note\n- that spans\n- multiple lines", system=True),
+            self._create_mock_note(
+                "2026-01-27T20:19:10Z", "This is a long system note\n- that spans\n- multiple lines", system=True
+            ),
             self._create_mock_note("2026-01-27T20:19:22Z", "marked this issue as closed", system=True),
         ]
         mock_gitlab_issue.notes.list.return_value = system_notes
@@ -557,15 +561,15 @@ class TestCommentMigration:
         # Verify - single comment with grouped format
         mock_github_issue.create_comment.assert_called_once()
         comment_body = mock_github_issue.create_comment.call_args[0][0]
-        
+
         # Should have markdown header
         assert comment_body.startswith("### System notes\n")
-        
+
         # Should have all three notes with timestamps
         assert "2026-01-27 20:18:55Z: marked this issue as related to #1" in comment_body
         assert "2026-01-27 20:19:10Z: This is a long system note\n- that spans\n- multiple lines" in comment_body
         assert "2026-01-27 20:19:22Z: marked this issue as closed" in comment_body
-        
+
         # Should have empty lines between notes (double newlines)
         assert "\n\n" in comment_body
 
@@ -590,7 +594,7 @@ class TestCommentMigration:
             self.github_repo_path,
             github_token="test_token",
         )
-        
+
         # Mock attachment handler
         mock_attachment_handler = Mock()
         mock_attachment_handler.process_content.return_value = "This is a user comment"
@@ -614,17 +618,17 @@ class TestCommentMigration:
 
         # Verify - should create 3 separate comments
         assert mock_github_issue.create_comment.call_count == 3
-        
+
         # First comment: single system note (compact format)
         first_comment = mock_github_issue.create_comment.call_args_list[0][0][0]
         assert first_comment.startswith("**System note**")
         assert "marked this issue as related to #1" in first_comment
-        
+
         # Second comment: user comment
         second_comment = mock_github_issue.create_comment.call_args_list[1][0][0]
         assert "**Comment by**" in second_comment
         assert "This is a user comment" in second_comment
-        
+
         # Third comment: single system note (compact format)
         third_comment = mock_github_issue.create_comment.call_args_list[2][0][0]
         assert third_comment.startswith("**System note**")
@@ -651,7 +655,7 @@ class TestCommentMigration:
             self.github_repo_path,
             github_token="test_token",
         )
-        
+
         # Mock attachment handler
         mock_attachment_handler = Mock()
         mock_attachment_handler.process_content.return_value = "Great work!"
@@ -677,18 +681,18 @@ class TestCommentMigration:
 
         # Verify - should create 3 comments
         assert mock_github_issue.create_comment.call_count == 3
-        
+
         # First comment: grouped system notes (2 consecutive)
         first_comment = mock_github_issue.create_comment.call_args_list[0][0][0]
         assert first_comment.startswith("### System notes\n")
         assert "marked this issue as related to #1" in first_comment
         assert "added label priority:high" in first_comment
-        
+
         # Second comment: user comment
         second_comment = mock_github_issue.create_comment.call_args_list[1][0][0]
         assert "**Comment by**" in second_comment
         assert "Great work!" in second_comment
-        
+
         # Third comment: grouped system notes (2 consecutive)
         third_comment = mock_github_issue.create_comment.call_args_list[2][0][0]
         assert third_comment.startswith("### System notes\n")
