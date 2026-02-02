@@ -26,6 +26,8 @@ from . import gitlab_utils as glu
 from .utils import setup_logging
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from gitlab.v4.objects import Project
 
 GITLAB_URL = "https://gitlab.com"
@@ -416,7 +418,7 @@ def update_test_data_for_last_edited(project: Project) -> None:
     _update_comment(project, wait_if_needed)
 
 
-def _update_milestones(project: Project, wait_if_needed) -> None:  # type: ignore[no-untyped-def]
+def _update_milestones(project: Project, wait_if_needed: Callable[[str, str], None]) -> None:
     """Update milestone test data."""
     ms1 = project.milestones.get(1)
     if "EDITED" not in ms1.title:
@@ -437,7 +439,7 @@ def _update_milestones(project: Project, wait_if_needed) -> None:  # type: ignor
         logger.info("    Milestone #3 description already updated")
 
 
-def _update_issues(project: Project, wait_if_needed) -> None:  # type: ignore[no-untyped-def]
+def _update_issues(project: Project, wait_if_needed: Callable[[str, str], None]) -> None:
     """Update issue test data."""
     issue2 = project.issues.get(2)
     if "EDITED" not in issue2.title:
@@ -460,7 +462,7 @@ def _update_issues(project: Project, wait_if_needed) -> None:  # type: ignore[no
         logger.info("    Issue #3 description already updated")
 
 
-def _update_comment(project: Project, wait_if_needed) -> None:  # type: ignore[no-untyped-def]
+def _update_comment(project: Project, wait_if_needed: Callable[[str, str], None]) -> None:
     """Update comment test data."""
     issue1 = project.issues.get(1)
     notes = issue1.notes.list(get_all=True)
