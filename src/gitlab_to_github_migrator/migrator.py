@@ -156,26 +156,15 @@ class GitlabToGithubMigrator:
                 # Real milestone exists
                 gitlab_milestone = gitlab_milestone_map[milestone_number]
 
-                # Build description with migration info
-                description = ""
-                if gitlab_milestone.description:
-                    description = gitlab_milestone.description
-
-                # Add last edited info if applicable
+                # Build description with last edited info if applicable
+                description = gitlab_milestone.description or ""
                 if should_show_last_edited(gitlab_milestone.created_at, gitlab_milestone.updated_at):
-                    migration_info = (
-                        f"\n\n---\n\n"
+                    separator = "\n\n---\n\n" if description else ""
+                    description = (
+                        f"{description}{separator}"
                         f"**Migrated from GitLab milestone %{milestone_number}**\n"
                         f"**Last Edited:** {format_timestamp(gitlab_milestone.updated_at)}"
                     )
-                    if description:
-                        description = description + migration_info
-                    else:
-                        # Remove leading newlines if no description
-                        description = (
-                            f"**Migrated from GitLab milestone %{milestone_number}**\n"
-                            f"**Last Edited:** {format_timestamp(gitlab_milestone.updated_at)}"
-                        )
 
                 # Create milestone parameters, only include due_on if it exists
                 milestone_params = {
@@ -415,15 +404,12 @@ class GitlabToGithubMigrator:
             if note.system:
                 comment_body = f"**System note** on {format_timestamp(note.created_at)}: {note.body.strip()}"
             else:
-                # Build comment header with author and timestamp
-                header_parts = [
-                    f"**Comment by** {note.author['name']} (@{note.author['username']}) "
-                    f"**on** {format_timestamp(note.created_at)}"
-                ]
+                # Build compact comment header on single line
+                header = f"**Comment by** {note.author['name']} (@{note.author['username']}) **on** {format_timestamp(note.created_at)}"
                 if should_show_last_edited(note.created_at, note.updated_at):
-                    header_parts.append(f"**Last Edited:** {format_timestamp(note.updated_at)}")
+                    header += f" — **Last Edited:** {format_timestamp(note.updated_at)}"
                 
-                comment_body = "\n".join(header_parts) + "\n\n---\n\n"
+                comment_body = header + "\n\n"
 
                 if note.body:
                     updated_body = self.attachment_handler.process_content(
