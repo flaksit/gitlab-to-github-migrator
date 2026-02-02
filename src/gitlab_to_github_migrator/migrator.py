@@ -391,17 +391,17 @@ class GitlabToGithubMigrator:
         notes.sort(key=lambda n: n.created_at)
 
         # Group consecutive system notes
-        i = 0
-        while i < len(notes):
-            note = notes[i]
+        note_index = 0
+        while note_index < len(notes):
+            note = notes[note_index]
 
             if note.system:
                 # Collect consecutive system notes
                 system_notes = [note]
-                j = i + 1
-                while j < len(notes) and notes[j].system:
-                    system_notes.append(notes[j])
-                    j += 1
+                next_index = note_index + 1
+                while next_index < len(notes) and notes[next_index].system:
+                    system_notes.append(notes[next_index])
+                    next_index += 1
 
                 # Format system notes
                 if len(system_notes) == 1:
@@ -409,13 +409,15 @@ class GitlabToGithubMigrator:
                     comment_body = f"**System note** on {format_timestamp(note.created_at)}: {note.body.strip()}"
                 else:
                     # Multiple consecutive system notes: use grouped format
-                    comment_body = "### System notes\n"
-                    for sys_note in system_notes:
-                        comment_body += f"{format_timestamp(sys_note.created_at)}: {sys_note.body.strip()}\n\n"
+                    note_lines = [
+                        f"{format_timestamp(sys_note.created_at)}: {sys_note.body.strip()}"
+                        for sys_note in system_notes
+                    ]
+                    comment_body = "### System notes\n" + "\n\n".join(note_lines) + "\n"
 
                 github_issue.create_comment(comment_body)
                 logger.debug(f"Migrated {len(system_notes)} system note(s)")
-                i = j  # Skip all processed system notes
+                note_index = next_index  # Skip all processed system notes
             else:
                 # Regular user comment
                 comment_body = (
@@ -433,7 +435,7 @@ class GitlabToGithubMigrator:
 
                 github_issue.create_comment(comment_body)
                 logger.debug(f"Migrated comment by {note.author['username']}")
-                i += 1
+                note_index += 1
 
     def validate_migration(self) -> dict[str, Any]:
         """Validate migration results and generate report."""

@@ -427,11 +427,7 @@ class TestFullMigration:
                 issues_with_comments += 1
                 # Verify comment format (should have bold text, system note marker, or system notes header)
                 for comment in comments:
-                    assert (
-                        "**" in comment.body
-                        or "System note:" in comment.body
-                        or "### System notes" in comment.body
-                    )
+                    assert "**" in comment.body or "System note:" in comment.body or "### System notes" in comment.body
 
         if issues_with_comments == 0:
             pytest.skip("No comments found in migrated issues")
