@@ -50,8 +50,9 @@ def setup_logging(*, verbose: bool = False) -> None:
 
     # Suppress verbose HTTP logging from httpx (used by GitLab library)
     # Even in verbose mode, HTTP request logs are too noisy
-    logging.getLogger("httpx").setLevel(logging.WARNING)
-    logging.getLogger("httpcore").setLevel(logging.WARNING)
+    # Set to ERROR to completely suppress informational HTTP logs
+    logging.getLogger("httpx").setLevel(logging.ERROR)
+    logging.getLogger("httpcore").setLevel(logging.ERROR)
 
 
 def _validate_pass_path(pass_path: str) -> None:

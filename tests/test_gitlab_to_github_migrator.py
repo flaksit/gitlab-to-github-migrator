@@ -751,6 +751,61 @@ class TestCommentMigration:
         assert "2026-01-27 20:19:10Z by testuser: (empty note)" in comment_body
         assert "2026-01-27 20:19:22Z by testuser: marked this issue as closed" in comment_body
 
+    @patch("gitlab_to_github_migrator.gitlab_utils.Gitlab")
+    @patch("gitlab_to_github_migrator.github_utils.Github")
+    def test_attachment_counting_in_comments(self, mock_github_class: Mock, mock_gitlab_class: Mock) -> None:
+        """Test that attachments in comments are counted correctly."""
+        # Setup mocks
+        mock_gitlab_client = Mock()
+        mock_github_client = Mock()
+        mock_gitlab_class.return_value = mock_gitlab_client
+        mock_github_class.return_value = mock_github_client
+
+        mock_gitlab_project = Mock()
+        mock_gitlab_project.id = 12345
+        mock_gitlab_project.name = "test-project"
+        mock_gitlab_client.projects.get.return_value = mock_gitlab_project
+
+        # Create migrator
+        migrator = GitlabToGithubMigrator(
+            self.gitlab_project_path,
+            self.github_repo_path,
+            github_token="test_token",
+        )
+
+        mock_github_issue = Mock()
+
+        # Mock GitLab issue with no description
+        mock_gitlab_issue = Mock()
+        mock_gitlab_issue.iid = 1
+        mock_gitlab_issue.description = None
+
+        # Mock attachment handler to return different content for each call
+        mock_attachment_handler = Mock()
+        # First call: 2 attachments, second call: 0 attachments
+        mock_attachment_handler.process_content.side_effect = [
+            "This has [file1](/releases/download/GitLab-issue-attachments/file1.png) and "
+            "[file2](/releases/download/GitLab-issue-attachments/file2.pdf) attachments",
+            "Plain comment without attachments",
+        ]
+        migrator._attachment_handler = mock_attachment_handler
+
+        # Mock notes - first with attachments, second without
+        note_with_attachments = self._create_mock_note(
+            "2026-01-27T20:18:55Z", "Comment with attachments", system=False
+        )
+        note_without_attachments = self._create_mock_note("2026-01-27T20:19:55Z", "Plain comment", system=False)
+
+        mock_gitlab_issue.notes.list.return_value = [note_with_attachments, note_without_attachments]
+
+        # Execute
+        user_comment_count, attachment_count = migrator.migrate_issue_comments(mock_gitlab_issue, mock_github_issue)
+
+        # Verify
+        assert user_comment_count == 2  # Two user comments
+        assert attachment_count == 2  # Two attachments from first comment, zero from second
+        assert mock_attachment_handler.process_content.call_count == 2
+
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

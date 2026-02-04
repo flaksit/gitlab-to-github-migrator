@@ -303,7 +303,7 @@ class GitlabToGithubMigrator:
                 logger.debug(f"Added issue #{gitlab_issue.iid} to github_issue_dict")
 
                 # Migrate comments
-                user_comment_count = self.migrate_issue_comments(gitlab_issue, github_issue)
+                user_comment_count, comment_attachment_count = self.migrate_issue_comments(gitlab_issue, github_issue)
 
                 # Close issue if needed
                 if gitlab_issue.state == "closed":
@@ -316,8 +316,9 @@ class GitlabToGithubMigrator:
 
                 # Print per-issue output
                 details: list[str] = []
-                if attachment_count > 0:
-                    details.append(f"{attachment_count} attachment{'s' if attachment_count != 1 else ''}")
+                total_attachment_count = attachment_count + comment_attachment_count
+                if total_attachment_count > 0:
+                    details.append(f"{total_attachment_count} attachment{'s' if total_attachment_count != 1 else ''}")
                 if user_comment_count > 0:
                     details.append(f"{user_comment_count} user comment{'s' if user_comment_count != 1 else ''}")
 
@@ -406,7 +407,9 @@ class GitlabToGithubMigrator:
 
         print(f"Migrated {len(gitlab_issues)} issues")
 
-    def migrate_issue_comments(self, gitlab_issue: GitlabProjectIssue, github_issue: github.Issue.Issue) -> int:
+    def migrate_issue_comments(
+        self, gitlab_issue: GitlabProjectIssue, github_issue: github.Issue.Issue
+    ) -> tuple[int, int]:
         """Migrate comments for an issue.
 
         Args:
@@ -414,12 +417,13 @@ class GitlabToGithubMigrator:
             github_issue: The GitHub issue to add comments to
 
         Returns:
-            Number of user comments migrated (not including system notes)
+            Tuple of (number of user comments migrated, total attachment count from all comments)
         """
         notes = gitlab_issue.notes.list(get_all=True)
         notes.sort(key=lambda n: n.created_at)
 
         user_comment_count = 0
+        comment_attachment_count = 0
         # Group consecutive system notes
         note_index = 0
         while note_index < len(notes):
@@ -464,6 +468,8 @@ class GitlabToGithubMigrator:
                         note.body,
                         context=f"issue #{gitlab_issue.iid} note {note.id}",
                     )
+                    # Count attachments in this comment
+                    comment_attachment_count += updated_body.count("/releases/download/GitLab-issue-attachments/")
                     comment_body += updated_body
 
                 github_issue.create_comment(comment_body)
@@ -471,7 +477,7 @@ class GitlabToGithubMigrator:
                 user_comment_count += 1
                 note_index += 1
 
-        return user_comment_count
+        return user_comment_count, comment_attachment_count
 
     def validate_migration(self) -> dict[str, Any]:
         """Validate migration results and generate report."""
@@ -588,7 +594,7 @@ class GitlabToGithubMigrator:
             # Optionally clean up created repository
             if self._github_repo:
                 try:
-                    logger.info("Cleaning up created repository due to failure")
+                    logger.warning("Cleaning up created repository due to failure")
                     self._github_repo.delete()
                 except GithubException:
                     logger.exception("Failed to cleanup repository")
