@@ -315,7 +315,7 @@ class GitlabToGithubMigrator:
                 logger.debug(f"Created issue #{issue_number}: {gitlab_issue.title}")
 
                 # Print per-issue output
-                details = []
+                details: list[str] = []
                 if attachment_count > 0:
                     details.append(f"{attachment_count} attachment{'s' if attachment_count != 1 else ''}")
                 if user_comment_count > 0:
