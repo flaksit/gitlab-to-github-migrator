@@ -369,12 +369,23 @@ gitlab-to-github-migrator/
 git clone git@github.com:flaksit/gitlab-to-github-migrator.git
 cd gitlab-to-github-migrator
 
-# If you have direnv, allow it. Then the following is not necessary
+# If you have direnv, allow it. Then uv sync is done automatically
 direnv allow
 
 # Install dependencies
 uv sync
 ```
+
+#### Git Hooks
+
+Enable the pre-commit hook to enforce code formatting:
+```bash
+git config core.hooksPath .githooks
+# Optional: auto-format on commit instead of just checking
+git config hooks.autoformat true
+```
+
+**Note:** With `hooks.autoformat`, files that need formatting are fully staged after formatting. If you had partially staged a file, the entire file will be committed.
 
 #### Code Quality Tools
 

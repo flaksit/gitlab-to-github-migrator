@@ -75,7 +75,7 @@ class GitlabToGithubMigrator:
         # Track initial repository state for reporting (lowercase name -> actual name)
         self.initial_github_labels: dict[str, str] = {}
 
-        logger.info(f"Initialized migrator for {gitlab_project_path} -> {github_repo_path}")
+        logger.debug(f"Initialized migrator for {gitlab_project_path} -> {github_repo_path}")
 
     @property
     def github_repo(self) -> github.Repository.Repository:
@@ -104,7 +104,7 @@ class GitlabToGithubMigrator:
         try:
             # Test GitLab access
             _ = self.gitlab_project.name  # pyright: ignore[reportUnknownVariableType]
-            logger.info("GitLab API access validated")
+            logger.debug("GitLab API access validated")
         except (GitlabError, GitlabAuthenticationError) as e:
             msg = f"GitLab API access failed: {e}"
             raise MigrationError(msg) from e
@@ -112,13 +112,14 @@ class GitlabToGithubMigrator:
         try:
             # Test GitHub access
             self.github_client.get_user()
-            logger.info("GitHub API access validated")
+            logger.debug("GitHub API access validated")
         except GithubException as e:
             msg = f"GitHub API access failed: {e}"
             raise MigrationError(msg) from e
 
     def migrate_git_content(self) -> None:
         """Migrate git repository content from GitLab to GitHub."""
+        print("Mirroring git repository...")
         git_migration.migrate_git_content(
             source_http_url=str(self.gitlab_project.http_url_to_repo),  # pyright: ignore[reportUnknownArgumentType]
             target_clone_url=self.github_repo.clone_url,
@@ -143,9 +144,10 @@ class GitlabToGithubMigrator:
         gitlab_milestones.sort(key=lambda m: m.iid)
 
         if not gitlab_milestones:
-            logger.info("No milestones to migrate")
+            print("No milestones to migrate")
             return
 
+        print("Migrating milestones...")
         max_milestone_number = gitlab_milestones[-1].iid  # This works because sorted by iid
         gitlab_milestone_map = {m.iid: m for m in gitlab_milestones}
         placeholder_milestones: list[github.Milestone.Milestone] = []
@@ -194,27 +196,31 @@ class GitlabToGithubMigrator:
             milestone.delete()
             logger.debug(f"Deleted placeholder milestone #{milestone.number}")
 
-        logger.info(f"Migrated {len(self.milestone_mapping)} milestones")
+        print(f"Migrated {len(self.milestone_mapping)} milestones")
 
     def _create_migrated_issue(
         self,
         gitlab_issue: GitlabProjectIssue,
-    ) -> tuple[github.Issue.Issue, list[int]]:
+    ) -> tuple[github.Issue.Issue, list[int], int]:
         """Create a GitHub issue from a GitLab issue.
 
         Args:
             gitlab_issue: The GitLab issue to migrate
 
         Returns:
-            The created GitHub issue and list of GitLab Issue IIDs that are blocked by this issue
+            Tuple of (created GitHub issue, list of GitLab Issue IIDs that are blocked by this issue,
+            number of attachments in the issue description)
         """
         # Process description with attachments
         processed_description = ""
+        attachment_count = 0
         if gitlab_issue.description:
             processed_description = self.attachment_handler.process_content(
                 gitlab_issue.description,
                 context=f"issue #{gitlab_issue.iid}",
             )
+            # Count attachments in description by counting release asset links
+            attachment_count = processed_description.count("/releases/download/GitLab-issue-attachments/")
 
         # Get cross-linked issues and collect relationships
         cross_links = get_normal_issue_cross_links(
@@ -250,7 +256,7 @@ class GitlabToGithubMigrator:
                 title=gitlab_issue.title, body=issue_body, labels=issue_labels
             )
 
-        return github_issue, cross_links.blocked_issue_iids
+        return github_issue, cross_links.blocked_issue_iids, attachment_count
 
     def _create_placeholder_issue(self, expected_number: int) -> github.Issue.Issue:
         """Create a placeholder issue to preserve issue numbering."""
@@ -287,7 +293,7 @@ class GitlabToGithubMigrator:
             if issue_number in gitlab_issue_map:
                 gitlab_issue = gitlab_issue_map[issue_number]
 
-                github_issue, gitlab_blocked_issue_iids = self._create_migrated_issue(gitlab_issue)
+                github_issue, gitlab_blocked_issue_iids, attachment_count = self._create_migrated_issue(gitlab_issue)
                 # Verify issue number
                 if github_issue.number != issue_number:
                     msg = f"Issue number mismatch: expected {issue_number}, got {github_issue.number}"
@@ -297,7 +303,7 @@ class GitlabToGithubMigrator:
                 logger.debug(f"Added issue #{gitlab_issue.iid} to github_issue_dict")
 
                 # Migrate comments
-                self.migrate_issue_comments(gitlab_issue, github_issue)
+                user_comment_count = self.migrate_issue_comments(gitlab_issue, github_issue)
 
                 # Close issue if needed
                 if gitlab_issue.state == "closed":
@@ -307,6 +313,18 @@ class GitlabToGithubMigrator:
                     gitlab_blocks_links[gitlab_issue.iid] = gitlab_blocked_issue_iids
 
                 logger.debug(f"Created issue #{issue_number}: {gitlab_issue.title}")
+
+                # Print per-issue output
+                details: list[str] = []
+                if attachment_count > 0:
+                    details.append(f"{attachment_count} attachment{'s' if attachment_count != 1 else ''}")
+                if user_comment_count > 0:
+                    details.append(f"{user_comment_count} user comment{'s' if user_comment_count != 1 else ''}")
+
+                if details:
+                    print(f"  Issue #{issue_number} migrated with {', '.join(details)}")
+                else:
+                    print(f"  Issue #{issue_number} migrated")
             else:
                 github_issue = self._create_placeholder_issue(issue_number)
                 github_placeholder_issues.append(github_issue)
@@ -346,7 +364,6 @@ class GitlabToGithubMigrator:
         if not gitlab_blocking_links:
             return
 
-        logger.info(f"Processing {len(gitlab_blocking_links)} blocking relationships...")
         owner, repo = self.github_repo_path.split("/")
 
         for source_gitlab_iid, relations in gitlab_blocking_links.items():
@@ -375,21 +392,34 @@ class GitlabToGithubMigrator:
         """Migrate issues while preserving GitLab issue numbers."""
         gitlab_issues = self.gitlab_project.issues.list(get_all=True, state="all")
         if not gitlab_issues:
-            logger.info("No issues to migrate")
+            print("No issues to migrate")
             return
 
+        print("Migrating issues...")
         gitlab_to_github_issue_map, gitlab_blocks_links = self._create_issues(gitlab_issues)
+
         self._create_parent_child_relations(gitlab_to_github_issue_map)
+
         if gitlab_blocks_links:
+            print("Setting up blocking relationships...")
             self._create_blocking_relations(gitlab_blocks_links, gitlab_to_github_issue_map)
 
-        logger.info(f"Migrated {len(gitlab_issues)} issues")
+        print(f"Migrated {len(gitlab_issues)} issues")
 
-    def migrate_issue_comments(self, gitlab_issue: GitlabProjectIssue, github_issue: github.Issue.Issue) -> None:
-        """Migrate comments for an issue."""
+    def migrate_issue_comments(self, gitlab_issue: GitlabProjectIssue, github_issue: github.Issue.Issue) -> int:
+        """Migrate comments for an issue.
+
+        Args:
+            gitlab_issue: The GitLab issue
+            github_issue: The GitHub issue to add comments to
+
+        Returns:
+            Number of user comments migrated (not including system notes)
+        """
         notes = gitlab_issue.notes.list(get_all=True)
         notes.sort(key=lambda n: n.created_at)
 
+        user_comment_count = 0
         # Group consecutive system notes
         note_index = 0
         while note_index < len(notes):
@@ -438,7 +468,10 @@ class GitlabToGithubMigrator:
 
                 github_issue.create_comment(comment_body)
                 logger.debug(f"Migrated comment by {note.author['username']}")
+                user_comment_count += 1
                 note_index += 1
+
+        return user_comment_count
 
     def validate_migration(self) -> dict[str, Any]:
         """Validate migration results and generate report."""
@@ -512,7 +545,7 @@ class GitlabToGithubMigrator:
                 )
                 report["success"] = False
 
-            logger.info("Migration validation completed")
+            logger.debug("Migration validation completed")
 
         except (GitlabError, GithubException) as e:
             report["success"] = False
@@ -531,7 +564,7 @@ class GitlabToGithubMigrator:
     def migrate(self) -> dict[str, Any]:
         """Execute the complete migration process."""
         try:
-            logger.info("Starting GitLab to GitHub migration")
+            print(f"Starting migration: {self.gitlab_project_path} → {self.github_repo_path}")
 
             # Validation
             self.validate_api_access()
@@ -548,7 +581,7 @@ class GitlabToGithubMigrator:
             # Validation
             report = self.validate_migration()
 
-            logger.info("Migration completed successfully")
+            print("Migration completed successfully")
 
         except (GitlabError, GithubException, subprocess.CalledProcessError, OSError) as e:
             logger.exception("Migration failed")
