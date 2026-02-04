@@ -26,6 +26,7 @@ jobs:
         run: |
           git config core.hooksPath .githooks
           git config --global hooks.autoformat true
+          git config --global hooks.strictChecks true
 
       - name: Install uv
         uses: astral-sh/setup-uv@v7

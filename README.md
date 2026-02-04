@@ -387,6 +387,11 @@ git config hooks.autoformat true
 
 **Note:** With `hooks.autoformat`, files that need formatting are fully staged after formatting. If you had partially staged a file, the entire file will be committed.
 
+For AI agents (e.g., GitHub Copilot), enable strict checks to run linting and type checking on every commit:
+```bash
+git config hooks.strictChecks true
+```
+
 #### Code Quality Tools
 
 The project includes several code quality tools as development dependencies:
