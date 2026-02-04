@@ -231,10 +231,10 @@ def create_repo(client: Github, repo_path: str, description: str | None) -> Repo
             "Example: 'myorg/myrepo' or 'myusername/myrepo'"
         )
         raise MigrationError(msg)
-    
+
     # Parse GitHub repo path
     owner, repo_name = repo_path_stripped.split("/")
-    
+
     # Validate both parts are non-empty
     if not owner.strip() or not repo_name.strip():
         msg = (
