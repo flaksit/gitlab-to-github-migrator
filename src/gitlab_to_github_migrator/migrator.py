@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import datetime as dt
 import logging
+import re
 import subprocess
 from typing import TYPE_CHECKING, Any
 
@@ -220,7 +221,9 @@ class GitlabToGithubMigrator:
                 context=f"issue #{gitlab_issue.iid}",
             )
             # Count attachments in description by counting release asset links
-            attachment_count = processed_description.count("/releases/download/")
+            # Pattern matches URLs like: /releases/download/tag/[8-char-secret]_filename.ext
+            # This matches the format created by our attachment handler
+            attachment_count = len(re.findall(r"/releases/download/[^/\s]+/[a-f0-9]{8}_", processed_description))
 
         # Get cross-linked issues and collect relationships
         cross_links = get_normal_issue_cross_links(
@@ -469,7 +472,11 @@ class GitlabToGithubMigrator:
                         context=f"issue #{gitlab_issue.iid} note {note.id}",
                     )
                     # Count attachments in this comment
-                    comment_attachment_count += updated_body.count("/releases/download/")
+                    # Pattern matches URLs like: /releases/download/tag/[8-char-secret]_filename.ext
+                    # This matches the format created by our attachment handler
+                    comment_attachment_count += len(
+                        re.findall(r"/releases/download/[^/\s]+/[a-f0-9]{8}_", updated_body)
+                    )
                     comment_body += updated_body
 
                 github_issue.create_comment(comment_body)
