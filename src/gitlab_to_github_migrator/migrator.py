@@ -25,8 +25,8 @@ from .gitlab_utils import get_normal_issue_cross_links
 from .issue_builder import build_issue_body, format_timestamp, should_show_last_edited
 
 if TYPE_CHECKING:
+    from gitlab.v4.objects import Project as GitlabProject
     from gitlab.v4.objects import ProjectIssue as GitlabProjectIssue
-    from gitlab.v4.objects.projects import Project as GitlabProject
 
 # Module-wide logger
 logger: logging.Logger = logging.getLogger(__name__)
@@ -426,7 +426,7 @@ class GitlabToGithubMigrator:
                 header = f"**Comment by** {note.author['name']} ({note.author['username']}) **on** {format_timestamp(note.created_at)}"
                 if should_show_last_edited(note.created_at, note.updated_at):
                     header += f" — **Last Edited:** {format_timestamp(note.updated_at)}"
-                
+
                 comment_body = header + "\n\n"
 
                 if note.body:

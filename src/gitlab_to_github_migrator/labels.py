@@ -18,7 +18,7 @@ if TYPE_CHECKING:
     from collections.abc import Sequence
 
     from github.Repository import Repository as GithubRepository
-    from gitlab.v4.objects.projects import Project as GitlabProject
+    from gitlab.v4.objects import Project as GitlabProject
 
 logger: logging.Logger = logging.getLogger(__name__)
 

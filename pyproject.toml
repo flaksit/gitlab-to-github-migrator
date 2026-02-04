@@ -182,8 +182,6 @@ ignore = [
 # https://docs.basedpyright.com/latest/configuration/config-files/#sample-pyprojecttoml-file
 include = ["src", "tests"]
 
-allowedUntypedLibraries = ["gitlab"]
-
 # By default BasedPyright is very strict, so you almost certainly want to disable
 # some of the rules.
 # A few typically noisy warnings are next.

@@ -17,7 +17,7 @@ if TYPE_CHECKING:
     import github.GitRelease
     import github.Repository
     from gitlab import Gitlab
-    from gitlab.v4.objects.projects import Project as GitlabProject
+    from gitlab.v4.objects import Project as GitlabProject
 
 logger: logging.Logger = logging.getLogger(__name__)
 

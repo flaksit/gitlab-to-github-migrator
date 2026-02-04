@@ -388,24 +388,24 @@ def add_comments_and_close_issue(project: Project) -> None:
 
 def update_test_data_for_last_edited(project: Project) -> None:
     """Update comments to test last edited timestamp feature.
-    
+
     Updates are made with smart waiting - only waiting the minimum necessary time
     based on when objects were created to ensure >1 minute difference.
     """
     import datetime as dt
-    
+
     logger.info("\n[7.5/8] Updating test data for last edited timestamp tests...")
-    
+
     def parse_time(timestamp: str) -> dt.datetime:
         """Parse GitLab timestamp."""
         return dt.datetime.fromisoformat(timestamp)
-    
+
     def wait_if_needed(created_at: str, item_name: str) -> None:
         """Wait only if we need to reach threshold + buffer seconds since creation."""
         created = parse_time(created_at)
         now = dt.datetime.now(dt.UTC)
         elapsed = (now - created).total_seconds()
-        
+
         # Add 5 second buffer to ensure we're well past the threshold
         required_elapsed = LAST_EDITED_THRESHOLD_SECONDS + 5
         if elapsed < required_elapsed:
@@ -414,10 +414,9 @@ def update_test_data_for_last_edited(project: Project) -> None:
             time.sleep(wait_time)
         else:
             logger.info(f"    No wait needed for {item_name} (created {int(elapsed)} seconds ago)")
-    
+
     # Update comment only (not milestones or issues)
     _update_comment(project, wait_if_needed)
-
 
 
 def _update_comment(project: Project, wait_if_needed: Callable[[str, str], None]) -> None:
@@ -429,7 +428,7 @@ def _update_comment(project: Project, wait_if_needed: Callable[[str, str], None]
         if not note.system and "This is a regular comment" in (note.body or ""):
             existing_comment = note
             break
-    
+
     if existing_comment:
         if "EDITED" not in existing_comment.body:
             wait_if_needed(existing_comment.created_at, "comment on issue #1")
