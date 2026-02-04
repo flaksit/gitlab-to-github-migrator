@@ -223,7 +223,8 @@ def create_issue_dependency(
 def create_repo(client: Github, repo_path: str, description: str | None) -> Repository:
     """Create GitHub repository with GitLab project metadata."""
     # Validate GitHub repo path format
-    if "/" not in repo_path:
+    repo_path_stripped = repo_path.strip()
+    if not repo_path_stripped or repo_path_stripped.count("/") != 1:
         msg = (
             f"Invalid GitHub repository path: '{repo_path}'. "
             "Expected format: 'owner/repository'. "
@@ -232,7 +233,17 @@ def create_repo(client: Github, repo_path: str, description: str | None) -> Repo
         raise MigrationError(msg)
     
     # Parse GitHub repo path
-    owner, repo_name = repo_path.split("/")
+    owner, repo_name = repo_path_stripped.split("/")
+    
+    # Validate both parts are non-empty
+    if not owner.strip() or not repo_name.strip():
+        msg = (
+            f"Invalid GitHub repository path: '{repo_path}'. "
+            "Both owner and repository name must be non-empty. "
+            "Expected format: 'owner/repository'. "
+            "Example: 'myorg/myrepo' or 'myusername/myrepo'"
+        )
+        raise MigrationError(msg)
 
     # Sanitize description to remove control characters GitHub doesn't allow
     safe_description = _sanitize_description(description)
