@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
   pull_request:
-    types: [opened, synchronize, ready_for_review]
+    types: [opened, synchronize, reopened, ready_for_review]
   workflow_dispatch:
 
 concurrency:
@@ -50,7 +50,9 @@ jobs:
 
   test-integration:
     needs: [lint, test-unit]
-    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+    if: |
+      github.event_name != 'pull_request' ||
+      (github.event.pull_request.draft == false && github.event.action != 'reopened')
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
