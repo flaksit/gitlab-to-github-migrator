@@ -222,6 +222,15 @@ def create_issue_dependency(
 
 def create_repo(client: Github, repo_path: str, description: str | None) -> Repository:
     """Create GitHub repository with GitLab project metadata."""
+    # Validate GitHub repo path format
+    if "/" not in repo_path:
+        msg = (
+            f"Invalid GitHub repository path: '{repo_path}'. "
+            "Expected format: 'owner/repository'. "
+            "Example: 'myorg/myrepo' or 'myusername/myrepo'"
+        )
+        raise MigrationError(msg)
+    
     # Parse GitHub repo path
     owner, repo_name = repo_path.split("/")
 
