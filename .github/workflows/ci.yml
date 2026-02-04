@@ -11,7 +11,6 @@ concurrency:
 
 jobs:
   lint:
-    if: github.event.action != 'ready_for_review'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -33,7 +32,6 @@ jobs:
           exit $exit_code
 
   test-unit:
-    if: github.event.action != 'ready_for_review'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -51,10 +49,7 @@ jobs:
   test-integration:
     needs: [lint, test-unit]
     if: |
-      always() &&
-      (needs.lint.result == 'success' || needs.lint.result == 'skipped') &&
-      (needs.test-unit.result == 'success' || needs.test-unit.result == 'skipped') &&
-      (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
+      github.event_name != 'pull_request' || github.event.pull_request.draft == false
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
