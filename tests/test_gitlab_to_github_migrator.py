@@ -34,6 +34,25 @@ class TestGitlabToGithubMigrator:
         self.mock_github_repo.html_url = "https://github.com/github-org/test-repo"
         self.mock_github_repo.ssh_url = "git@github.com:github-org/test-repo.git"
 
+    def _create_mock_milestone(self, iid: int, state: str = "active", due_date: str | None = None) -> Mock:
+        """Create a mock GitLab milestone with standard attributes."""
+        from datetime import UTC, datetime, timedelta
+
+        base = datetime(2024, 1, 1, 10, 0, 0, tzinfo=UTC)
+        created = base + timedelta(hours=iid)
+        updated = created + timedelta(minutes=30)
+
+        mock = Mock()
+        mock.iid = iid
+        mock.id = 100 + iid
+        mock.title = f"Milestone {iid}"
+        mock.state = state
+        mock.description = f"Milestone {iid} description"
+        mock.due_date = due_date
+        mock.created_at = created.strftime("%Y-%m-%dT%H:%M:%SZ")
+        mock.updated_at = updated.strftime("%Y-%m-%dT%H:%M:%SZ")
+        return mock
+
     @patch("gitlab_to_github_migrator.gitlab_utils.Gitlab")
     @patch("gitlab_to_github_migrator.github_utils.Github")
     def test_init(self, mock_github_class, mock_gitlab_class) -> None:
@@ -164,36 +183,9 @@ class TestGitlabToGithubMigrator:
         mock_gitlab_client.projects.get.return_value = self.mock_gitlab_project
 
         # Mock GitLab milestones with gaps (1, 3, 5)
-        mock_milestone1 = Mock()
-        mock_milestone1.iid = 1
-        mock_milestone1.id = 101
-        mock_milestone1.title = "Milestone 1"
-        mock_milestone1.state = "active"
-        mock_milestone1.description = "First milestone"
-        mock_milestone1.due_date = None
-        mock_milestone1.created_at = "2024-01-15T10:30:45Z"
-        mock_milestone1.updated_at = "2024-01-15T10:30:45Z"
-
-        mock_milestone3 = Mock()
-        mock_milestone3.iid = 3
-        mock_milestone3.id = 103
-        mock_milestone3.title = "Milestone 3"
-        mock_milestone3.state = "closed"
-        mock_milestone3.description = "Third milestone"
-        mock_milestone3.due_date = None
-        mock_milestone3.created_at = "2024-01-15T11:00:00Z"
-        mock_milestone3.updated_at = "2024-01-15T11:00:00Z"
-
-        mock_milestone5 = Mock()
-        mock_milestone5.iid = 5
-        mock_milestone5.id = 105
-        mock_milestone5.title = "Milestone 5"
-        mock_milestone5.state = "active"
-        mock_milestone5.description = "Fifth milestone"
-        mock_milestone5.due_date = None
-        mock_milestone5.created_at = "2024-01-15T12:00:00Z"
-        mock_milestone5.updated_at = "2024-01-15T12:00:00Z"
-
+        mock_milestone1 = self._create_mock_milestone(1)
+        mock_milestone3 = self._create_mock_milestone(3, state="closed", due_date="2024-03-01")
+        mock_milestone5 = self._create_mock_milestone(5)
         self.mock_gitlab_project.milestones.list.return_value = [mock_milestone1, mock_milestone3, mock_milestone5]
 
         # Mock GitHub milestone creation
