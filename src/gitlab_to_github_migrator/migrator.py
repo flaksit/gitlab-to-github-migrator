@@ -25,8 +25,8 @@ from .gitlab_utils import get_normal_issue_cross_links
 from .issue_builder import build_issue_body, format_timestamp, should_show_last_edited
 
 if TYPE_CHECKING:
+    from gitlab.v4.objects import Project as GitlabProject
     from gitlab.v4.objects import ProjectIssue as GitlabProjectIssue
-    from gitlab.v4.objects.projects import Project as GitlabProject
 
 # Module-wide logger
 logger: logging.Logger = logging.getLogger(__name__)
