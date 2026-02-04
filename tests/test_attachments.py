@@ -37,9 +37,10 @@ class TestAttachmentHandler:
         )
 
         content = "No attachments here"
-        result = handler.process_content(content)
+        result, count = handler.process_content(content)
 
         assert result == content
+        assert count == 0
 
     def test_process_content_with_cached_attachment(self) -> None:
         handler = AttachmentHandler(
@@ -54,10 +55,11 @@ class TestAttachmentHandler:
         )
 
         content = "See attachment: /uploads/abcdef0123456789abcdef0123456789/cached.pdf"
-        result = handler.process_content(content)
+        result, count = handler.process_content(content)
 
         assert "/uploads/abcdef0123456789abcdef0123456789/cached.pdf" not in result
         assert "https://github.com/releases/cached.pdf" in result
+        assert count == 1
 
     @patch("gitlab_to_github_migrator.attachments.glu.download_attachment")
     def test_process_content_downloads_and_uploads(self, mock_download) -> None:
@@ -79,7 +81,8 @@ class TestAttachmentHandler:
         )
 
         content = "File: /uploads/abcdef0123456789abcdef0123456789/doc.pdf"
-        result = handler.process_content(content, context="issue #1")
+        result, count = handler.process_content(content, context="issue #1")
 
         assert "/uploads/abcdef0123456789abcdef0123456789/doc.pdf" not in result
         assert "https://github.com/releases/download/file.pdf" in result
+        assert count == 1

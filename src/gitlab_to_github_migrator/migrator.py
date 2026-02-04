@@ -6,7 +6,6 @@ from __future__ import annotations
 
 import datetime as dt
 import logging
-import re
 import subprocess
 from typing import TYPE_CHECKING, Any
 
@@ -31,11 +30,6 @@ if TYPE_CHECKING:
 
 # Module-wide logger
 logger: logging.Logger = logging.getLogger(__name__)
-
-# Regex pattern for counting migrated attachment URLs
-# Matches: /releases/download/{tag}/{8-hex-chars}_filename
-# The 8-char hex prefix is added by AttachmentHandler to ensure unique filenames
-ATTACHMENT_URL_PATTERN = re.compile(r"/releases/download/[^/]+/[a-f0-9]{8}_")
 
 
 class GitlabToGithubMigrator:
@@ -221,12 +215,10 @@ class GitlabToGithubMigrator:
         processed_description = ""
         attachment_count = 0
         if gitlab_issue.description:
-            processed_description = self.attachment_handler.process_content(
+            processed_description, attachment_count = self.attachment_handler.process_content(
                 gitlab_issue.description,
                 context=f"issue #{gitlab_issue.iid}",
             )
-            # Count attachments in description by counting release asset links
-            attachment_count = len(ATTACHMENT_URL_PATTERN.findall(processed_description))
 
         # Get cross-linked issues and collect relationships
         cross_links = get_normal_issue_cross_links(
@@ -470,12 +462,11 @@ class GitlabToGithubMigrator:
                 comment_body = header + "\n\n"
 
                 if note.body:
-                    updated_body = self.attachment_handler.process_content(
+                    updated_body, note_attachment_count = self.attachment_handler.process_content(
                         note.body,
                         context=f"issue #{gitlab_issue.iid} note {note.id}",
                     )
-                    # Count attachments in this comment
-                    comment_attachment_count += len(ATTACHMENT_URL_PATTERN.findall(updated_body))
+                    comment_attachment_count += note_attachment_count
                     comment_body += updated_body
 
                 github_issue.create_comment(comment_body)

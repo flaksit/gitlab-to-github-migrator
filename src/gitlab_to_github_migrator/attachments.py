@@ -78,7 +78,7 @@ class AttachmentHandler:
 
         return self._release
 
-    def process_content(self, content: str, context: str = "") -> str:
+    def process_content(self, content: str, context: str = "") -> tuple[str, int]:
         """Download GitLab attachments and upload to GitHub, returning updated content.
 
         Args:
@@ -86,13 +86,18 @@ class AttachmentHandler:
             context: Context for log messages (e.g., "issue #5")
 
         Returns:
-            Content with GitLab URLs replaced by GitHub URLs
+            Tuple of (content with GitLab URLs replaced by GitHub URLs, number of attachments processed)
         """
-        files, updated_content = self._download_files(content)
-        return self._upload_files(files, updated_content, context)
+        files, updated_content, total_attachment_count = self._download_files(content)
+        final_content = self._upload_files(files, updated_content, context)
+        return final_content, total_attachment_count
 
-    def _download_files(self, content: str) -> tuple[list[DownloadedFile], str]:
-        """Find attachment URLs, download files, replace cached URLs."""
+    def _download_files(self, content: str) -> tuple[list[DownloadedFile], str, int]:
+        """Find attachment URLs, download files, replace cached URLs.
+
+        Returns:
+            Tuple of (list of files to upload, updated content, total attachment count)
+        """
         attachment_pattern = r"/uploads/([a-f0-9]{32})/([^)\s]+)"
         attachments = re.findall(attachment_pattern, content)
 
@@ -135,7 +140,7 @@ class AttachmentHandler:
             except Exception as e:
                 logger.warning(f"Failed to download attachment {short_url}: {e}")
 
-        return downloaded_files, updated_content
+        return downloaded_files, updated_content, len(attachments)
 
     def _upload_files(self, files: list[DownloadedFile], content: str, context: str) -> str:
         """Upload files to GitHub release, update content with new URLs."""

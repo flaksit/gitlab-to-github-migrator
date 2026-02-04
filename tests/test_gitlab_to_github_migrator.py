@@ -599,7 +599,7 @@ class TestCommentMigration:
 
         # Mock attachment handler
         mock_attachment_handler = Mock()
-        mock_attachment_handler.process_content.return_value = "This is a user comment"
+        mock_attachment_handler.process_content.return_value = ("This is a user comment", 0)
         migrator._attachment_handler = mock_attachment_handler
 
         # Mock issue
@@ -660,7 +660,7 @@ class TestCommentMigration:
 
         # Mock attachment handler
         mock_attachment_handler = Mock()
-        mock_attachment_handler.process_content.return_value = "Great work!"
+        mock_attachment_handler.process_content.return_value = ("Great work!", 0)
         migrator._attachment_handler = mock_attachment_handler
 
         # Mock issue
@@ -784,9 +784,12 @@ class TestCommentMigration:
         mock_attachment_handler = Mock()
         # First call: 2 attachments, second call: 0 attachments
         mock_attachment_handler.process_content.side_effect = [
-            "This has [file1](/releases/download/tag/abcd1234_file1.png) and "
-            "[file2](/releases/download/tag/ef567890_file2.pdf) attachments",
-            "Plain comment without attachments",
+            (
+                "This has [file1](/releases/download/tag/abcd1234_file1.png) and "
+                "[file2](/releases/download/tag/ef567890_file2.pdf) attachments",
+                2,
+            ),
+            ("Plain comment without attachments", 0),
         ]
         migrator._attachment_handler = mock_attachment_handler
 
