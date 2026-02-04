@@ -18,10 +18,10 @@ class TestCreateRepo:
         """Test that create_repo raises MigrationError when repo path has no slash."""
         mock_client = Mock()
         
-        with pytest.raises(MigrationError, match="Invalid GitHub repository path"):
-            create_repo(mock_client, "just-owner", "Test description")
-        
-        with pytest.raises(MigrationError, match="Expected format: 'owner/repository'"):
+        with pytest.raises(
+            MigrationError, 
+            match=r"Invalid GitHub repository path.*Expected format: 'owner/repository'"
+        ):
             create_repo(mock_client, "just-owner", "Test description")
 
     def test_create_repo_invalid_path_empty_string(self) -> None:
@@ -46,17 +46,17 @@ class TestCreateRepo:
             create_repo(mock_client, "owner/repo/extra", "Test description")
 
     def test_create_repo_invalid_path_leading_slash(self) -> None:
-        """Test that create_repo raises MigrationError when repo path has leading slash."""
+        """Test that create_repo raises MigrationError when repo path has leading slash (empty owner)."""
         mock_client = Mock()
         
-        with pytest.raises(MigrationError, match="Invalid GitHub repository path"):
+        with pytest.raises(MigrationError, match="Both owner and repository name must be non-empty"):
             create_repo(mock_client, "/repo", "Test description")
 
     def test_create_repo_invalid_path_trailing_slash(self) -> None:
-        """Test that create_repo raises MigrationError when repo path has trailing slash."""
+        """Test that create_repo raises MigrationError when repo path has trailing slash (empty repo)."""
         mock_client = Mock()
         
-        with pytest.raises(MigrationError, match="Invalid GitHub repository path"):
+        with pytest.raises(MigrationError, match="Both owner and repository name must be non-empty"):
             create_repo(mock_client, "owner/", "Test description")
 
     def test_create_repo_invalid_path_double_slash(self) -> None:
@@ -65,20 +65,6 @@ class TestCreateRepo:
         
         with pytest.raises(MigrationError, match="Invalid GitHub repository path"):
             create_repo(mock_client, "owner//repo", "Test description")
-
-    def test_create_repo_invalid_path_empty_owner(self) -> None:
-        """Test that create_repo raises MigrationError when owner is empty."""
-        mock_client = Mock()
-        
-        with pytest.raises(MigrationError, match="Both owner and repository name must be non-empty"):
-            create_repo(mock_client, "/repo", "Test description")
-
-    def test_create_repo_invalid_path_empty_repo(self) -> None:
-        """Test that create_repo raises MigrationError when repo name is empty."""
-        mock_client = Mock()
-        
-        with pytest.raises(MigrationError, match="Both owner and repository name must be non-empty"):
-            create_repo(mock_client, "owner/", "Test description")
 
     @patch("gitlab_to_github_migrator.github_utils.get_repo")
     def test_create_repo_valid_path_already_exists(self, mock_get_repo: Mock) -> None:
