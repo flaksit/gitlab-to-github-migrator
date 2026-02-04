@@ -32,6 +32,11 @@ if TYPE_CHECKING:
 # Module-wide logger
 logger: logging.Logger = logging.getLogger(__name__)
 
+# Regex pattern for counting migrated attachment URLs
+# Matches: /releases/download/{tag}/{8-hex-chars}_filename
+# The 8-char hex prefix is added by AttachmentHandler to ensure unique filenames
+ATTACHMENT_URL_PATTERN = re.compile(r"/releases/download/[^/]+/[a-f0-9]{8}_")
+
 
 class GitlabToGithubMigrator:
     """Main migration class."""
@@ -221,9 +226,7 @@ class GitlabToGithubMigrator:
                 context=f"issue #{gitlab_issue.iid}",
             )
             # Count attachments in description by counting release asset links
-            # Pattern matches URLs like: /releases/download/tag/[8-char-secret]_filename.ext
-            # This matches the format created by our attachment handler
-            attachment_count = len(re.findall(r"/releases/download/[^/\s]+/[a-f0-9]{8}_", processed_description))
+            attachment_count = len(ATTACHMENT_URL_PATTERN.findall(processed_description))
 
         # Get cross-linked issues and collect relationships
         cross_links = get_normal_issue_cross_links(
@@ -472,11 +475,7 @@ class GitlabToGithubMigrator:
                         context=f"issue #{gitlab_issue.iid} note {note.id}",
                     )
                     # Count attachments in this comment
-                    # Pattern matches URLs like: /releases/download/tag/[8-char-secret]_filename.ext
-                    # This matches the format created by our attachment handler
-                    comment_attachment_count += len(
-                        re.findall(r"/releases/download/[^/\s]+/[a-f0-9]{8}_", updated_body)
-                    )
+                    comment_attachment_count += len(ATTACHMENT_URL_PATTERN.findall(updated_body))
                     comment_body += updated_body
 
                 github_issue.create_comment(comment_body)
