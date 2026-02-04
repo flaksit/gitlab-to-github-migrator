@@ -11,3 +11,9 @@ else
     # Check mode: fail if not formatted
     uv run ruff format --check .
 fi
+
+# Lint and type check (only for AI agents)
+if [ "$(git config --get hooks.strictChecks)" = "true" ]; then
+    uv run ruff check .
+    uv run basedpyright .
+fi
