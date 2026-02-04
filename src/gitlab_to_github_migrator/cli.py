@@ -51,75 +51,75 @@ def parse_arguments() -> argparse.Namespace:
 
 def _print_validation_report(report: dict[str, Any]) -> None:
     """Print the validation report in a readable format."""
-    logger.info("=" * 80)
-    logger.info("MIGRATION VALIDATION REPORT")
-    logger.info("=" * 80)
-    logger.info("")
+    print("=" * 80)
+    print("MIGRATION VALIDATION REPORT")
+    print("=" * 80)
+    print()
 
     # Print project info
-    logger.info(f"GitLab Project: {report['gitlab_project']}")
-    logger.info(f"GitHub Repository: {report['github_repo']}")
-    logger.info("")
+    print(f"GitLab Project: {report['gitlab_project']}")
+    print(f"GitHub Repository: {report['github_repo']}")
+    print()
 
     # Print validation status
     if report["success"]:
-        logger.info("✓ Validation Status: PASSED")
+        print("✓ Validation Status: PASSED")
     else:
-        logger.error("✗ Validation Status: FAILED")
-    logger.info("")
+        print("✗ Validation Status: FAILED")
+    print()
 
     # Print errors if any
     if report["errors"]:
-        logger.error("ERRORS:")
+        print("ERRORS:")
         for error in report["errors"]:
-            logger.error(f"  • {error}")
-        logger.info("")
+            print(f"  • {error}")
+        print()
 
     # Print statistics
-    logger.info("MIGRATION STATISTICS:")
-    logger.info("")
+    print("MIGRATION STATISTICS:")
+    print()
 
     stats = report["statistics"]
 
     # Issues section
-    logger.info("Issues:")
-    logger.info(
+    print("Issues:")
+    print(
         f"  GitLab:  Total={stats.get('gitlab_issues_total', 0)}, "
         f"Open={stats.get('gitlab_issues_open', 0)}, "
         f"Closed={stats.get('gitlab_issues_closed', 0)}"
     )
-    logger.info(
+    print(
         f"  GitHub:  Total={stats.get('github_issues_total', 0)}, "
         f"Open={stats.get('github_issues_open', 0)}, "
         f"Closed={stats.get('github_issues_closed', 0)}"
     )
-    logger.info("")
+    print()
 
     # Milestones section
-    logger.info("Milestones:")
-    logger.info(
+    print("Milestones:")
+    print(
         f"  GitLab:  Total={stats.get('gitlab_milestones_total', 0)}, "
         f"Open={stats.get('gitlab_milestones_open', 0)}, "
         f"Closed={stats.get('gitlab_milestones_closed', 0)}"
     )
-    logger.info(
+    print(
         f"  GitHub:  Total={stats.get('github_milestones_total', 0)}, "
         f"Open={stats.get('github_milestones_open', 0)}, "
         f"Closed={stats.get('github_milestones_closed', 0)}"
     )
-    logger.info("")
+    print()
 
     # Labels section
-    logger.info("Labels:")
-    logger.info(f"  GitLab:  Total={stats.get('gitlab_labels_total', 0)}")
-    logger.info(
+    print("Labels:")
+    print(f"  GitLab:  Total={stats.get('gitlab_labels_total', 0)}")
+    print(
         f"  GitHub:  Existing={stats.get('github_labels_existing', 0)}, "
         f"Created={stats.get('github_labels_created', 0)}, "
         f"Translated={stats.get('labels_translated', 0)}"
     )
-    logger.info("")
+    print()
 
-    logger.info("=" * 80)
+    print("=" * 80)
 
 
 def main() -> None:
