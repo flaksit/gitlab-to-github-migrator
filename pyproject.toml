@@ -151,6 +151,21 @@ ignore = [
     "S603",    # Allow subprocess calls with user input
     "PLR0912", # Allow many branches in scripts
 ]
+"src/gitlab_to_github_migrator/cli.py" = [
+    "T201",  # Allow print() for CLI output
+]
+"src/gitlab_to_github_migrator/migrator.py" = [
+    "T201",  # Allow print() for CLI output
+]
+"src/gitlab_to_github_migrator/labels.py" = [
+    "T201",  # Allow print() for CLI output
+]
+"src/gitlab_to_github_migrator/git_migration.py" = [
+    "T201",  # Allow print() for CLI output
+]
+"src/gitlab_to_github_migrator/attachments.py" = [
+    "T201",  # Allow print() for CLI output
+]
 "*.ipynb" = [
     "T201",  # Allow print()
     "E741",  # Allow ambiguous variable names in notebooks

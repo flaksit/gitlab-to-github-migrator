@@ -85,6 +85,8 @@ def migrate_labels(
     translator = LabelTranslator(label_translations)
     label_mapping: dict[str, str] = {}
 
+    print("Migrating labels...")
+
     try:
         # Get existing GitHub labels (case-insensitive lookup: lowercase -> actual name)
         initial_github_labels: dict[str, str] = {label.name.lower(): label.name for label in github_repo.get_labels()}
@@ -116,7 +118,7 @@ def migrate_labels(
                 msg = f"Failed to create label {translated_name}"
                 raise MigrationError(msg) from e
 
-        logger.info(f"Migrated {len(label_mapping)} labels")
+        print(f"Migrated {len(label_mapping)} labels")
 
     except (GitlabError, GithubException) as e:
         msg = f"Failed to migrate labels: {e}"

@@ -26,11 +26,24 @@ class PassphraseRequiredError(PassError):
 def setup_logging(*, verbose: bool = False) -> None:
     """Configure logging for the migration process."""
     level = logging.DEBUG if verbose else logging.INFO
+    
+    # Configure root logger to write to file with full formatting
+    file_handler = logging.FileHandler("migration.log", mode="a")
+    file_handler.setFormatter(logging.Formatter("%(asctime)s - %(levelname)s - %(name)s - %(message)s"))
+    
+    # Configure console handler to only show warnings and errors
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(logging.WARNING)
+    console_handler.setFormatter(logging.Formatter("%(levelname)s: %(message)s"))
+    
     logging.basicConfig(
         level=level,
-        format="%(asctime)s - %(levelname)s - %(message)s",
-        handlers=[logging.StreamHandler(), logging.FileHandler("migration.log", mode="a")],
+        handlers=[console_handler, file_handler],
     )
+    
+    # Suppress verbose HTTP logging from httpx (used by GitLab library)
+    logging.getLogger("httpx").setLevel(logging.WARNING)
+    logging.getLogger("httpcore").setLevel(logging.WARNING)
 
 
 def _validate_pass_path(pass_path: str) -> None:

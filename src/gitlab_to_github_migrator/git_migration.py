@@ -118,7 +118,7 @@ def migrate_git_content(
         except subprocess.CalledProcessError:
             pass  # Ignore cleanup errors
 
-        logger.info("Repository content migrated successfully")
+        print("Repository content migrated successfully")
 
     except (subprocess.CalledProcessError, OSError) as e:
         msg = f"Failed to migrate repository content: {_sanitize_error(str(e), tokens)}"

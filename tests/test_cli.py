@@ -13,7 +13,7 @@ from gitlab_to_github_migrator.cli import _print_validation_report
 class TestPrintValidationReport:
     """Test validation report printing functionality."""
 
-    def test_successful_validation_report(self) -> None:
+    def test_successful_validation_report(self, capsys: pytest.CaptureFixture[str]) -> None:
         """Test printing a successful validation report."""
         report = {
             "gitlab_project": "test-org/test-project",
@@ -40,22 +40,16 @@ class TestPrintValidationReport:
             },
         }
 
-        with patch("gitlab_to_github_migrator.cli.logger") as mock_logger:
-            _print_validation_report(report)
+        _print_validation_report(report)
+        captured = capsys.readouterr()
 
-            # Verify that logger.info and logger.error were called
-            assert mock_logger.info.called
+        # Check key outputs
+        assert "test-org/test-project" in captured.out
+        assert "github-org/test-repo" in captured.out
+        assert "PASSED" in captured.out
+        assert "Total=10" in captured.out
 
-            # Check key outputs
-            calls = [str(c) for c in mock_logger.info.call_args_list]
-            output = " ".join(calls)
-
-            assert "test-org/test-project" in output
-            assert "github-org/test-repo" in output
-            assert "PASSED" in output
-            assert "gitlab_issues_total=10" in output or "Total=10" in output
-
-    def test_failed_validation_report(self) -> None:
+    def test_failed_validation_report(self, capsys: pytest.CaptureFixture[str]) -> None:
         """Test printing a failed validation report with errors."""
         report = {
             "gitlab_project": "test-org/test-project",
@@ -85,21 +79,15 @@ class TestPrintValidationReport:
             },
         }
 
-        with patch("gitlab_to_github_migrator.cli.logger") as mock_logger:
-            _print_validation_report(report)
+        _print_validation_report(report)
+        captured = capsys.readouterr()
 
-            # Verify that errors are printed
-            assert mock_logger.error.called
+        # Check that error messages are included
+        assert "FAILED" in captured.out
+        assert "Issue count mismatch" in captured.out
+        assert "Milestone count mismatch" in captured.out
 
-            # Check that error messages are included
-            error_calls = [str(c) for c in mock_logger.error.call_args_list]
-            error_output = " ".join(error_calls)
-
-            assert "FAILED" in error_output
-            assert "Issue count mismatch" in error_output
-            assert "Milestone count mismatch" in error_output
-
-    def test_empty_statistics(self) -> None:
+    def test_empty_statistics(self, capsys: pytest.CaptureFixture[str]) -> None:
         """Test printing report with empty statistics."""
         report = {
             "gitlab_project": "test-org/test-project",
@@ -109,10 +97,10 @@ class TestPrintValidationReport:
             "statistics": {},
         }
 
-        with patch("gitlab_to_github_migrator.cli.logger") as mock_logger:
-            # Should not raise an error
-            _print_validation_report(report)
-            assert mock_logger.info.called
+        # Should not raise an error
+        _print_validation_report(report)
+        captured = capsys.readouterr()
+        assert "test-org/test-project" in captured.out
 
 
 if __name__ == "__main__":

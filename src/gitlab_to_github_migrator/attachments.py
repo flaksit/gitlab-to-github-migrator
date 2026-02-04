@@ -68,7 +68,7 @@ class AttachmentHandler:
                     return self._release
 
             # Create new release
-            logger.info(f"Creating new '{release_name}' release for attachments")
+            print(f"Creating new '{release_name}' release for attachments")
             self._release = self._github_repo.create_git_release(
                 tag=release_tag,
                 name=release_name,
