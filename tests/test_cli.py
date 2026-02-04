@@ -2,8 +2,6 @@
 Tests for CLI module.
 """
 
-from unittest.mock import patch
-
 import pytest
 
 from gitlab_to_github_migrator.cli import _print_validation_report

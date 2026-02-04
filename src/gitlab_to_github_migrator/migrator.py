@@ -208,7 +208,7 @@ class GitlabToGithubMigrator:
             gitlab_issue: The GitLab issue to migrate
 
         Returns:
-            Tuple of (created GitHub issue, list of GitLab Issue IIDs that are blocked by this issue, 
+            Tuple of (created GitHub issue, list of GitLab Issue IIDs that are blocked by this issue,
             number of attachments in the issue description)
         """
         # Process description with attachments
@@ -313,14 +313,14 @@ class GitlabToGithubMigrator:
                     gitlab_blocks_links[gitlab_issue.iid] = gitlab_blocked_issue_iids
 
                 logger.debug(f"Created issue #{issue_number}: {gitlab_issue.title}")
-                
+
                 # Print per-issue output
                 details = []
                 if attachment_count > 0:
                     details.append(f"{attachment_count} attachment{'s' if attachment_count != 1 else ''}")
                 if user_comment_count > 0:
                     details.append(f"{user_comment_count} user comment{'s' if user_comment_count != 1 else ''}")
-                
+
                 if details:
                     print(f"  Issue #{issue_number} migrated with {', '.join(details)}")
                 else:
@@ -397,9 +397,9 @@ class GitlabToGithubMigrator:
 
         print("Migrating issues...")
         gitlab_to_github_issue_map, gitlab_blocks_links = self._create_issues(gitlab_issues)
-        
+
         self._create_parent_child_relations(gitlab_to_github_issue_map)
-        
+
         if gitlab_blocks_links:
             print("Setting up blocking relationships...")
             self._create_blocking_relations(gitlab_blocks_links, gitlab_to_github_issue_map)
@@ -408,11 +408,11 @@ class GitlabToGithubMigrator:
 
     def migrate_issue_comments(self, gitlab_issue: GitlabProjectIssue, github_issue: github.Issue.Issue) -> int:
         """Migrate comments for an issue.
-        
+
         Args:
             gitlab_issue: The GitLab issue
             github_issue: The GitHub issue to add comments to
-            
+
         Returns:
             Number of user comments migrated (not including system notes)
         """
@@ -470,7 +470,7 @@ class GitlabToGithubMigrator:
                 logger.debug(f"Migrated comment by {note.author['username']}")
                 user_comment_count += 1
                 note_index += 1
-        
+
         return user_comment_count
 
     def validate_migration(self) -> dict[str, Any]:
