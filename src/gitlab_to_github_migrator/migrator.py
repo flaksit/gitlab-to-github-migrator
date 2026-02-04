@@ -220,7 +220,7 @@ class GitlabToGithubMigrator:
                 context=f"issue #{gitlab_issue.iid}",
             )
             # Count attachments in description by counting release asset links
-            attachment_count = processed_description.count("/releases/download/GitLab-issue-attachments/")
+            attachment_count = processed_description.count("/releases/download/")
 
         # Get cross-linked issues and collect relationships
         cross_links = get_normal_issue_cross_links(
@@ -469,7 +469,7 @@ class GitlabToGithubMigrator:
                         context=f"issue #{gitlab_issue.iid} note {note.id}",
                     )
                     # Count attachments in this comment
-                    comment_attachment_count += updated_body.count("/releases/download/GitLab-issue-attachments/")
+                    comment_attachment_count += updated_body.count("/releases/download/")
                     comment_body += updated_body
 
                 github_issue.create_comment(comment_body)
