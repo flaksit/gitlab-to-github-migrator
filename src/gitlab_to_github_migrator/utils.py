@@ -24,16 +24,23 @@ class PassphraseRequiredError(PassError):
 
 
 def setup_logging(*, verbose: bool = False) -> None:
-    """Configure logging for the migration process."""
+    """Configure logging for the migration process.
+
+    Args:
+        verbose: If True, console shows INFO+ messages. If False (default),
+                 console shows only WARNING+ messages.
+    """
     level = logging.DEBUG if verbose else logging.INFO
 
     # Configure root logger to write to file with full formatting
     file_handler = logging.FileHandler("migration.log", mode="a")
     file_handler.setFormatter(logging.Formatter("%(asctime)s - %(levelname)s - %(name)s - %(message)s"))
 
-    # Configure console handler to only show warnings and errors
+    # Configure console handler (stderr) based on verbose flag
+    # Default: WARNING+ only (clean output, errors visible)
+    # Verbose: INFO+ (diagnostic messages visible)
     console_handler = logging.StreamHandler()
-    console_handler.setLevel(logging.WARNING)
+    console_handler.setLevel(logging.INFO if verbose else logging.WARNING)
     console_handler.setFormatter(logging.Formatter("%(levelname)s: %(message)s"))
 
     logging.basicConfig(
@@ -42,6 +49,7 @@ def setup_logging(*, verbose: bool = False) -> None:
     )
 
     # Suppress verbose HTTP logging from httpx (used by GitLab library)
+    # Even in verbose mode, HTTP request logs are too noisy
     logging.getLogger("httpx").setLevel(logging.WARNING)
     logging.getLogger("httpcore").setLevel(logging.WARNING)
 
