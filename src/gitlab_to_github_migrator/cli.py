@@ -81,17 +81,27 @@ def _print_validation_report(report: dict[str, Any]) -> None:
 
     stats = report["statistics"]
 
-    # Issues section
-    print("Issues:")
+    # Git Repository section
+    print("Git Repository:")
     print(
-        f"  GitLab:  Total={stats.get('gitlab_issues_total', 0)}, "
-        f"Open={stats.get('gitlab_issues_open', 0)}, "
-        f"Closed={stats.get('gitlab_issues_closed', 0)}"
+        f"  GitLab:  Branches={stats.get('gitlab_branches', 0)}, "
+        f"Tags={stats.get('gitlab_tags', 0)}, "
+        f"Commits={stats.get('gitlab_commits', 0)}"
     )
     print(
-        f"  GitHub:  Total={stats.get('github_issues_total', 0)}, "
-        f"Open={stats.get('github_issues_open', 0)}, "
-        f"Closed={stats.get('github_issues_closed', 0)}"
+        f"  GitHub:  Branches={stats.get('github_branches', 0)}, "
+        f"Tags={stats.get('github_tags', 0)}, "
+        f"Commits={stats.get('github_commits', 0)}"
+    )
+    print()
+
+    # Labels section
+    print("Labels:")
+    print(f"  GitLab:  Total={stats.get('gitlab_labels_total', 0)}")
+    print(
+        f"  GitHub:  Existing={stats.get('github_labels_existing', 0)}, "
+        f"Created={stats.get('github_labels_created', 0)}, "
+        f"Translated={stats.get('labels_translated', 0)}"
     )
     print()
 
@@ -109,27 +119,17 @@ def _print_validation_report(report: dict[str, Any]) -> None:
     )
     print()
 
-    # Labels section
-    print("Labels:")
-    print(f"  GitLab:  Total={stats.get('gitlab_labels_total', 0)}")
+    # Issues section
+    print("Issues:")
     print(
-        f"  GitHub:  Existing={stats.get('github_labels_existing', 0)}, "
-        f"Created={stats.get('github_labels_created', 0)}, "
-        f"Translated={stats.get('labels_translated', 0)}"
-    )
-    print()
-
-    # Git Repository section
-    print("Git Repository:")
-    print(
-        f"  GitLab:  Branches={stats.get('gitlab_branches', 0)}, "
-        f"Tags={stats.get('gitlab_tags', 0)}, "
-        f"Commits={stats.get('gitlab_commits', 0)}"
+        f"  GitLab:  Total={stats.get('gitlab_issues_total', 0)}, "
+        f"Open={stats.get('gitlab_issues_open', 0)}, "
+        f"Closed={stats.get('gitlab_issues_closed', 0)}"
     )
     print(
-        f"  GitHub:  Branches={stats.get('github_branches', 0)}, "
-        f"Tags={stats.get('github_tags', 0)}, "
-        f"Commits={stats.get('github_commits', 0)}"
+        f"  GitHub:  Total={stats.get('github_issues_total', 0)}, "
+        f"Open={stats.get('github_issues_open', 0)}, "
+        f"Closed={stats.get('github_issues_closed', 0)}"
     )
     print()
 
