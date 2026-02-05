@@ -507,7 +507,7 @@ class GitlabToGithubMigrator:
 
         return CommentMigrationResult(user_comment_count=user_comment_count, attachment_count=comment_attachment_count)
 
-    def validate_migration(self) -> dict[str, Any]:
+    def validate_migration(self) -> dict[str, Any]:  # noqa: PLR0915
         """Validate migration results and generate report."""
         errors: list[str] = []
         statistics: dict[str, int] = {}
@@ -534,7 +534,14 @@ class GitlabToGithubMigrator:
             # Count git repository items
             gitlab_branches = self.gitlab_project.branches.list(get_all=True)
             gitlab_tags = self.gitlab_project.tags.list(get_all=True)
-            gitlab_commits = self.gitlab_project.commits.list(get_all=True)
+
+            # Count unique commits across all branches
+            gitlab_commit_shas = set()
+            for branch in gitlab_branches:
+                branch_commits = self.gitlab_project.commits.list(get_all=True, ref_name=branch.name)
+                for commit in branch_commits:
+                    gitlab_commit_shas.add(commit.id)
+            gitlab_commits_count = len(gitlab_commit_shas)
 
             # Count GitHub items with state breakdown
             github_issues = list(self.github_repo.get_issues(state="all"))
@@ -552,7 +559,14 @@ class GitlabToGithubMigrator:
             # Count git repository items
             github_branches = list(self.github_repo.get_branches())
             github_tags = list(self.github_repo.get_tags())
-            github_commits = list(self.github_repo.get_commits())
+
+            # Count unique commits across all branches
+            github_commit_shas = set()
+            for branch in github_branches:
+                branch_commits = list(self.github_repo.get_commits(sha=branch.name))
+                for commit in branch_commits:
+                    github_commit_shas.add(commit.sha)
+            github_commits_count = len(github_commit_shas)
 
             # Use the initial label count we captured at repository creation
             labels_created = len(github_labels_all) - len(self.initial_github_labels)
@@ -577,10 +591,10 @@ class GitlabToGithubMigrator:
                     "labels_translated": len(self.label_mapping),
                     "gitlab_branches": len(gitlab_branches),
                     "gitlab_tags": len(gitlab_tags),
-                    "gitlab_commits": len(gitlab_commits),
+                    "gitlab_commits": gitlab_commits_count,
                     "github_branches": len(github_branches),
                     "github_tags": len(github_tags),
-                    "github_commits": len(github_commits),
+                    "github_commits": github_commits_count,
                     "comments_migrated": self.total_comments_migrated,
                     "attachments_uploaded": self._attachment_handler.uploaded_files_count
                     if self._attachment_handler
@@ -611,8 +625,8 @@ class GitlabToGithubMigrator:
                 errors.append(f"Tag count mismatch: GitLab {len(gitlab_tags)}, GitHub {len(github_tags)}")
                 report["success"] = False
 
-            if len(gitlab_commits) != len(github_commits):
-                errors.append(f"Commit count mismatch: GitLab {len(gitlab_commits)}, GitHub {len(github_commits)}")
+            if gitlab_commits_count != github_commits_count:
+                errors.append(f"Commit count mismatch: GitLab {gitlab_commits_count}, GitHub {github_commits_count}")
                 report["success"] = False
 
             logger.debug("Migration validation completed")
