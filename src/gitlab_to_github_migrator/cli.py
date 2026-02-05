@@ -51,6 +51,7 @@ def parse_arguments() -> argparse.Namespace:
 
 def _print_validation_report(report: dict[str, Any]) -> None:
     """Print the validation report in a readable format."""
+    print()
     print("=" * 80)
     print("MIGRATION VALIDATION REPORT")
     print("=" * 80)
