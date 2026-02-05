@@ -20,7 +20,7 @@ A Python tool for migrating GitLab projects to GitHub with full metadata preserv
 ### Prerequisites
 
 - Python 3.14+
-- [uv](https://docs.astral.sh/uv/) package manager
+- [uv](https://docs.astral.sh/uv/) package manager (recommended) or pip
 - Git
 - Access to both GitLab and GitHub APIs
 
@@ -34,8 +34,10 @@ uv tool install git+https://github.com/flaksit/gitlab-to-github-migrator
 uv tool install git+https://github.com/flaksit/gitlab-to-github-migrator@v0.1.0
 
 # The tool is now ready to use
-uv run gitlab-to-github-migrator --help
+gitlab-to-github-migrator --help
 ```
+
+When using `pip` instead of `uv`, just replace `uv tool` with `pip`.
 
 Note: Only the main `gitlab-to-github-migrator` CLI is installed. Developer-only tools are run from a checkout (see Development).
 
@@ -80,17 +82,17 @@ Note: Environment variables may be visible in process lists and logs.
 ### Basic Migration
 
 ```bash
-uv run gitlab-to-github-migrator source/project target/repo
+gitlab-to-github-migrator source/project target/repo
 ```
 
 ### Advanced Migration with Label Translation
 
 ```bash
 # See help for available options
-uv run gitlab-to-github-migrator -h
+gitlab-to-github-migrator -h
 
 # Using short options
-uv run gitlab-to-github-migrator source/project target/repo \
+gitlab-to-github-migrator source/project target/repo \
   -l "p_*:priority: *" \
   -l "comp_*:component: *" \
   -l "t_*:type: *" \
@@ -98,7 +100,7 @@ uv run gitlab-to-github-migrator source/project target/repo \
   -v
 
 # Using full option names
-uv run gitlab-to-github-migrator \
+gitlab-to-github-migrator \
   --gitlab-project "source/project" \
   --github-repo "target/repo" \
   --label-translation "p_*:priority: *" \
@@ -459,7 +461,7 @@ print('GitLab access:', gl.projects.get('your-namespace/your-project').name)
 
 ```bash
 # Enable maximum verbosity
-uv run gitlab-to-github-migrator "source/project" "target/repo" --verbose
+gitlab-to-github-migrator "source/project" "target/repo" --verbose
 
 # Check migration logs
 tail -f migration.log
