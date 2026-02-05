@@ -136,32 +136,30 @@ GitHub treats labels as case-insensitive ("Bug" and "bug" are the same label). W
 ## Example Migration Report
 
 ```text
-==================================================
-MIGRATION REPORT
-==================================================
-GitLab Project: source/project
-GitHub Repository: target/repo
-Success: True
+================================================================================
+MIGRATION VALIDATION REPORT
+================================================================================
 
-Statistics:
-  gitlab_issues_total: 378
-  gitlab_issues_open: 123
-  gitlab_issues_closed: 255
-  github_issues_total: 378
-  github_issues_open: 123
-  github_issues_closed: 255
-  gitlab_milestones_total: 17
-  gitlab_milestones_open: 5
-  gitlab_milestones_closed: 12
-  github_milestones_total: 17
-  github_milestones_open: 5
-  github_milestones_closed: 12
-  gitlab_labels_total: 31
-  github_labels_existing: 9
-  github_labels_created: 22
-  labels_translated: 31
+GitLab Project: flaks/gl2gh-migration-test-project
+GitHub Repository: flaks-test/gl2ghmigr-manual-test3
 
-Migration completed successfully!
+✓ Validation Status: PASSED
+
+MIGRATION STATISTICS:
+
+Issues:
+  GitLab:  Total=7, Open=5, Closed=2
+  GitHub:  Total=7, Open=5, Closed=2
+
+Milestones:
+  GitLab:  Total=2, Open=1, Closed=1
+  GitHub:  Total=2, Open=1, Closed=1
+
+Labels:
+  GitLab:  Total=20
+  GitHub:  Existing=9, Created=18, Translated=20
+
+================================================================================
 ```
 
 ## Development
