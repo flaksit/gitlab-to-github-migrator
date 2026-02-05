@@ -261,6 +261,9 @@ class TestGitlabToGithubMigrator:
         assert report["statistics"]["gitlab_milestones_total"] == 1
         assert report["statistics"]["github_milestones_total"] == 1
         assert report["statistics"]["labels_translated"] == 2
+        assert report["statistics"]["comments_migrated"] == 0
+        assert report["statistics"]["attachments_uploaded"] == 0
+        assert report["statistics"]["attachments_referenced"] == 0
 
     @patch("gitlab_to_github_migrator.gitlab_utils.Gitlab")
     @patch("gitlab_to_github_migrator.github_utils.Github")
@@ -302,6 +305,48 @@ class TestGitlabToGithubMigrator:
         assert len(report["errors"]) == 2  # Issue and milestone count mismatches
         assert "Issue count mismatch" in report["errors"][0]
         assert "Milestone count mismatch" in report["errors"][1]
+
+    @patch("gitlab_to_github_migrator.gitlab_utils.Gitlab")
+    @patch("gitlab_to_github_migrator.github_utils.Github")
+    def test_comments_and_attachments_tracking(self, mock_github_class, mock_gitlab_class) -> None:
+        """Test that comments and attachments are tracked correctly."""
+        from gitlab_to_github_migrator.attachments import AttachmentHandler
+
+        mock_gitlab_client = Mock()
+        mock_github_client = Mock()
+        mock_gitlab_class.return_value = mock_gitlab_client
+        mock_github_class.return_value = mock_github_client
+        mock_gitlab_client.projects.get.return_value = self.mock_gitlab_project
+
+        migrator = GitlabToGithubMigrator(self.gitlab_project_path, self.github_repo_path, github_token="test_token")
+        migrator.gitlab_project = self.mock_gitlab_project
+        migrator.github_repo = self.mock_github_repo
+        migrator.label_mapping = {}
+
+        # Mock GitLab items
+        self.mock_gitlab_project.issues.list.return_value = [Mock()]  # 1 issue
+        self.mock_gitlab_project.milestones.list.return_value = []
+        self.mock_gitlab_project.labels.list.return_value = []
+
+        # Mock GitHub items
+        github_issues = [Mock()]
+        self.mock_github_repo.get_issues.return_value = github_issues
+        self.mock_github_repo.get_milestones.return_value = []
+        self.mock_github_repo.get_labels.return_value = []
+
+        # Set up comment and attachment tracking
+        migrator.total_comments_migrated = 5
+        mock_attachment_handler = Mock(spec=AttachmentHandler)
+        mock_attachment_handler.uploaded_files_count = 3
+        mock_attachment_handler.total_attachments_referenced = 7
+        migrator._attachment_handler = mock_attachment_handler
+
+        report = migrator.validate_migration()
+
+        assert report["success"] is True
+        assert report["statistics"]["comments_migrated"] == 5
+        assert report["statistics"]["attachments_uploaded"] == 3
+        assert report["statistics"]["attachments_referenced"] == 7
 
 
 @pytest.mark.unit
