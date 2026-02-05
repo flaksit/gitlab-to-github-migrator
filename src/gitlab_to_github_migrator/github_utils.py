@@ -298,7 +298,7 @@ def count_unique_commits(repo: Repository) -> int:
         Number of unique commits across all branches
     """
     branches = list(repo.get_branches())
-    commit_shas = set()
+    commit_shas: set[str] = set()
     for branch in branches:
         branch_commits = list(repo.get_commits(sha=branch.name))
         for commit in branch_commits:

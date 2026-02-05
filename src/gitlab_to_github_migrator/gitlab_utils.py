@@ -358,9 +358,9 @@ def count_unique_commits(project: Project) -> int:
         Number of unique commits across all branches
     """
     branches = project.branches.list(get_all=True)
-    commit_shas = set()
+    commit_shas: set[str] = set()
     for branch in branches:
         branch_commits = project.commits.list(get_all=True, ref_name=branch.name)
         for commit in branch_commits:
-            commit_shas.add(commit.id)
+            commit_shas.add(commit.id)  # type: ignore[reportUnknownMemberType]
     return len(commit_shas)
