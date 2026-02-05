@@ -22,7 +22,7 @@ if TYPE_CHECKING:
 logger: logging.Logger = logging.getLogger(__name__)
 
 
-@dataclass
+@dataclass(frozen=True)
 class DownloadedFile:
     """Represents a downloaded file from GitLab."""
 

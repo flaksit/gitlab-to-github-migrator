@@ -156,7 +156,7 @@ class TestGitHubAccess:
                 pytest.fail(f"Failed to access '{github_owner}' as organization or user: {user_err}")
 
 
-@dataclass
+@dataclass(frozen=True)
 class MigrationResult:
     """Result of a migration run, providing access to the migrator and its output."""
 
