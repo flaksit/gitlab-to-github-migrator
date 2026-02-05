@@ -20,7 +20,7 @@ A Python tool for migrating GitLab projects to GitHub with full metadata preserv
 ### Prerequisites
 
 - Python 3.14+
-- [uv](https://docs.astral.sh/uv/) package manager
+- [uv](https://docs.astral.sh/uv/) package manager (recommended) or pip
 - Git
 - Access to both GitLab and GitHub APIs
 
@@ -34,8 +34,10 @@ uv tool install git+https://github.com/flaksit/gitlab-to-github-migrator
 uv tool install git+https://github.com/flaksit/gitlab-to-github-migrator@v0.1.0
 
 # The tool is now ready to use
-uv run gitlab-to-github-migrator --help
+gitlab-to-github-migrator --help
 ```
+
+When using `pip` instead of `uv`, just replace `uv tool` with `pip`.
 
 Note: Only the main `gitlab-to-github-migrator` CLI is installed. Developer-only tools are run from a checkout (see Development).
 
@@ -51,21 +53,11 @@ Note: Only the main `gitlab-to-github-migrator` CLI is installed. Developer-only
 
 ### Token Resolution Order
 
-When no explicit token path is provided via CLI options, tokens are resolved in this order:
-1. Environment variable (`SOURCE_GITLAB_TOKEN` / `TARGET_GITHUB_TOKEN`)
-2. Default `pass` path (`gitlab/api/ro_token` / `github/api/token`)
+1. Path to token in `pass` provided as CLI options (`--gitlab-token-pass-path` / `--github-token-pass-path`)
+2. Environment variable (`SOURCE_GITLAB_TOKEN` / `TARGET_GITHUB_TOKEN`)
+3. Default `pass` path (`gitlab/api/ro_token` / `github/api/token`)
 
-### Option 1: Using Environment Variables
-
-```bash
-# Set environment variables
-export SOURCE_GITLAB_TOKEN="your_gitlab_token"
-export TARGET_GITHUB_TOKEN="your_github_token"
-```
-
-Note: Environment variables may be visible in process lists and logs.
-
-### Option 2: Using `pass` Utility
+### Using `pass` Utility
 
 ```bash
 # Store GitLab token in the default location (read-only recommended)
@@ -75,22 +67,32 @@ pass insert gitlab/api/ro_token
 pass insert github/api/token
 ```
 
+### Using Environment Variables
+
+```bash
+# Set environment variables
+export SOURCE_GITLAB_TOKEN="your_gitlab_token"
+export TARGET_GITHUB_TOKEN="your_github_token"
+```
+
+Note: Environment variables may be visible in process lists and logs.
+
 ## Usage
 
 ### Basic Migration
 
 ```bash
-uv run gitlab-to-github-migrator source/project target/repo
+gitlab-to-github-migrator source/project target/repo
 ```
 
 ### Advanced Migration with Label Translation
 
 ```bash
 # See help for available options
-uv run gitlab-to-github-migrator -h
+gitlab-to-github-migrator -h
 
 # Using short options
-uv run gitlab-to-github-migrator source/project target/repo \
+gitlab-to-github-migrator source/project target/repo \
   -l "p_*:priority: *" \
   -l "comp_*:component: *" \
   -l "t_*:type: *" \
@@ -98,7 +100,7 @@ uv run gitlab-to-github-migrator source/project target/repo \
   -v
 
 # Using full option names
-uv run gitlab-to-github-migrator \
+gitlab-to-github-migrator \
   --gitlab-project "source/project" \
   --github-repo "target/repo" \
   --label-translation "p_*:priority: *" \
@@ -117,9 +119,7 @@ Label translation uses glob-style patterns:
 - `"p_high:priority: high"` - Literal replacement
 - `"p_*:priority: *"` - Wildcard transformation (p_high → priority: high)
 
-#### Case-Insensitive Label Matching
-
-GitHub treats labels as case-insensitive ("Bug" and "bug" are the same label). When a translated GitLab label matches an existing GitHub label (including organization defaults), the migrator uses the existing label's name rather than creating a duplicate. For example, if GitLab has a "documentation" label and GitHub has "Documentation", the existing "Documentation" label will be used.
+GitHub treats labels as **case-insensitive** ("Bug" and "bug" are the same label). When a translated GitLab label matches an existing GitHub label (including organization defaults), the migrator uses the existing label's name rather than creating a duplicate. For example, if GitLab has a "documentation" label and GitHub has "Documentation", the existing "Documentation" label will be used.
 
 ## Migration Process
 
@@ -136,32 +136,30 @@ GitHub treats labels as case-insensitive ("Bug" and "bug" are the same label). W
 ## Example Migration Report
 
 ```text
-==================================================
-MIGRATION REPORT
-==================================================
-GitLab Project: source/project
-GitHub Repository: target/repo
-Success: True
+================================================================================
+MIGRATION VALIDATION REPORT
+================================================================================
 
-Statistics:
-  gitlab_issues_total: 378
-  gitlab_issues_open: 123
-  gitlab_issues_closed: 255
-  github_issues_total: 378
-  github_issues_open: 123
-  github_issues_closed: 255
-  gitlab_milestones_total: 17
-  gitlab_milestones_open: 5
-  gitlab_milestones_closed: 12
-  github_milestones_total: 17
-  github_milestones_open: 5
-  github_milestones_closed: 12
-  gitlab_labels_total: 31
-  github_labels_existing: 9
-  github_labels_created: 22
-  labels_translated: 31
+GitLab Project: flaks/gl2gh-migration-test-project
+GitHub Repository: flaks-test/gl2ghmigr-manual-test3
 
-Migration completed successfully!
+✓ Validation Status: PASSED
+
+MIGRATION STATISTICS:
+
+Issues:
+  GitLab:  Total=7, Open=5, Closed=2
+  GitHub:  Total=7, Open=5, Closed=2
+
+Milestones:
+  GitLab:  Total=2, Open=1, Closed=1
+  GitHub:  Total=2, Open=1, Closed=1
+
+Labels:
+  GitLab:  Total=20
+  GitHub:  Existing=9, Created=18, Translated=20
+
+================================================================================
 ```
 
 ## Development
@@ -463,7 +461,7 @@ print('GitLab access:', gl.projects.get('your-namespace/your-project').name)
 
 ```bash
 # Enable maximum verbosity
-uv run gitlab-to-github-migrator "source/project" "target/repo" --verbose
+gitlab-to-github-migrator "source/project" "target/repo" --verbose
 
 # Check migration logs
 tail -f migration.log

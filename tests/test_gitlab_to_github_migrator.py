@@ -9,6 +9,7 @@ from github import GithubException
 from gitlab.exceptions import GitlabError
 
 from gitlab_to_github_migrator import GitlabToGithubMigrator, MigrationError
+from gitlab_to_github_migrator.attachments import ProcessedContent
 from gitlab_to_github_migrator.gitlab_utils import get_work_item_children
 
 
@@ -675,7 +676,9 @@ class TestCommentMigration:
 
         # Mock attachment handler
         mock_attachment_handler = Mock()
-        mock_attachment_handler.process_content.return_value = "This is a user comment"
+        mock_attachment_handler.process_content.return_value = ProcessedContent(
+            content="This is a user comment", attachment_count=0
+        )
         migrator._attachment_handler = mock_attachment_handler
 
         # Mock issue
@@ -736,7 +739,9 @@ class TestCommentMigration:
 
         # Mock attachment handler
         mock_attachment_handler = Mock()
-        mock_attachment_handler.process_content.return_value = "Great work!"
+        mock_attachment_handler.process_content.return_value = ProcessedContent(
+            content="Great work!", attachment_count=0
+        )
         migrator._attachment_handler = mock_attachment_handler
 
         # Mock issue
@@ -860,9 +865,12 @@ class TestCommentMigration:
         mock_attachment_handler = Mock()
         # First call: 2 attachments, second call: 0 attachments
         mock_attachment_handler.process_content.side_effect = [
-            "This has [file1](/releases/download/GitLab-issue-attachments/file1.png) and "
-            "[file2](/releases/download/GitLab-issue-attachments/file2.pdf) attachments",
-            "Plain comment without attachments",
+            ProcessedContent(
+                content="This has [file1](/releases/download/tag/abcd1234_file1.png) and "
+                "[file2](/releases/download/tag/ef567890_file2.pdf) attachments",
+                attachment_count=2,
+            ),
+            ProcessedContent(content="Plain comment without attachments", attachment_count=0),
         ]
         migrator._attachment_handler = mock_attachment_handler
 
@@ -875,11 +883,11 @@ class TestCommentMigration:
         mock_gitlab_issue.notes.list.return_value = [note_with_attachments, note_without_attachments]
 
         # Execute
-        user_comment_count, attachment_count = migrator.migrate_issue_comments(mock_gitlab_issue, mock_github_issue)
+        result = migrator.migrate_issue_comments(mock_gitlab_issue, mock_github_issue)
 
         # Verify
-        assert user_comment_count == 2  # Two user comments
-        assert attachment_count == 2  # Two attachments from first comment, zero from second
+        assert result.user_comment_count == 2  # Two user comments
+        assert result.attachment_count == 2  # Two attachments from first comment, zero from second
         assert mock_attachment_handler.process_content.call_count == 2
 
 

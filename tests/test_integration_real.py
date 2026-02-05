@@ -107,11 +107,6 @@ def gitlab_tags(gitlab_project: gitlab.v4.objects.Project) -> Sequence[gitlab.v4
 
 
 @pytest.fixture(scope="module")
-def gitlab_commits(gitlab_project: gitlab.v4.objects.Project) -> Sequence[gitlab.v4.objects.ProjectCommit]:
-    return gitlab_project.commits.list(get_all=True)
-
-
-@pytest.fixture(scope="module")
 def github_token() -> str:
     """Get GitHub API token."""
     return ghu.get_token()
@@ -156,7 +151,7 @@ class TestGitHubAccess:
                 pytest.fail(f"Failed to access '{github_owner}' as organization or user: {user_err}")
 
 
-@dataclass
+@dataclass(frozen=True)
 class MigrationResult:
     """Result of a migration run, providing access to the migrator and its output."""
 
@@ -293,27 +288,40 @@ class TestFullMigration:
     def test_git_content(
         self,
         migration_result: MigrationResult,
+        gitlab_project: gitlab.v4.objects.Project,
         gitlab_branches: Sequence[gitlab.v4.objects.ProjectBranch],
         gitlab_tags: Sequence[gitlab.v4.objects.ProjectTag],
-        gitlab_commits: Sequence[gitlab.v4.objects.ProjectCommit],
     ) -> None:
         """Test that git content (branches, tags, commits) was migrated correctly."""
         github_repo = migration_result.github_repo
 
         github_branches = list(github_repo.get_branches())
         github_tags = list(github_repo.get_tags())
-        github_commits = list(github_repo.get_commits())
 
         assert len(github_branches) == len(gitlab_branches), (
             f"Branch count mismatch: {len(github_branches)} != {len(gitlab_branches)}"
         )
         assert len(github_tags) == len(gitlab_tags), f"Tag count mismatch: {len(github_tags)} != {len(gitlab_tags)}"
-        assert len(github_commits) == len(gitlab_commits), (
-            f"Commit count mismatch: {len(github_commits)} != {len(gitlab_commits)}"
+
+        # Compare commit counts per branch to avoid default-branch mismatch issues
+        gitlab_branch_names = {b.name for b in gitlab_branches}
+        github_branch_names = {b.name for b in github_branches}
+        assert gitlab_branch_names == github_branch_names, (
+            f"Branch names mismatch: {gitlab_branch_names} != {github_branch_names}"
         )
 
+        total_commits = 0
+        for branch_name in gitlab_branch_names:
+            gitlab_branch_commits = gitlab_project.commits.list(get_all=True, ref_name=branch_name)
+            github_branch_commits = list(github_repo.get_commits(sha=branch_name))
+            assert len(github_branch_commits) == len(gitlab_branch_commits), (
+                f"Commit count mismatch on branch '{branch_name}': "
+                f"{len(github_branch_commits)} != {len(gitlab_branch_commits)}"
+            )
+            total_commits += len(github_branch_commits)
+
         print(
-            f"Git content migrated ({len(github_branches)} branches, {len(github_tags)} tags, {len(github_commits)} commits)"
+            f"Git content migrated ({len(github_branches)} branches, {len(github_tags)} tags, {total_commits} commits)"
         )
 
     def test_labels(

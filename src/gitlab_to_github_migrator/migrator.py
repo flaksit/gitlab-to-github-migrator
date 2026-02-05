@@ -7,6 +7,7 @@ from __future__ import annotations
 import datetime as dt
 import logging
 import subprocess
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
 import github.Issue
@@ -30,6 +31,23 @@ if TYPE_CHECKING:
 
 # Module-wide logger
 logger: logging.Logger = logging.getLogger(__name__)
+
+
+@dataclass
+class MigratedIssue:
+    """Result of migrating a single issue."""
+
+    github_issue: github.Issue.Issue
+    blocked_issue_iids: list[int]
+    attachment_count: int
+
+
+@dataclass
+class CommentMigrationResult:
+    """Result of migrating comments for an issue."""
+
+    user_comment_count: int
+    attachment_count: int
 
 
 class GitlabToGithubMigrator:
@@ -204,26 +222,25 @@ class GitlabToGithubMigrator:
     def _create_migrated_issue(
         self,
         gitlab_issue: GitlabProjectIssue,
-    ) -> tuple[github.Issue.Issue, list[int], int]:
+    ) -> MigratedIssue:
         """Create a GitHub issue from a GitLab issue.
 
         Args:
             gitlab_issue: The GitLab issue to migrate
 
         Returns:
-            Tuple of (created GitHub issue, list of GitLab Issue IIDs that are blocked by this issue,
-            number of attachments in the issue description)
+            MigratedIssue with the created GitHub issue, blocked issue IIDs, and attachment count
         """
         # Process description with attachments
         processed_description = ""
         attachment_count = 0
         if gitlab_issue.description:
-            processed_description = self.attachment_handler.process_content(
+            processed = self.attachment_handler.process_content(
                 gitlab_issue.description,
                 context=f"issue #{gitlab_issue.iid}",
             )
-            # Count attachments in description by counting release asset links
-            attachment_count = processed_description.count("/releases/download/GitLab-issue-attachments/")
+            processed_description = processed.content
+            attachment_count = processed.attachment_count
 
         # Get cross-linked issues and collect relationships
         cross_links = get_normal_issue_cross_links(
@@ -259,7 +276,11 @@ class GitlabToGithubMigrator:
                 title=gitlab_issue.title, body=issue_body, labels=issue_labels
             )
 
-        return github_issue, cross_links.blocked_issue_iids, attachment_count
+        return MigratedIssue(
+            github_issue=github_issue,
+            blocked_issue_iids=cross_links.blocked_issue_iids,
+            attachment_count=attachment_count,
+        )
 
     def _create_placeholder_issue(self, expected_number: int) -> github.Issue.Issue:
         """Create a placeholder issue to preserve issue numbering."""
@@ -296,34 +317,36 @@ class GitlabToGithubMigrator:
             if issue_number in gitlab_issue_map:
                 gitlab_issue = gitlab_issue_map[issue_number]
 
-                github_issue, gitlab_blocked_issue_iids, attachment_count = self._create_migrated_issue(gitlab_issue)
+                migrated = self._create_migrated_issue(gitlab_issue)
                 # Verify issue number
-                if github_issue.number != issue_number:
-                    msg = f"Issue number mismatch: expected {issue_number}, got {github_issue.number}"
+                if migrated.github_issue.number != issue_number:
+                    msg = f"Issue number mismatch: expected {issue_number}, got {migrated.github_issue.number}"
                     raise NumberVerificationError(msg)
 
-                gitlab_to_github_issue_map[gitlab_issue.iid] = github_issue
+                gitlab_to_github_issue_map[gitlab_issue.iid] = migrated.github_issue
                 logger.debug(f"Added issue #{gitlab_issue.iid} to github_issue_dict")
 
                 # Migrate comments
-                user_comment_count, comment_attachment_count = self.migrate_issue_comments(gitlab_issue, github_issue)
+                comment_result = self.migrate_issue_comments(gitlab_issue, migrated.github_issue)
 
                 # Close issue if needed
                 if gitlab_issue.state == "closed":
-                    github_issue.edit(state="closed")
+                    migrated.github_issue.edit(state="closed")
 
-                if gitlab_blocked_issue_iids:
-                    gitlab_blocks_links[gitlab_issue.iid] = gitlab_blocked_issue_iids
+                if migrated.blocked_issue_iids:
+                    gitlab_blocks_links[gitlab_issue.iid] = migrated.blocked_issue_iids
 
                 logger.debug(f"Created issue #{issue_number}: {gitlab_issue.title}")
 
                 # Print per-issue output
                 details: list[str] = []
-                total_attachment_count = attachment_count + comment_attachment_count
+                total_attachment_count = migrated.attachment_count + comment_result.attachment_count
                 if total_attachment_count > 0:
                     details.append(f"{total_attachment_count} attachment{'s' if total_attachment_count != 1 else ''}")
-                if user_comment_count > 0:
-                    details.append(f"{user_comment_count} user comment{'s' if user_comment_count != 1 else ''}")
+                if comment_result.user_comment_count > 0:
+                    details.append(
+                        f"{comment_result.user_comment_count} user comment{'s' if comment_result.user_comment_count != 1 else ''}"
+                    )
 
                 if details:
                     print(f"  Issue #{issue_number} migrated with {', '.join(details)}")
@@ -412,7 +435,7 @@ class GitlabToGithubMigrator:
 
     def migrate_issue_comments(
         self, gitlab_issue: GitlabProjectIssue, github_issue: github.Issue.Issue
-    ) -> tuple[int, int]:
+    ) -> CommentMigrationResult:
         """Migrate comments for an issue.
 
         Args:
@@ -420,7 +443,7 @@ class GitlabToGithubMigrator:
             github_issue: The GitHub issue to add comments to
 
         Returns:
-            Tuple of (number of user comments migrated, total attachment count from all comments)
+            CommentMigrationResult with user comment count and total attachment count
         """
         notes = gitlab_issue.notes.list(get_all=True)
         notes.sort(key=lambda n: n.created_at)
@@ -467,13 +490,12 @@ class GitlabToGithubMigrator:
                 comment_body = header + "\n\n"
 
                 if note.body:
-                    updated_body = self.attachment_handler.process_content(
+                    processed = self.attachment_handler.process_content(
                         note.body,
                         context=f"issue #{gitlab_issue.iid} note {note.id}",
                     )
-                    # Count attachments in this comment
-                    comment_attachment_count += updated_body.count("/releases/download/GitLab-issue-attachments/")
-                    comment_body += updated_body
+                    comment_attachment_count += processed.attachment_count
+                    comment_body += processed.content
 
                 github_issue.create_comment(comment_body)
                 logger.debug(f"Migrated comment by {note.author['username']}")
@@ -483,7 +505,7 @@ class GitlabToGithubMigrator:
         # Track total comments migrated across all issues
         self.total_comments_migrated += user_comment_count
 
-        return user_comment_count, comment_attachment_count
+        return CommentMigrationResult(user_comment_count=user_comment_count, attachment_count=comment_attachment_count)
 
     def validate_migration(self) -> dict[str, Any]:
         """Validate migration results and generate report."""
