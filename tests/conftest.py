@@ -9,6 +9,7 @@ This module configures pytest behavior for different test types:
 from __future__ import annotations
 
 import logging
+import os
 from typing import TYPE_CHECKING, override
 
 import pytest
@@ -18,6 +19,64 @@ if TYPE_CHECKING:
 
 # Store warning records during test execution
 _integration_test_warnings: dict[str, list[logging.LogRecord]] = {}
+
+
+@pytest.fixture(scope="module", autouse=True)
+def check_integration_test_env_vars(request: pytest.FixtureRequest) -> None:
+    """
+    Validate that required environment variables are set before running integration tests.
+
+    This fixture runs once per test module and checks if any integration tests will be run.
+    If integration tests are present but required environment variables are missing,
+    it raises a clear error message indicating which variables need to be set.
+
+    Required environment variables:
+    - SOURCE_GITLAB_TEST_PROJECT: GitLab project path (e.g., "namespace/project")
+    - TARGET_GITHUB_TEST_OWNER: GitHub org/user for test repos
+
+    Optional environment variables (can also use `pass` utility):
+    - SOURCE_GITLAB_TOKEN: GitLab API token
+    - TARGET_GITHUB_TOKEN: GitHub API token
+    """
+    # Check if any tests in this module have the integration marker
+    has_integration_tests = False
+    for item in request.session.items:
+        if item.get_closest_marker("integration") is not None:
+            has_integration_tests = True
+            break
+
+    if not has_integration_tests:
+        # No integration tests in this session, skip the check
+        return
+
+    # Check for required environment variables
+    missing_vars = []
+
+    if not os.environ.get("SOURCE_GITLAB_TEST_PROJECT"):
+        missing_vars.append("SOURCE_GITLAB_TEST_PROJECT")
+
+    if not os.environ.get("TARGET_GITHUB_TEST_OWNER"):
+        missing_vars.append("TARGET_GITHUB_TEST_OWNER")
+
+    if missing_vars:
+        error_msg = (
+            f"Integration tests require environment variables to be set.\n"
+            f"Missing: {', '.join(missing_vars)}\n\n"
+            f"Please set them before running integration tests:\n"
+        )
+
+        if "SOURCE_GITLAB_TEST_PROJECT" in missing_vars:
+            error_msg += "  export SOURCE_GITLAB_TEST_PROJECT='your-namespace/your-project'\n"
+
+        if "TARGET_GITHUB_TEST_OWNER" in missing_vars:
+            error_msg += "  export TARGET_GITHUB_TEST_OWNER='your-org-or-username'\n"
+
+        error_msg += (
+            "\nNote: API tokens (SOURCE_GITLAB_TOKEN, TARGET_GITHUB_TOKEN) can be provided\n"
+            "via environment variables or the 'pass' utility and will be validated when needed."
+        )
+
+        pytest.skip(error_msg)
 
 
 class IntegrationTestWarningHandler(logging.Handler):
