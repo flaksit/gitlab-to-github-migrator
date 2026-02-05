@@ -544,10 +544,10 @@ class GitlabToGithubMigrator:
                     "github_labels_created": max(0, labels_created),
                     "labels_translated": len(self.label_mapping),
                     "comments_migrated": self.total_comments_migrated,
-                    "attachments_uploaded": self.attachment_handler.uploaded_files_count
+                    "attachments_uploaded": self._attachment_handler.uploaded_files_count
                     if self._attachment_handler
                     else 0,
-                    "attachments_referenced": self.attachment_handler.total_attachments_referenced
+                    "attachments_referenced": self._attachment_handler.total_attachments_referenced
                     if self._attachment_handler
                     else 0,
                 }
