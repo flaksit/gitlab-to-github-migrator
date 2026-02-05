@@ -150,6 +150,10 @@ class GitlabToGithubMigrator:
         gitlab_default_branch: str = str(self.gitlab_project.default_branch)  # pyright: ignore[reportUnknownArgumentType]
         logger.debug(f"GitLab default branch: {gitlab_default_branch}")
 
+        # Refresh the repository object to ensure we have the latest state after git push
+        self._github_repo = self.github_client.get_repo(self.github_repo.full_name)
+        logger.debug(f"Refreshed repository object, current default branch: {self.github_repo.default_branch}")
+
         print(f"Setting default branch to '{gitlab_default_branch}'...")
         ghu.set_default_branch(self.github_repo, gitlab_default_branch)
 
