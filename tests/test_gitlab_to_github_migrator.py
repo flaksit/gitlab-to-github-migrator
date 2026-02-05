@@ -237,6 +237,9 @@ class TestGitlabToGithubMigrator:
         self.mock_gitlab_project.issues.list.return_value = [Mock(), Mock()]  # 2 issues
         self.mock_gitlab_project.milestones.list.return_value = [Mock()]  # 1 milestone
         self.mock_gitlab_project.labels.list.return_value = [Mock(), Mock()]  # 2 labels
+        self.mock_gitlab_project.branches.list.return_value = [Mock(), Mock()]  # 2 branches
+        self.mock_gitlab_project.tags.list.return_value = [Mock()]  # 1 tag
+        self.mock_gitlab_project.commits.list.return_value = [Mock() for _ in range(5)]  # 5 commits
 
         # Mock GitHub items (no placeholders)
         github_issues = [Mock(), Mock()]
@@ -252,6 +255,11 @@ class TestGitlabToGithubMigrator:
         # Mock GitHub labels
         self.mock_github_repo.get_labels.return_value = []
 
+        # Mock GitHub git repository items
+        self.mock_github_repo.get_branches.return_value = [Mock(), Mock()]  # 2 branches
+        self.mock_github_repo.get_tags.return_value = [Mock()]  # 1 tag
+        self.mock_github_repo.get_commits.return_value = [Mock() for _ in range(5)]  # 5 commits
+
         report = migrator.validate_migration()
 
         assert report["success"] is True
@@ -261,6 +269,12 @@ class TestGitlabToGithubMigrator:
         assert report["statistics"]["gitlab_milestones_total"] == 1
         assert report["statistics"]["github_milestones_total"] == 1
         assert report["statistics"]["labels_translated"] == 2
+        assert report["statistics"]["gitlab_branches"] == 2
+        assert report["statistics"]["gitlab_tags"] == 1
+        assert report["statistics"]["gitlab_commits"] == 5
+        assert report["statistics"]["github_branches"] == 2
+        assert report["statistics"]["github_tags"] == 1
+        assert report["statistics"]["github_commits"] == 5
         assert report["statistics"]["comments_migrated"] == 0
         assert report["statistics"]["attachments_uploaded"] == 0
         assert report["statistics"]["attachments_referenced"] == 0
@@ -284,6 +298,9 @@ class TestGitlabToGithubMigrator:
         self.mock_gitlab_project.issues.list.return_value = [Mock(), Mock()]  # 2 issues
         self.mock_gitlab_project.milestones.list.return_value = [Mock()]  # 1 milestone
         self.mock_gitlab_project.labels.list.return_value = []  # No labels
+        self.mock_gitlab_project.branches.list.return_value = [Mock(), Mock()]  # 2 branches
+        self.mock_gitlab_project.tags.list.return_value = [Mock()]  # 1 tag
+        self.mock_gitlab_project.commits.list.return_value = [Mock() for _ in range(5)]  # 5 commits
 
         # Mock GitHub with different counts
         github_issues = [Mock()]  # Only 1 issue
@@ -299,12 +316,20 @@ class TestGitlabToGithubMigrator:
         # Mock GitHub labels
         self.mock_github_repo.get_labels.return_value = []
 
+        # Mock GitHub git repository items with mismatched counts
+        self.mock_github_repo.get_branches.return_value = [Mock()]  # Only 1 branch (mismatch)
+        self.mock_github_repo.get_tags.return_value = [Mock(), Mock()]  # 2 tags (mismatch)
+        self.mock_github_repo.get_commits.return_value = [Mock() for _ in range(3)]  # 3 commits (mismatch)
+
         report = migrator.validate_migration()
 
         assert report["success"] is False
-        assert len(report["errors"]) == 2  # Issue and milestone count mismatches
+        assert len(report["errors"]) == 5  # Issue, milestone, branch, tag, and commit count mismatches
         assert "Issue count mismatch" in report["errors"][0]
         assert "Milestone count mismatch" in report["errors"][1]
+        assert "Branch count mismatch" in report["errors"][2]
+        assert "Tag count mismatch" in report["errors"][3]
+        assert "Commit count mismatch" in report["errors"][4]
 
     @patch("gitlab_to_github_migrator.gitlab_utils.Gitlab")
     @patch("gitlab_to_github_migrator.github_utils.Github")
@@ -327,12 +352,18 @@ class TestGitlabToGithubMigrator:
         self.mock_gitlab_project.issues.list.return_value = [Mock()]  # 1 issue
         self.mock_gitlab_project.milestones.list.return_value = []
         self.mock_gitlab_project.labels.list.return_value = []
+        self.mock_gitlab_project.branches.list.return_value = [Mock()]  # 1 branch
+        self.mock_gitlab_project.tags.list.return_value = []
+        self.mock_gitlab_project.commits.list.return_value = [Mock()]  # 1 commit
 
         # Mock GitHub items
         github_issues = [Mock()]
         self.mock_github_repo.get_issues.return_value = github_issues
         self.mock_github_repo.get_milestones.return_value = []
         self.mock_github_repo.get_labels.return_value = []
+        self.mock_github_repo.get_branches.return_value = [Mock()]  # 1 branch
+        self.mock_github_repo.get_tags.return_value = []
+        self.mock_github_repo.get_commits.return_value = [Mock()]  # 1 commit
 
         # Set up comment and attachment tracking
         migrator.total_comments_migrated = 5

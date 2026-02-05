@@ -119,6 +119,20 @@ def _print_validation_report(report: dict[str, Any]) -> None:
     )
     print()
 
+    # Git Repository section
+    print("Git Repository:")
+    print(
+        f"  GitLab:  Branches={stats.get('gitlab_branches', 0)}, "
+        f"Tags={stats.get('gitlab_tags', 0)}, "
+        f"Commits={stats.get('gitlab_commits', 0)}"
+    )
+    print(
+        f"  GitHub:  Branches={stats.get('github_branches', 0)}, "
+        f"Tags={stats.get('github_tags', 0)}, "
+        f"Commits={stats.get('github_commits', 0)}"
+    )
+    print()
+
     # Comments section
     print("Comments:")
     print(f"  Migrated: {stats.get('comments_migrated', 0)}")
