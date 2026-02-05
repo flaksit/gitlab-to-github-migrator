@@ -6,8 +6,7 @@ from __future__ import annotations
 
 import logging
 import re
-from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, NamedTuple
 
 from github import GithubException
 from gitlab.exceptions import GitlabError
@@ -50,8 +49,7 @@ class LabelTranslator:
         return label_name
 
 
-@dataclass
-class LabelMigrationResult:
+class LabelMigrationResult(NamedTuple):
     """Result of label migration."""
 
     label_mapping: dict[str, str]

@@ -280,7 +280,7 @@ def get_work_item_children(
     return children
 
 
-@dataclass
+@dataclass(frozen=True)
 class IssueCrossLinks:
     """Cross-linked issues separated by relationship type."""
 
