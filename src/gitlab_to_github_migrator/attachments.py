@@ -32,6 +32,23 @@ class DownloadedFile:
     full_gitlab_url: str
 
 
+@dataclass
+class ProcessedContent:
+    """Result of processing content with attachments."""
+
+    content: str
+    attachment_count: int
+
+
+@dataclass
+class DownloadResult:
+    """Result of downloading files from GitLab."""
+
+    files: list[DownloadedFile]
+    updated_content: str
+    attachment_count: int
+
+
 class AttachmentHandler:
     """Downloads attachments from GitLab and uploads to GitHub releases."""
 
@@ -78,7 +95,7 @@ class AttachmentHandler:
 
         return self._release
 
-    def process_content(self, content: str, context: str = "") -> tuple[str, int]:
+    def process_content(self, content: str, context: str = "") -> ProcessedContent:
         """Download GitLab attachments and upload to GitHub, returning updated content.
 
         Args:
@@ -86,17 +103,17 @@ class AttachmentHandler:
             context: Context for log messages (e.g., "issue #5")
 
         Returns:
-            Tuple of (content with GitLab URLs replaced by GitHub URLs, number of attachments processed)
+            ProcessedContent with updated content and attachment count
         """
-        files, updated_content, total_attachment_count = self._download_files(content)
-        final_content = self._upload_files(files, updated_content, context)
-        return final_content, total_attachment_count
+        download_result = self._download_files(content)
+        final_content = self._upload_files(download_result.files, download_result.updated_content, context)
+        return ProcessedContent(content=final_content, attachment_count=download_result.attachment_count)
 
-    def _download_files(self, content: str) -> tuple[list[DownloadedFile], str, int]:
+    def _download_files(self, content: str) -> DownloadResult:
         """Find attachment URLs, download files, replace cached URLs.
 
         Returns:
-            Tuple of (list of files to upload, updated content, total attachment count)
+            DownloadResult with files to upload, updated content, and attachment count
         """
         attachment_pattern = r"/uploads/([a-f0-9]{32})/([^)\s]+)"
         attachments = re.findall(attachment_pattern, content)
@@ -140,7 +157,9 @@ class AttachmentHandler:
             except Exception as e:
                 logger.warning(f"Failed to download attachment {short_url}: {e}")
 
-        return downloaded_files, updated_content, len(attachments)
+        return DownloadResult(
+            files=downloaded_files, updated_content=updated_content, attachment_count=len(attachments)
+        )
 
     def _upload_files(self, files: list[DownloadedFile], content: str, context: str) -> str:
         """Upload files to GitHub release, update content with new URLs."""
