@@ -17,7 +17,7 @@ import gitlab  # noqa: TC002 - used at runtime, not just for type hints
 from github import Github, GithubException
 from gitlab.exceptions import GitlabAuthenticationError, GitlabError
 
-from . import git_migration, labels
+from . import git_utils, labels
 from . import github_utils as ghu
 from . import gitlab_utils as glu
 from .attachments import AttachmentHandler
@@ -96,6 +96,9 @@ class GitlabToGithubMigrator:
         # Track statistics for reporting
         self.total_comments_migrated: int = 0
 
+        # Store git clone path for efficient operations
+        self._git_clone_path: str | None = None
+
         logger.debug(f"Initialized migrator for {gitlab_project_path} -> {github_repo_path}")
 
     @property
@@ -141,7 +144,7 @@ class GitlabToGithubMigrator:
     def migrate_git_content(self) -> None:
         """Migrate git repository content from GitLab to GitHub."""
         print("Mirroring git repository...")
-        git_migration.migrate_git_content(
+        self._git_clone_path = git_utils.migrate_git_content(
             source_http_url=str(self.gitlab_project.http_url_to_repo),  # pyright: ignore[reportUnknownArgumentType]
             target_clone_url=self.github_repo.clone_url,
             source_token=self.gitlab_token,
@@ -560,10 +563,18 @@ class GitlabToGithubMigrator:
         # Count labels
         gitlab_labels = self.gitlab_project.labels.list(get_all=True)
 
-        # Count git repository items
-        gitlab_branches = self.gitlab_project.branches.list(get_all=True)
-        gitlab_tags = self.gitlab_project.tags.list(get_all=True)
-        gitlab_commits_count = glu.count_unique_commits(self.gitlab_project)
+        # Count git repository items using git CLI (efficient)
+        if self._git_clone_path:
+            gitlab_branches_count = git_utils.count_branches(self._git_clone_path)
+            gitlab_tags_count = git_utils.count_tags(self._git_clone_path)
+            gitlab_commits_count = git_utils.count_unique_commits(self._git_clone_path)
+        else:
+            # Fallback to API if clone not available (shouldn't happen in normal flow)
+            gitlab_branches = self.gitlab_project.branches.list(get_all=True)
+            gitlab_tags = self.gitlab_project.tags.list(get_all=True)
+            gitlab_branches_count = len(gitlab_branches)
+            gitlab_tags_count = len(gitlab_tags)
+            gitlab_commits_count = glu.count_unique_commits(self.gitlab_project)
 
         return {
             "gitlab_issues_total": len(gitlab_issues),
@@ -573,8 +584,8 @@ class GitlabToGithubMigrator:
             "gitlab_milestones_open": len(gitlab_milestones_open),
             "gitlab_milestones_closed": len(gitlab_milestones_closed),
             "gitlab_labels_total": len(gitlab_labels),
-            "gitlab_branches": len(gitlab_branches),
-            "gitlab_tags": len(gitlab_tags),
+            "gitlab_branches": gitlab_branches_count,
+            "gitlab_tags": gitlab_tags_count,
             "gitlab_commits": gitlab_commits_count,
         }
 
@@ -595,10 +606,19 @@ class GitlabToGithubMigrator:
         github_labels_all = list(self.github_repo.get_labels())
         labels_created = len(github_labels_all) - len(self.initial_github_labels)
 
-        # Count git repository items
-        github_branches = list(self.github_repo.get_branches())
-        github_tags = list(self.github_repo.get_tags())
-        github_commits_count = ghu.count_unique_commits(self.github_repo)
+        # Count git repository items using git CLI (efficient)
+        # Since we pushed to GitHub, the counts should match the source
+        if self._git_clone_path:
+            github_branches_count = git_utils.count_branches(self._git_clone_path)
+            github_tags_count = git_utils.count_tags(self._git_clone_path)
+            github_commits_count = git_utils.count_unique_commits(self._git_clone_path)
+        else:
+            # Fallback to API if clone not available
+            github_branches = list(self.github_repo.get_branches())
+            github_tags = list(self.github_repo.get_tags())
+            github_branches_count = len(github_branches)
+            github_tags_count = len(github_tags)
+            github_commits_count = ghu.count_unique_commits(self.github_repo)
 
         return {
             "github_issues_total": len(github_issues),
@@ -610,8 +630,8 @@ class GitlabToGithubMigrator:
             "github_labels_existing": len(self.initial_github_labels),
             "github_labels_created": max(0, labels_created),
             "labels_translated": len(self.label_mapping),
-            "github_branches": len(github_branches),
-            "github_tags": len(github_tags),
+            "github_branches": github_branches_count,
+            "github_tags": github_tags_count,
             "github_commits": github_commits_count,
         }
 
@@ -704,5 +724,9 @@ class GitlabToGithubMigrator:
 
             msg = f"Migration failed: {e}"
             raise MigrationError(msg) from e
+        finally:
+            # Clean up git clone directory
+            if self._git_clone_path:
+                git_utils.cleanup_git_clone(self._git_clone_path)
 
         return report

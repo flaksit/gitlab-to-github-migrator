@@ -293,9 +293,6 @@ class TestFullMigration:
         gitlab_tags: Sequence[gitlab.v4.objects.ProjectTag],
     ) -> None:
         """Test that git content (branches, tags, commits) was migrated correctly."""
-        from gitlab_to_github_migrator import github_utils as ghu
-        from gitlab_to_github_migrator import gitlab_utils as glu
-
         github_repo = migration_result.github_repo
 
         github_branches = list(github_repo.get_branches())
@@ -313,7 +310,12 @@ class TestFullMigration:
             f"Branch names mismatch: {gitlab_branch_names} != {github_branch_names}"
         )
 
-        # Use utility functions to count unique commits
+        # Use git CLI to count unique commits efficiently
+        # Note: In integration tests, we don't have direct access to the git clone,
+        # so we'll use API counts for verification
+        from gitlab_to_github_migrator import github_utils as ghu
+        from gitlab_to_github_migrator import gitlab_utils as glu
+
         gitlab_commits_count = glu.count_unique_commits(gitlab_project)
         github_commits_count = ghu.count_unique_commits(github_repo)
 
