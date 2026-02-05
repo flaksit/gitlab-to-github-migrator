@@ -5,9 +5,34 @@ Tests for GitHub utilities module.
 from unittest.mock import Mock, patch
 
 import pytest
+from github import GithubException
 
 from gitlab_to_github_migrator import MigrationError
-from gitlab_to_github_migrator.github_utils import create_repo
+from gitlab_to_github_migrator.github_utils import create_repo, set_default_branch
+
+
+@pytest.mark.unit
+class TestSetDefaultBranch:
+    """Test default branch setting functionality."""
+
+    def test_set_default_branch_success(self) -> None:
+        """Test that set_default_branch successfully sets the branch."""
+        mock_repo = Mock()
+        mock_repo.full_name = "owner/repo"
+        mock_repo.edit = Mock()
+
+        set_default_branch(mock_repo, "develop")
+
+        mock_repo.edit.assert_called_once_with(default_branch="develop")
+
+    def test_set_default_branch_github_error(self) -> None:
+        """Test that set_default_branch raises MigrationError on GitHub API error."""
+        mock_repo = Mock()
+        mock_repo.full_name = "owner/repo"
+        mock_repo.edit = Mock(side_effect=GithubException(404, "Branch not found", None))
+
+        with pytest.raises(MigrationError, match=r"Failed to set default branch to 'nonexistent'"):
+            set_default_branch(mock_repo, "nonexistent")
 
 
 @pytest.mark.unit
