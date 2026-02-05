@@ -75,6 +75,9 @@ class GitlabToGithubMigrator:
         # Track initial repository state for reporting (lowercase name -> actual name)
         self.initial_github_labels: dict[str, str] = {}
 
+        # Track statistics for reporting
+        self.total_comments_migrated: int = 0
+
         logger.debug(f"Initialized migrator for {gitlab_project_path} -> {github_repo_path}")
 
     @property
@@ -477,6 +480,9 @@ class GitlabToGithubMigrator:
                 user_comment_count += 1
                 note_index += 1
 
+        # Track total comments migrated across all issues
+        self.total_comments_migrated += user_comment_count
+
         return user_comment_count, comment_attachment_count
 
     def validate_migration(self) -> dict[str, Any]:
@@ -537,6 +543,13 @@ class GitlabToGithubMigrator:
                     "github_labels_existing": len(self.initial_github_labels),
                     "github_labels_created": max(0, labels_created),
                     "labels_translated": len(self.label_mapping),
+                    "comments_migrated": self.total_comments_migrated,
+                    "attachments_uploaded": self.attachment_handler.uploaded_files_count
+                    if self._attachment_handler
+                    else 0,
+                    "attachments_referenced": self.attachment_handler.total_attachments_referenced
+                    if self._attachment_handler
+                    else 0,
                 }
             )
 

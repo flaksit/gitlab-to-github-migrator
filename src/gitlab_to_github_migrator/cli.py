@@ -119,6 +119,17 @@ def _print_validation_report(report: dict[str, Any]) -> None:
     )
     print()
 
+    # Comments section
+    print("Comments:")
+    print(f"  Migrated: {stats.get('comments_migrated', 0)}")
+    print()
+
+    # Attachments section
+    print("Attachments:")
+    print(f"  Uploaded files: {stats.get('attachments_uploaded', 0)}")
+    print(f"  Total references: {stats.get('attachments_referenced', 0)}")
+    print()
+
     print("=" * 80)
 
 

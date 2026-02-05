@@ -40,6 +40,8 @@ class AttachmentHandler:
     _github_repo: github.Repository.Repository
     _uploaded_cache: dict[str, str]
     _release: github.GitRelease.GitRelease | None
+    _uploaded_files_count: int
+    _total_attachments_referenced: int
 
     def __init__(
         self,
@@ -52,6 +54,8 @@ class AttachmentHandler:
         self._github_repo = github_repo
         self._uploaded_cache = {}
         self._release = None
+        self._uploaded_files_count = 0
+        self._total_attachments_referenced = 0
 
     @property
     def attachments_release(self) -> github.GitRelease.GitRelease:
@@ -78,6 +82,16 @@ class AttachmentHandler:
 
         return self._release
 
+    @property
+    def uploaded_files_count(self) -> int:
+        """Get the count of unique files uploaded to GitHub."""
+        return self._uploaded_files_count
+
+    @property
+    def total_attachments_referenced(self) -> int:
+        """Get the total count of attachment references in content (including duplicates)."""
+        return self._total_attachments_referenced
+
     def process_content(self, content: str, context: str = "") -> str:
         """Download GitLab attachments and upload to GitHub, returning updated content.
 
@@ -95,6 +109,9 @@ class AttachmentHandler:
         """Find attachment URLs, download files, replace cached URLs."""
         attachment_pattern = r"/uploads/([a-f0-9]{32})/([^)\s]+)"
         attachments = re.findall(attachment_pattern, content)
+
+        # Count total attachments referenced (including duplicates)
+        self._total_attachments_referenced += len(attachments)
 
         downloaded_files: list[DownloadedFile] = []
         updated_content = content
@@ -174,6 +191,7 @@ class AttachmentHandler:
                 download_url = asset.browser_download_url
 
                 self._uploaded_cache[file_info.short_gitlab_url] = download_url
+                self._uploaded_files_count += 1
                 updated_content = updated_content.replace(file_info.short_gitlab_url, download_url)
                 logger.debug(f"Uploaded {file_info.filename}: {download_url}")
 
