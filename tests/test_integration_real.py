@@ -293,6 +293,9 @@ class TestFullMigration:
         gitlab_tags: Sequence[gitlab.v4.objects.ProjectTag],
     ) -> None:
         """Test that git content (branches, tags, commits) was migrated correctly."""
+        from gitlab_to_github_migrator import github_utils as ghu
+        from gitlab_to_github_migrator import gitlab_utils as glu
+
         github_repo = migration_result.github_repo
 
         github_branches = list(github_repo.get_branches())
@@ -310,18 +313,17 @@ class TestFullMigration:
             f"Branch names mismatch: {gitlab_branch_names} != {github_branch_names}"
         )
 
-        total_commits = 0
-        for branch_name in gitlab_branch_names:
-            gitlab_branch_commits = gitlab_project.commits.list(get_all=True, ref_name=branch_name)
-            github_branch_commits = list(github_repo.get_commits(sha=branch_name))
-            assert len(github_branch_commits) == len(gitlab_branch_commits), (
-                f"Commit count mismatch on branch '{branch_name}': "
-                f"{len(github_branch_commits)} != {len(gitlab_branch_commits)}"
-            )
-            total_commits += len(github_branch_commits)
+        # Use utility functions to count unique commits
+        gitlab_commits_count = glu.count_unique_commits(gitlab_project)
+        github_commits_count = ghu.count_unique_commits(github_repo)
+
+        assert github_commits_count == gitlab_commits_count, (
+            f"Total commit count mismatch: {github_commits_count} != {gitlab_commits_count}"
+        )
 
         print(
-            f"Git content migrated ({len(github_branches)} branches, {len(github_tags)} tags, {total_commits} commits)"
+            f"Git content migrated ({len(github_branches)} branches, {len(github_tags)} tags, "
+            f"{github_commits_count} commits)"
         )
 
     def test_labels(

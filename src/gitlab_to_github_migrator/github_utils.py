@@ -286,3 +286,21 @@ def create_repo(client: Github, repo_path: str, description: str | None) -> Repo
                 has_issues=True,
             )
         raise
+
+
+def count_unique_commits(repo: Repository) -> int:
+    """Count unique commits across all branches in a GitHub repository.
+
+    Args:
+        repo: GitHub repository object
+
+    Returns:
+        Number of unique commits across all branches
+    """
+    branches = list(repo.get_branches())
+    commit_shas = set()
+    for branch in branches:
+        branch_commits = list(repo.get_commits(sha=branch.name))
+        for commit in branch_commits:
+            commit_shas.add(commit.sha)
+    return len(commit_shas)

@@ -507,7 +507,7 @@ class GitlabToGithubMigrator:
 
         return CommentMigrationResult(user_comment_count=user_comment_count, attachment_count=comment_attachment_count)
 
-    def validate_migration(self) -> dict[str, Any]:  # noqa: PLR0915
+    def validate_migration(self) -> dict[str, Any]:
         """Validate migration results and generate report."""
         errors: list[str] = []
         statistics: dict[str, int] = {}
@@ -520,115 +520,8 @@ class GitlabToGithubMigrator:
         }
 
         try:
-            # Count GitLab items with state breakdown
-            gitlab_issues = self.gitlab_project.issues.list(get_all=True, state="all")
-            gitlab_issues_open = [i for i in gitlab_issues if i.state == "opened"]
-            gitlab_issues_closed = [i for i in gitlab_issues if i.state == "closed"]
-
-            gitlab_milestones = self.gitlab_project.milestones.list(get_all=True, state="all")
-            gitlab_milestones_open = [m for m in gitlab_milestones if m.state == "active"]
-            gitlab_milestones_closed = [m for m in gitlab_milestones if m.state == "closed"]
-
-            gitlab_labels = self.gitlab_project.labels.list(get_all=True)
-
-            # Count git repository items
-            gitlab_branches = self.gitlab_project.branches.list(get_all=True)
-            gitlab_tags = self.gitlab_project.tags.list(get_all=True)
-
-            # Count unique commits across all branches
-            gitlab_commit_shas = set()
-            for branch in gitlab_branches:
-                branch_commits = self.gitlab_project.commits.list(get_all=True, ref_name=branch.name)
-                for commit in branch_commits:
-                    gitlab_commit_shas.add(commit.id)
-            gitlab_commits_count = len(gitlab_commit_shas)
-
-            # Count GitHub items with state breakdown
-            github_issues = list(self.github_repo.get_issues(state="all"))
-            github_issues_open = [i for i in github_issues if i.state == "open"]
-            github_issues_closed = [i for i in github_issues if i.state == "closed"]
-
-            github_milestones_all = list(self.github_repo.get_milestones(state="all"))
-            github_milestones = [m for m in github_milestones_all if m.title != "Placeholder Milestone"]
-            github_milestones_open = [m for m in github_milestones if m.state == "open"]
-            github_milestones_closed = [m for m in github_milestones if m.state == "closed"]
-
-            # Count label statistics
-            github_labels_all = list(self.github_repo.get_labels())
-
-            # Count git repository items
-            github_branches = list(self.github_repo.get_branches())
-            github_tags = list(self.github_repo.get_tags())
-
-            # Count unique commits across all branches
-            github_commit_shas = set()
-            for branch in github_branches:
-                branch_commits = list(self.github_repo.get_commits(sha=branch.name))
-                for commit in branch_commits:
-                    github_commit_shas.add(commit.sha)
-            github_commits_count = len(github_commit_shas)
-
-            # Use the initial label count we captured at repository creation
-            labels_created = len(github_labels_all) - len(self.initial_github_labels)
-
-            statistics.update(
-                {
-                    "gitlab_issues_total": len(gitlab_issues),
-                    "gitlab_issues_open": len(gitlab_issues_open),
-                    "gitlab_issues_closed": len(gitlab_issues_closed),
-                    "github_issues_total": len(github_issues),
-                    "github_issues_open": len(github_issues_open),
-                    "github_issues_closed": len(github_issues_closed),
-                    "gitlab_milestones_total": len(gitlab_milestones),
-                    "gitlab_milestones_open": len(gitlab_milestones_open),
-                    "gitlab_milestones_closed": len(gitlab_milestones_closed),
-                    "github_milestones_total": len(github_milestones),
-                    "github_milestones_open": len(github_milestones_open),
-                    "github_milestones_closed": len(github_milestones_closed),
-                    "gitlab_labels_total": len(gitlab_labels),
-                    "github_labels_existing": len(self.initial_github_labels),
-                    "github_labels_created": max(0, labels_created),
-                    "labels_translated": len(self.label_mapping),
-                    "gitlab_branches": len(gitlab_branches),
-                    "gitlab_tags": len(gitlab_tags),
-                    "gitlab_commits": gitlab_commits_count,
-                    "github_branches": len(github_branches),
-                    "github_tags": len(github_tags),
-                    "github_commits": github_commits_count,
-                    "comments_migrated": self.total_comments_migrated,
-                    "attachments_uploaded": self._attachment_handler.uploaded_files_count
-                    if self._attachment_handler
-                    else 0,
-                    "attachments_referenced": self._attachment_handler.total_attachments_referenced
-                    if self._attachment_handler
-                    else 0,
-                }
-            )
-
-            # Validate counts
-            if len(gitlab_issues) != len(github_issues):
-                errors.append(f"Issue count mismatch: GitLab {len(gitlab_issues)}, GitHub {len(github_issues)}")
-                report["success"] = False
-
-            if len(gitlab_milestones) != len(github_milestones):
-                errors.append(
-                    f"Milestone count mismatch: GitLab {len(gitlab_milestones)}, GitHub {len(github_milestones)}"
-                )
-                report["success"] = False
-
-            # Validate git repository counts
-            if len(gitlab_branches) != len(github_branches):
-                errors.append(f"Branch count mismatch: GitLab {len(gitlab_branches)}, GitHub {len(github_branches)}")
-                report["success"] = False
-
-            if len(gitlab_tags) != len(github_tags):
-                errors.append(f"Tag count mismatch: GitLab {len(gitlab_tags)}, GitHub {len(github_tags)}")
-                report["success"] = False
-
-            if gitlab_commits_count != github_commits_count:
-                errors.append(f"Commit count mismatch: GitLab {gitlab_commits_count}, GitHub {github_commits_count}")
-                report["success"] = False
-
+            statistics.update(self._collect_statistics())
+            self._validate_counts(statistics, errors, report)
             logger.debug("Migration validation completed")
 
         except (GitlabError, GithubException) as e:
@@ -637,6 +530,138 @@ class GitlabToGithubMigrator:
             logger.exception("Validation failed")
 
         return report
+
+    def _collect_statistics(self) -> dict[str, int]:
+        """Collect all migration statistics from GitLab and GitHub."""
+        # Collect GitLab statistics
+        gitlab_stats = self._collect_gitlab_statistics()
+
+        # Collect GitHub statistics
+        github_stats = self._collect_github_statistics()
+
+        # Collect migration-specific statistics
+        migration_stats = self._collect_migration_statistics()
+
+        # Combine all statistics
+        return {**gitlab_stats, **github_stats, **migration_stats}
+
+    def _collect_gitlab_statistics(self) -> dict[str, int]:
+        """Collect statistics from GitLab."""
+        # Count issues with state breakdown
+        gitlab_issues = self.gitlab_project.issues.list(get_all=True, state="all")
+        gitlab_issues_open = [i for i in gitlab_issues if i.state == "opened"]
+        gitlab_issues_closed = [i for i in gitlab_issues if i.state == "closed"]
+
+        # Count milestones with state breakdown
+        gitlab_milestones = self.gitlab_project.milestones.list(get_all=True, state="all")
+        gitlab_milestones_open = [m for m in gitlab_milestones if m.state == "active"]
+        gitlab_milestones_closed = [m for m in gitlab_milestones if m.state == "closed"]
+
+        # Count labels
+        gitlab_labels = self.gitlab_project.labels.list(get_all=True)
+
+        # Count git repository items
+        gitlab_branches = self.gitlab_project.branches.list(get_all=True)
+        gitlab_tags = self.gitlab_project.tags.list(get_all=True)
+        gitlab_commits_count = glu.count_unique_commits(self.gitlab_project)
+
+        return {
+            "gitlab_issues_total": len(gitlab_issues),
+            "gitlab_issues_open": len(gitlab_issues_open),
+            "gitlab_issues_closed": len(gitlab_issues_closed),
+            "gitlab_milestones_total": len(gitlab_milestones),
+            "gitlab_milestones_open": len(gitlab_milestones_open),
+            "gitlab_milestones_closed": len(gitlab_milestones_closed),
+            "gitlab_labels_total": len(gitlab_labels),
+            "gitlab_branches": len(gitlab_branches),
+            "gitlab_tags": len(gitlab_tags),
+            "gitlab_commits": gitlab_commits_count,
+        }
+
+    def _collect_github_statistics(self) -> dict[str, int]:
+        """Collect statistics from GitHub."""
+        # Count issues with state breakdown
+        github_issues = list(self.github_repo.get_issues(state="all"))
+        github_issues_open = [i for i in github_issues if i.state == "open"]
+        github_issues_closed = [i for i in github_issues if i.state == "closed"]
+
+        # Count milestones with state breakdown
+        github_milestones_all = list(self.github_repo.get_milestones(state="all"))
+        github_milestones = [m for m in github_milestones_all if m.title != "Placeholder Milestone"]
+        github_milestones_open = [m for m in github_milestones if m.state == "open"]
+        github_milestones_closed = [m for m in github_milestones if m.state == "closed"]
+
+        # Count labels
+        github_labels_all = list(self.github_repo.get_labels())
+        labels_created = len(github_labels_all) - len(self.initial_github_labels)
+
+        # Count git repository items
+        github_branches = list(self.github_repo.get_branches())
+        github_tags = list(self.github_repo.get_tags())
+        github_commits_count = ghu.count_unique_commits(self.github_repo)
+
+        return {
+            "github_issues_total": len(github_issues),
+            "github_issues_open": len(github_issues_open),
+            "github_issues_closed": len(github_issues_closed),
+            "github_milestones_total": len(github_milestones),
+            "github_milestones_open": len(github_milestones_open),
+            "github_milestones_closed": len(github_milestones_closed),
+            "github_labels_existing": len(self.initial_github_labels),
+            "github_labels_created": max(0, labels_created),
+            "labels_translated": len(self.label_mapping),
+            "github_branches": len(github_branches),
+            "github_tags": len(github_tags),
+            "github_commits": github_commits_count,
+        }
+
+    def _collect_migration_statistics(self) -> dict[str, int]:
+        """Collect migration-specific statistics."""
+        return {
+            "comments_migrated": self.total_comments_migrated,
+            "attachments_uploaded": self._attachment_handler.uploaded_files_count if self._attachment_handler else 0,
+            "attachments_referenced": self._attachment_handler.total_attachments_referenced
+            if self._attachment_handler
+            else 0,
+        }
+
+    def _validate_counts(self, statistics: dict[str, int], errors: list[str], report: dict[str, Any]) -> None:
+        """Validate that GitLab and GitHub counts match."""
+        # Validate issue counts
+        if statistics["gitlab_issues_total"] != statistics["github_issues_total"]:
+            errors.append(
+                f"Issue count mismatch: GitLab {statistics['gitlab_issues_total']}, "
+                f"GitHub {statistics['github_issues_total']}"
+            )
+            report["success"] = False
+
+        # Validate milestone counts
+        if statistics["gitlab_milestones_total"] != statistics["github_milestones_total"]:
+            errors.append(
+                f"Milestone count mismatch: GitLab {statistics['gitlab_milestones_total']}, "
+                f"GitHub {statistics['github_milestones_total']}"
+            )
+            report["success"] = False
+
+        # Validate git repository counts
+        if statistics["gitlab_branches"] != statistics["github_branches"]:
+            errors.append(
+                f"Branch count mismatch: GitLab {statistics['gitlab_branches']}, "
+                f"GitHub {statistics['github_branches']}"
+            )
+            report["success"] = False
+
+        if statistics["gitlab_tags"] != statistics["github_tags"]:
+            errors.append(
+                f"Tag count mismatch: GitLab {statistics['gitlab_tags']}, GitHub {statistics['github_tags']}"
+            )
+            report["success"] = False
+
+        if statistics["gitlab_commits"] != statistics["github_commits"]:
+            errors.append(
+                f"Commit count mismatch: GitLab {statistics['gitlab_commits']}, GitHub {statistics['github_commits']}"
+            )
+            report["success"] = False
 
     def create_github_repo(self) -> None:
         self._github_repo = ghu.create_repo(

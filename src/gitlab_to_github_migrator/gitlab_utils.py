@@ -346,3 +346,21 @@ def get_normal_issue_cross_links(
         cross_links_text = "\n\n---\n\n**Cross-linked Issues:**\n\n" + cross_links_text
 
     return IssueCrossLinks(cross_links_text, blocked_issue_iids)
+
+
+def count_unique_commits(project: Project) -> int:
+    """Count unique commits across all branches in a GitLab project.
+
+    Args:
+        project: GitLab project object
+
+    Returns:
+        Number of unique commits across all branches
+    """
+    branches = project.branches.list(get_all=True)
+    commit_shas = set()
+    for branch in branches:
+        branch_commits = project.commits.list(get_all=True, ref_name=branch.name)
+        for commit in branch_commits:
+            commit_shas.add(commit.id)
+    return len(commit_shas)
