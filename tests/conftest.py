@@ -21,12 +21,12 @@ if TYPE_CHECKING:
 _integration_test_warnings: dict[str, list[logging.LogRecord]] = {}
 
 
-@pytest.fixture(scope="module", autouse=True)
+@pytest.fixture(scope="session", autouse=True)
 def check_integration_test_env_vars(request: pytest.FixtureRequest) -> None:
     """
     Validate that required environment variables are set before running integration tests.
 
-    This fixture runs once per test module and checks if any integration tests will be run.
+    This fixture runs once per test session and checks if any integration tests will be run.
     If integration tests are present but required environment variables are missing,
     it raises a clear error message indicating which variables need to be set.
 
