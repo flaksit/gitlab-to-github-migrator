@@ -16,4 +16,5 @@ fi
 if [ "$(git config --get hooks.strictChecks)" = "true" ]; then
     uv run ruff check .
     uv run basedpyright .
+    uv run codespell .
 fi
