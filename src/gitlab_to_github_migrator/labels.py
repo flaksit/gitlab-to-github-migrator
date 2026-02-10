@@ -22,6 +22,16 @@ if TYPE_CHECKING:
 logger: logging.Logger = logging.getLogger(__name__)
 
 
+def _is_already_exists_error(exc: GithubException) -> bool:
+    """Check if a GithubException is a 422 'already_exists' validation error."""
+    if not isinstance(exc.data, dict):
+        return False
+    errors: object = exc.data.get("errors")  # pyright: ignore[reportUnknownVariableType]
+    if not isinstance(errors, list):
+        return False
+    return any(isinstance(e, dict) and e.get("code") == "already_exists" for e in errors)  # pyright: ignore[reportUnknownArgumentType,reportUnknownVariableType]
+
+
 class LabelTranslator:
     """Handles label translation patterns."""
 
@@ -113,8 +123,15 @@ def migrate_labels(
                 label_mapping[gitlab_label.name] = github_label.name
                 logger.debug(f"Created label: {gitlab_label.name} -> {translated_name}")
             except GithubException as e:
-                msg = f"Failed to create label {translated_name}"
-                raise MigrationError(msg) from e
+                if e.status == 422 and _is_already_exists_error(e):
+                    # Label appeared between get_labels() and create_label() (race condition
+                    # with GitHub's default label provisioning)
+                    existing = github_repo.get_label(translated_name)
+                    label_mapping[gitlab_label.name] = existing.name
+                    logger.debug(f"Label already existed: {gitlab_label.name} -> {existing.name}")
+                else:
+                    msg = f"Failed to create label {translated_name}"
+                    raise MigrationError(msg) from e
 
         print(f"Migrated {len(label_mapping)} labels")
 
