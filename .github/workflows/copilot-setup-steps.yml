@@ -19,14 +19,14 @@ jobs:
     # You can define any steps you want, and they will run before the agent starts.
     # If you do not check out your code, Copilot will do this for you.
     steps:
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Configure git hooks
         run: |
           git config core.hooksPath .githooks
           git config --global hooks.autoformat true
           git config --global hooks.strictChecks true
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@v7
