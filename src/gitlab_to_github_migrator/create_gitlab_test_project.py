@@ -272,7 +272,7 @@ def create_issues(project: Project, gql: GraphQL, project_path: str, ms1_id: int
         if dummy_issue.title == "DELETE-ME":
             dummy_issue.delete()
             logger.info("    Deleted placeholder issue #4 to create gap")
-    except (GitlabGetError, GitlabDeleteError):
+    except GitlabGetError, GitlabDeleteError:
         logger.info("    Placeholder issue #4 already deleted or doesn't exist")
 
     # Create Tasks #5 and #6 (children of issue #3) via GraphQL

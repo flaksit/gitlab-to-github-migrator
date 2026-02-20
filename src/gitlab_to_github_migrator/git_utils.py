@@ -216,6 +216,6 @@ def count_unique_commits(clone_path: str) -> int:
             text=True,
         )
         return int(result.stdout.strip())
-    except (subprocess.CalledProcessError, ValueError):
+    except subprocess.CalledProcessError, ValueError:
         logger.exception("Failed to count commits")
         return 0

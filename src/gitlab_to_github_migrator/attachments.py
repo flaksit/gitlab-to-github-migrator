@@ -219,7 +219,7 @@ class AttachmentHandler:
                 updated_content = updated_content.replace(file_info.short_gitlab_url, download_url)
                 logger.debug(f"Uploaded {file_info.filename}: {download_url}")
 
-            except (GithubException, OSError):
+            except GithubException, OSError:
                 logger.exception(f"Failed to upload attachment {file_info.filename}")
                 raise
             finally:
