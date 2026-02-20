@@ -478,7 +478,7 @@ def create_git_content(project_path: str) -> None:
                 # Empty repo - create initial commit with full README
                 run_git(["git", "checkout", "-b", "main"], cwd=repo_path)
                 readme_file = repo_path / "README.md"
-                project_name = project_path.split("/")[-1]
+                project_name = project_path.rsplit("/", maxsplit=1)[-1]
                 readme_content = f"""# {project_name}
 
 Test project for [gitlab-to-github-migrator](https://github.com/flaksit/gitlab-to-github-migrator).
