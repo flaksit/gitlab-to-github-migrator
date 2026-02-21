@@ -1,8 +1,9 @@
 #!/bin/sh
+set -e
 
 if [ "$(git config --get hooks.autoformat)" = "true" ]; then
     # Auto-format mode: format and stage only the files that changed
-    files_to_format=$(uv run ruff format --check . 2>&1 | grep "^Would reformat:" | sed 's/^Would reformat: //')
+    files_to_format=$(uv run ruff format --check . 2>&1 | grep "^Would reformat:" | sed 's/^Would reformat: //' || true)
     if [ -n "$files_to_format" ]; then
         printf '%s\n' "$files_to_format" | xargs -d '\n' uv run ruff format
         printf '%s\n' "$files_to_format" | xargs -d '\n' git add

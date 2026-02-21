@@ -10,6 +10,7 @@ import sys
 from logging import Logger
 from typing import Any
 
+from . import git_utils
 from . import github_utils as ghu
 from . import gitlab_utils as glu
 from .migrator import GitlabToGithubMigrator
@@ -50,6 +51,18 @@ def parse_arguments() -> argparse.Namespace:
         action="count",
         default=0,
         help="Increase verbosity: -v shows INFO messages, -vv shows DEBUG messages",
+    )
+
+    _ = parser.add_argument(
+        "--no-update-remotes",
+        action="store_true",
+        default=False,
+        help=(
+            "Do not update git remotes in the current working directory after a successful migration. "
+            "By default, if the current directory is a git workdir for the migrated GitLab project, "
+            "the remote pointing to GitLab is updated to point to the new GitHub repository and the "
+            "old GitLab URL is kept as a backup remote."
+        ),
     )
 
     return parser.parse_args()
@@ -189,6 +202,16 @@ def main() -> None:
 
     # Print validation report
     _print_validation_report(report)
+
+    # Update git remotes in the current working directory (unless disabled).
+    if report["success"] and not getattr(args, "no_update_remotes", False):
+        updated = git_utils.update_remotes_after_migration(args.gitlab_project, args.github_repo)
+        if updated:
+            print()
+            print("Git remotes updated:")
+            for entry in updated:
+                print(f"  {entry.remote_name}: {entry.old_url} → {entry.new_url}")
+                print(f"  {entry.backup_name}: {entry.old_url} (backup)")
 
     if report["success"]:
         sys.exit(0)
