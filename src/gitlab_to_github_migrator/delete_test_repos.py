@@ -147,10 +147,12 @@ def main() -> None:
         help=f"Path for GitHub token in pass utility. If not set, will use {ghu.GITHUB_TOKEN_ENV_VAR} env var, "
         f"or fall back to default pass path {ghu.DEFAULT_GITHUB_TOKEN_PASS_PATH}.",
     )
-    parser.add_argument("--verbose", "-v", action="store_true", help="Enable verbose logging")
+    parser.add_argument(
+        "--verbose", "-v", action="count", default=0, help="Increase verbosity: -v shows INFO messages, -vv shows DEBUG messages"
+    )
 
     args = parser.parse_args()
-    setup_logging(verbose=args.verbose)
+    setup_logging(verbosity=args.verbose)
 
     # Determine github_owner: use argument if provided, otherwise use env var
     github_owner = args.github_owner
