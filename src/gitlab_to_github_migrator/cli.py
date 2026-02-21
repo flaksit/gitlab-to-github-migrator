@@ -194,12 +194,18 @@ def main() -> None:
     # Execute migration
     report = migrator.migrate()
 
-    # Update git remotes in the current working directory (unless disabled).
-    if report["success"] and not getattr(args, "no_update_remotes", False):
-        git_utils.update_remotes_after_migration(args.gitlab_project, args.github_repo)
-
     # Print validation report
     _print_validation_report(report)
+
+    # Update git remotes in the current working directory (unless disabled).
+    if report["success"] and not getattr(args, "no_update_remotes", False):
+        updated = git_utils.update_remotes_after_migration(args.gitlab_project, args.github_repo)
+        if updated:
+            print()
+            print("Git remotes updated:")
+            for entry in updated:
+                print(f"  {entry.remote_name}: {entry.old_url} → {entry.new_url}")
+                print(f"  {entry.backup_name}: {entry.old_url} (backup)")
 
     if report["success"]:
         sys.exit(0)

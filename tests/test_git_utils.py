@@ -7,6 +7,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from gitlab_to_github_migrator.git_utils import (
+    UpdatedRemote,
     _build_github_url,
     _get_backup_remote_name,
     _matches_gitlab_project,
@@ -106,46 +107,47 @@ class TestUpdateRemotesAfterMigration:
         mock.side_effect = side_effect
         return mock
 
-    def test_not_in_git_repo_returns_false(self) -> None:
+    def test_not_in_git_repo_returns_empty(self) -> None:
         with patch("gitlab_to_github_migrator.git_utils.subprocess.run") as mock_run:
             mock_run.return_value = MagicMock(returncode=1)
             result = update_remotes_after_migration("ns/repo", "owner/newrepo")
-        assert result is False
+        assert result == []
 
-    def test_no_matching_remote_returns_false(self) -> None:
+    def test_no_matching_remote_returns_empty(self) -> None:
         remotes = "origin\thttps://github.com/someone/other.git (fetch)\n"
         with patch("gitlab_to_github_migrator.git_utils.subprocess.run", self._make_run(remotes)):
             result = update_remotes_after_migration("ns/repo", "owner/newrepo")
-        assert result is False
+        assert result == []
 
-    def test_origin_remote_https_is_updated(self, capsys: pytest.CaptureFixture[str]) -> None:
+    def test_origin_remote_https_is_updated(self) -> None:
         remotes = "origin\thttps://gitlab.com/ns/repo.git (fetch)\n"
         with patch("gitlab_to_github_migrator.git_utils.subprocess.run", self._make_run(remotes)):
             result = update_remotes_after_migration("ns/repo", "owner/newrepo")
 
-        assert result is True
-        captured = capsys.readouterr()
-        assert "origin" in captured.out
-        assert "https://github.com/owner/newrepo.git" in captured.out
-        assert "gitlab" in captured.out
+        assert result == [
+            UpdatedRemote(
+                remote_name="origin",
+                old_url="https://gitlab.com/ns/repo.git",
+                backup_name="gitlab",
+                new_url="https://github.com/owner/newrepo.git",
+            )
+        ]
 
-    def test_origin_remote_ssh_is_updated_as_ssh(self, capsys: pytest.CaptureFixture[str]) -> None:
+    def test_origin_remote_ssh_is_updated_as_ssh(self) -> None:
         remotes = "origin\tgit@gitlab.com:ns/repo.git (fetch)\n"
         with patch("gitlab_to_github_migrator.git_utils.subprocess.run", self._make_run(remotes)):
             result = update_remotes_after_migration("ns/repo", "owner/newrepo")
 
-        assert result is True
-        captured = capsys.readouterr()
-        assert "git@github.com:owner/newrepo.git" in captured.out
+        assert len(result) == 1
+        assert result[0].new_url == "git@github.com:owner/newrepo.git"
 
-    def test_non_origin_remote_gets_gitlab_suffix(self, capsys: pytest.CaptureFixture[str]) -> None:
+    def test_non_origin_remote_gets_gitlab_suffix(self) -> None:
         remotes = "upstream\thttps://gitlab.com/ns/repo.git (fetch)\n"
         with patch("gitlab_to_github_migrator.git_utils.subprocess.run", self._make_run(remotes)):
             result = update_remotes_after_migration("ns/repo", "owner/newrepo")
 
-        assert result is True
-        captured = capsys.readouterr()
-        assert "upstream-gitlab" in captured.out
+        assert len(result) == 1
+        assert result[0].backup_name == "upstream-gitlab"
 
     def test_backup_remote_add_called_with_old_url(self) -> None:
         remotes = "origin\thttps://gitlab.com/ns/repo.git (fetch)\n"

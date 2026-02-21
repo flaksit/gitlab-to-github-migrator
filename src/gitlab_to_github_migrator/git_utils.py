@@ -6,6 +6,7 @@ import logging
 import shutil
 import subprocess
 import tempfile
+from dataclasses import dataclass
 from pathlib import Path
 
 from .exceptions import MigrationError
@@ -276,11 +277,21 @@ def _get_backup_remote_name(remote_name: str) -> str:
     return f"{remote_name}-gitlab"
 
 
+@dataclass
+class UpdatedRemote:
+    """A git remote that was updated from GitLab to GitHub."""
+
+    remote_name: str
+    old_url: str
+    backup_name: str
+    new_url: str
+
+
 def update_remotes_after_migration(
     gitlab_project_path: str,
     github_repo_path: str,
     cwd: str | None = None,
-) -> bool:
+) -> list[UpdatedRemote]:
     """Update git remotes in the current working directory after a successful migration.
 
     If the working directory (or *cwd*) is a git repository whose remotes
@@ -304,7 +315,7 @@ def update_remotes_after_migration(
         cwd: Directory to operate in; defaults to the current working directory.
 
     Returns:
-        True if at least one remote was updated, False otherwise.
+        List of updated remotes.  Empty list if nothing was changed.
     """
     work_dir = cwd or "."
 
@@ -318,7 +329,7 @@ def update_remotes_after_migration(
     )
     if check.returncode != 0:
         logger.debug("Not inside a git repository - skipping remote update")
-        return False
+        return []
 
     # List all remotes with their fetch URLs.
     result = subprocess.run(
@@ -330,7 +341,7 @@ def update_remotes_after_migration(
     )
     if result.returncode != 0:
         logger.debug("Failed to list git remotes - skipping remote update")
-        return False
+        return []
 
     # Parse only the fetch lines: "<name>\t<url> (fetch)"
     remotes: dict[str, str] = {}
@@ -342,7 +353,7 @@ def update_remotes_after_migration(
                 url = parts[1].replace(" (fetch)", "").strip()
                 remotes[name] = url
 
-    updated = False
+    updated: list[UpdatedRemote] = []
     for remote_name, remote_url in remotes.items():
         if not _matches_gitlab_project(remote_url, gitlab_project_path):
             continue
@@ -373,9 +384,7 @@ def update_remotes_after_migration(
                 text=True,
             )
             logger.info(f"Updated remote '{remote_name}' → {github_url}")
-            print(f"Updated git remote '{remote_name}' → {github_url}")  # noqa: T201
-            print(f"Kept old GitLab URL as remote '{backup_name}' → {remote_url}")  # noqa: T201
-            updated = True
+            updated.append(UpdatedRemote(remote_name=remote_name, old_url=remote_url, backup_name=backup_name, new_url=github_url))
         except subprocess.CalledProcessError as e:
             logger.warning(f"Failed to update remote '{remote_name}': {e}")
 
