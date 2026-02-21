@@ -219,3 +219,164 @@ def count_unique_commits(clone_path: str) -> int:
     except subprocess.CalledProcessError, ValueError:
         logger.exception("Failed to count commits")
         return 0
+
+
+def _matches_gitlab_project(url: str, gitlab_project_path: str) -> bool:
+    """Check whether a git remote URL refers to the given GitLab project.
+
+    Handles both SSH (``git@host:ns/repo.git``) and HTTPS
+    (``https://host/ns/repo.git``) URLs, with or without the ``.git`` suffix.
+
+    Args:
+        url: Remote URL to test.
+        gitlab_project_path: GitLab project path, e.g. ``namespace/project``.
+
+    Returns:
+        True if the URL points to the given project.
+    """
+    path = gitlab_project_path.rstrip("/")
+    normalized = url.rstrip("/").removesuffix(".git")
+    # SSH style:   git@gitlab.com:namespace/project
+    # HTTPS style: https://gitlab.com/namespace/project
+    return normalized.endswith((f"/{path}", f":{path}"))
+
+
+def _build_github_url(original_url: str, github_repo_path: str) -> str:
+    """Build a GitHub remote URL that mirrors the protocol of *original_url*.
+
+    If *original_url* is SSH-style (starts with ``git@`` or contains
+    ``ssh://``), returns an SSH GitHub URL; otherwise returns an HTTPS URL.
+
+    Args:
+        original_url: The existing remote URL (used to detect protocol).
+        github_repo_path: GitHub repository path, e.g. ``owner/repo``.
+
+    Returns:
+        GitHub remote URL in the same protocol as the original.
+    """
+    if original_url.startswith(("git@", "ssh://")):
+        return f"git@github.com:{github_repo_path}.git"
+    return f"https://github.com/{github_repo_path}.git"
+
+
+def _get_backup_remote_name(remote_name: str) -> str:
+    """Return the name to use for the backup GitLab remote.
+
+    * ``"origin"`` → ``"gitlab"``
+    * ``"<name>"`` → ``"<name>-gitlab"``
+
+    Args:
+        remote_name: Current name of the remote that points to GitLab.
+
+    Returns:
+        Name for the backup remote that will keep the GitLab URL.
+    """
+    if remote_name == "origin":
+        return "gitlab"
+    return f"{remote_name}-gitlab"
+
+
+def update_remotes_after_migration(
+    gitlab_project_path: str,
+    github_repo_path: str,
+    cwd: str | None = None,
+) -> bool:
+    """Update git remotes in the current working directory after a successful migration.
+
+    If the working directory (or *cwd*) is a git repository whose remotes
+    include the migrated GitLab project, each such remote is updated to point
+    to the new GitHub repository.  The old GitLab URL is kept as a backup
+    remote so no history is lost.
+
+    Because git worktrees share the same ``.git/config`` as their main
+    worktree, updating remotes once from any worktree directory covers all
+    linked worktrees automatically.
+
+    Naming convention for the backup remote:
+
+    * If the original remote was named ``origin``, the backup is named
+      ``gitlab``.
+    * Otherwise the backup is named ``<original-name>-gitlab``.
+
+    Args:
+        gitlab_project_path: GitLab project path (``namespace/project``).
+        github_repo_path: GitHub repository path (``owner/repo``).
+        cwd: Directory to operate in; defaults to the current working directory.
+
+    Returns:
+        True if at least one remote was updated, False otherwise.
+    """
+    work_dir = cwd or "."
+
+    # Verify we are inside a git repository.
+    check = subprocess.run(
+        ["git", "rev-parse", "--git-dir"],
+        cwd=work_dir,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    if check.returncode != 0:
+        logger.debug("Not inside a git repository - skipping remote update")
+        return False
+
+    # List all remotes with their fetch URLs.
+    result = subprocess.run(
+        ["git", "remote", "-v"],
+        cwd=work_dir,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode != 0:
+        logger.debug("Failed to list git remotes - skipping remote update")
+        return False
+
+    # Parse only the fetch lines: "<name>\t<url> (fetch)"
+    remotes: dict[str, str] = {}
+    for line in result.stdout.splitlines():
+        if "(fetch)" in line:
+            parts = line.split("\t", 1)
+            if len(parts) == 2:
+                name = parts[0].strip()
+                url = parts[1].replace(" (fetch)", "").strip()
+                remotes[name] = url
+
+    updated = False
+    for remote_name, remote_url in remotes.items():
+        if not _matches_gitlab_project(remote_url, gitlab_project_path):
+            continue
+
+        github_url = _build_github_url(remote_url, github_repo_path)
+        backup_name = _get_backup_remote_name(remote_name)
+
+        # Add backup remote pointing to the old GitLab URL.
+        try:
+            subprocess.run(  # noqa: S603
+                ["git", "remote", "add", backup_name, remote_url],
+                cwd=work_dir,
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+            logger.info(f"Added backup remote '{backup_name}' → {remote_url}")
+        except subprocess.CalledProcessError:
+            logger.warning(f"Could not add backup remote '{backup_name}' (may already exist)")
+
+        # Update the existing remote to point to GitHub.
+        try:
+            subprocess.run(  # noqa: S603
+                ["git", "remote", "set-url", remote_name, github_url],
+                cwd=work_dir,
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+            logger.info(f"Updated remote '{remote_name}' → {github_url}")
+            print(f"Updated git remote '{remote_name}' → {github_url}")  # noqa: T201
+            print(f"Kept old GitLab URL as remote '{backup_name}' → {remote_url}")  # noqa: T201
+            updated = True
+        except subprocess.CalledProcessError as e:
+            logger.warning(f"Failed to update remote '{remote_name}': {e}")
+
+    return updated
