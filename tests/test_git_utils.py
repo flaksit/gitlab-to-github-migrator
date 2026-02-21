@@ -3,8 +3,11 @@
 from __future__ import annotations
 
 import subprocess
-from pathlib import Path
+from typing import TYPE_CHECKING
 from unittest.mock import MagicMock, patch
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 import pytest
 
@@ -33,11 +36,22 @@ class TestMatchesGitLabProject:
     def test_ssh_url_matches_without_git_suffix(self) -> None:
         assert _matches_gitlab_project("git@gitlab.com:ns/repo", "ns/repo")
 
-    def test_custom_gitlab_instance_https(self) -> None:
-        assert _matches_gitlab_project("https://git.example.com/ns/repo.git", "ns/repo")
+    def test_custom_instance_does_not_match(self) -> None:
+        assert not _matches_gitlab_project("https://git.example.com/ns/repo.git", "ns/repo")
+        assert not _matches_gitlab_project("git@git.example.com:ns/repo.git", "ns/repo")
 
-    def test_custom_gitlab_instance_ssh(self) -> None:
-        assert _matches_gitlab_project("git@git.example.com:ns/repo.git", "ns/repo")
+    def test_nested_namespace_https_matches(self) -> None:
+        assert _matches_gitlab_project("https://gitlab.com/acme/team/project.git", "acme/team/project")
+
+    def test_nested_namespace_ssh_matches(self) -> None:
+        assert _matches_gitlab_project("git@gitlab.com:acme/team/project.git", "acme/team/project")
+
+    def test_nested_namespace_without_git_suffix_matches(self) -> None:
+        assert _matches_gitlab_project("https://gitlab.com/acme/team/project", "acme/team/project")
+
+    def test_nested_namespace_partial_does_not_match(self) -> None:
+        # "team/project" must not match "acme/team/project"
+        assert not _matches_gitlab_project("https://gitlab.com/acme/team/project.git", "team/project")
 
     def test_different_project_does_not_match(self) -> None:
         assert not _matches_gitlab_project("https://gitlab.com/ns/other.git", "ns/repo")
@@ -194,7 +208,7 @@ class TestUpdateRemotesAfterMigration:
 
 def _git(args: list[str], cwd: Path) -> str:
     """Run a git command in *cwd* and return stdout."""
-    return subprocess.run(["git", *args], cwd=cwd, check=True, capture_output=True, text=True).stdout.strip()
+    return subprocess.run(["git", *args], cwd=cwd, check=True, capture_output=True, text=True).stdout.strip()  # noqa: S603
 
 
 def _make_git_repo(tmp_path: Path) -> Path:

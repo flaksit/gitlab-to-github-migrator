@@ -222,24 +222,34 @@ def count_unique_commits(clone_path: str) -> int:
         return 0
 
 
-def _matches_gitlab_project(url: str, gitlab_project_path: str) -> bool:
-    """Check whether a git remote URL refers to the given GitLab project.
+_GITLAB_HOSTS = ("gitlab.com", "www.gitlab.com")
 
-    Handles both SSH (``git@host:ns/repo.git``) and HTTPS
-    (``https://host/ns/repo.git``) URLs, with or without the ``.git`` suffix.
+
+def _matches_gitlab_project(url: str, gitlab_project_path: str) -> bool:
+    """Check whether a git remote URL refers to the given GitLab project on gitlab.com.
+
+    Handles both SSH (``git@gitlab.com:ns/repo.git``) and HTTPS
+    (``https://gitlab.com/ns/repo.git``) URLs, with or without the ``.git`` suffix.
 
     Args:
         url: Remote URL to test.
         gitlab_project_path: GitLab project path, e.g. ``namespace/project``.
 
     Returns:
-        True if the URL points to the given project.
+        True if the URL points to the given project on gitlab.com.
     """
     path = gitlab_project_path.rstrip("/")
     normalized = url.rstrip("/").removesuffix(".git")
-    # SSH style:   git@gitlab.com:namespace/project
-    # HTTPS style: https://gitlab.com/namespace/project
-    return normalized.endswith((f"/{path}", f":{path}"))
+    if "://" in normalized:
+        # HTTPS: https://gitlab.com/namespace/project
+        parts = normalized.split("/", 3)
+        return len(parts) == 4 and parts[2] in _GITLAB_HOSTS and parts[3] == path
+    if ":" in normalized:
+        # SSH: git@gitlab.com:namespace/project
+        prefix, _, remote_path = normalized.partition(":")
+        host = prefix.split("@")[-1]
+        return host in _GITLAB_HOSTS and remote_path == path
+    return False
 
 
 def _build_github_url(original_url: str, github_repo_path: str) -> str:
@@ -384,7 +394,9 @@ def update_remotes_after_migration(
                 text=True,
             )
             logger.info(f"Updated remote '{remote_name}' → {github_url}")
-            updated.append(UpdatedRemote(remote_name=remote_name, old_url=remote_url, backup_name=backup_name, new_url=github_url))
+            updated.append(
+                UpdatedRemote(remote_name=remote_name, old_url=remote_url, backup_name=backup_name, new_url=github_url)
+            )
         except subprocess.CalledProcessError as e:
             logger.warning(f"Failed to update remote '{remote_name}': {e}")
 
