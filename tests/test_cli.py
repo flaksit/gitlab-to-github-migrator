@@ -2,9 +2,12 @@
 Tests for CLI module.
 """
 
+import logging
+
 import pytest
 
 from gitlab_to_github_migrator.cli import _print_validation_report
+from gitlab_to_github_migrator.utils import setup_logging
 
 
 @pytest.mark.unit
@@ -99,6 +102,53 @@ class TestPrintValidationReport:
         _print_validation_report(report)
         captured = capsys.readouterr()
         assert "test-org/test-project" in captured.out
+
+
+@pytest.mark.unit
+class TestSetupLogging:
+    """Test setup_logging verbose behavior."""
+
+    def test_verbose_enables_debug_on_console(self) -> None:
+        """With verbose=True, the console handler level should be DEBUG."""
+        root_logger = logging.getLogger()
+        # Remove existing handlers to isolate the test
+        original_handlers = root_logger.handlers[:]
+        root_logger.handlers.clear()
+
+        try:
+            setup_logging(verbose=True)
+            console_handlers = [
+                h
+                for h in root_logger.handlers
+                if isinstance(h, logging.StreamHandler) and not isinstance(h, logging.FileHandler)
+            ]
+            assert console_handlers, "Expected at least one console StreamHandler"
+            assert console_handlers[0].level == logging.DEBUG
+        finally:
+            # Restore original handlers
+            for h in root_logger.handlers:
+                h.close()
+            root_logger.handlers = original_handlers
+
+    def test_non_verbose_shows_only_warnings_on_console(self) -> None:
+        """With verbose=False, the console handler level should be WARNING."""
+        root_logger = logging.getLogger()
+        original_handlers = root_logger.handlers[:]
+        root_logger.handlers.clear()
+
+        try:
+            setup_logging(verbose=False)
+            console_handlers = [
+                h
+                for h in root_logger.handlers
+                if isinstance(h, logging.StreamHandler) and not isinstance(h, logging.FileHandler)
+            ]
+            assert console_handlers, "Expected at least one console StreamHandler"
+            assert console_handlers[0].level == logging.WARNING
+        finally:
+            for h in root_logger.handlers:
+                h.close()
+            root_logger.handlers = original_handlers
 
 
 if __name__ == "__main__":

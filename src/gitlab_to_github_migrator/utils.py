@@ -27,7 +27,7 @@ def setup_logging(*, verbose: bool = False) -> None:
     """Configure logging for the migration process.
 
     Args:
-        verbose: If True, console shows INFO+ messages. If False (default),
+        verbose: If True, console shows DEBUG+ messages. If False (default),
                  console shows only WARNING+ messages.
     """
     level = logging.DEBUG if verbose else logging.INFO
@@ -38,9 +38,9 @@ def setup_logging(*, verbose: bool = False) -> None:
 
     # Configure console handler (stderr) based on verbose flag
     # Default: WARNING+ only (clean output, errors visible)
-    # Verbose: INFO+ (diagnostic messages visible)
+    # Verbose: DEBUG+ (all diagnostic messages visible)
     console_handler = logging.StreamHandler()
-    console_handler.setLevel(logging.INFO if verbose else logging.WARNING)
+    console_handler.setLevel(logging.DEBUG if verbose else logging.WARNING)
     console_handler.setFormatter(logging.Formatter("%(levelname)s: %(message)s"))
 
     logging.basicConfig(
