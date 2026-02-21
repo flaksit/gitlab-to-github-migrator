@@ -217,7 +217,7 @@ class AttachmentHandler:
                 self._uploaded_cache[file_info.short_gitlab_url] = download_url
                 self._uploaded_files_count += 1
                 updated_content = updated_content.replace(file_info.short_gitlab_url, download_url)
-                logger.debug(f"Uploaded {file_info.filename}: {download_url}")
+                logger.info(f"Uploaded {file_info.filename}: {download_url}")
 
             except GithubException, OSError:
                 logger.exception(f"Failed to upload attachment {file_info.filename}")
