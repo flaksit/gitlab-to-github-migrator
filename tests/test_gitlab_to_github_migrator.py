@@ -383,7 +383,7 @@ class TestGitlabToGithubMigrator:
     @patch("gitlab_to_github_migrator.gitlab_utils.Gitlab")
     @patch("gitlab_to_github_migrator.github_utils.Github")
     def test_mark_gitlab_project_as_migrated(self, mock_github_class, mock_gitlab_class) -> None:
-        """Test that mark_gitlab_project_as_migrated updates title and description."""
+        """Test that mark_gitlab_project_as_migrated delegates to gitlab_utils."""
         mock_gitlab_client = Mock()
         mock_github_client = Mock()
         mock_gitlab_class.return_value = mock_gitlab_client
@@ -397,64 +397,9 @@ class TestGitlabToGithubMigrator:
         migrator = GitlabToGithubMigrator(self.gitlab_project_path, self.github_repo_path, github_token="test_token")
         migrator.github_repo = self.mock_github_repo
 
-        migrator.mark_gitlab_project_as_migrated()
-
-        assert self.mock_gitlab_project.name == "My Project (migrated to GitHub)"
-        assert self.mock_gitlab_project.description == (
-            "Migrated to https://github.com/github-org/test-repo\n\nOriginal description"
-        )
-        self.mock_gitlab_project.save.assert_called_once()
-
-    @patch("gitlab_to_github_migrator.gitlab_utils.Gitlab")
-    @patch("gitlab_to_github_migrator.github_utils.Github")
-    def test_mark_gitlab_project_as_migrated_empty_description(self, mock_github_class, mock_gitlab_class) -> None:
-        """Test mark_gitlab_project_as_migrated with an empty project description."""
-        mock_gitlab_client = Mock()
-        mock_github_client = Mock()
-        mock_gitlab_class.return_value = mock_gitlab_client
-        mock_github_class.return_value = mock_github_client
-
-        mock_gitlab_client.projects.get.return_value = self.mock_gitlab_project
-        self.mock_gitlab_project.name = "My Project"
-        self.mock_gitlab_project.description = None
-        self.mock_github_repo.html_url = "https://github.com/github-org/test-repo"
-
-        migrator = GitlabToGithubMigrator(self.gitlab_project_path, self.github_repo_path, github_token="test_token")
-        migrator.github_repo = self.mock_github_repo
-
-        migrator.mark_gitlab_project_as_migrated()
-
-        assert self.mock_gitlab_project.name == "My Project (migrated to GitHub)"
-        assert self.mock_gitlab_project.description == "Migrated to https://github.com/github-org/test-repo"
-        self.mock_gitlab_project.save.assert_called_once()
-
-    @patch("gitlab_to_github_migrator.gitlab_utils.Gitlab")
-    @patch("gitlab_to_github_migrator.github_utils.Github")
-    def test_mark_gitlab_project_as_migrated_already_marked(self, mock_github_class, mock_gitlab_class) -> None:
-        """Test mark_gitlab_project_as_migrated does not double-append suffix or URL."""
-        mock_gitlab_client = Mock()
-        mock_github_client = Mock()
-        mock_gitlab_class.return_value = mock_gitlab_client
-        mock_github_class.return_value = mock_github_client
-
-        mock_gitlab_client.projects.get.return_value = self.mock_gitlab_project
-        self.mock_gitlab_project.name = "My Project (migrated to GitHub)"
-        self.mock_gitlab_project.description = (
-            "Migrated to https://github.com/github-org/test-repo\n\nSome description"
-        )
-        self.mock_github_repo.html_url = "https://github.com/github-org/test-repo"
-
-        migrator = GitlabToGithubMigrator(self.gitlab_project_path, self.github_repo_path, github_token="test_token")
-        migrator.github_repo = self.mock_github_repo
-
-        migrator.mark_gitlab_project_as_migrated()
-
-        # Name should not be double-suffixed
-        assert self.mock_gitlab_project.name == "My Project (migrated to GitHub)"
-        # Description should not have the URL prepended again
-        assert self.mock_gitlab_project.description == (
-            "Migrated to https://github.com/github-org/test-repo\n\nSome description"
-        )
+        with patch("gitlab_to_github_migrator.migrator.glu.mark_project_as_migrated") as mock_mark:
+            migrator.mark_gitlab_project_as_migrated()
+            mock_mark.assert_called_once_with(self.mock_gitlab_project, "https://github.com/github-org/test-repo")
 
 
 @pytest.mark.unit

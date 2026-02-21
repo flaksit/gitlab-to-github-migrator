@@ -704,17 +704,7 @@ class GitlabToGithubMigrator:
 
     def mark_gitlab_project_as_migrated(self) -> None:
         """Mark the GitLab project as migrated by updating its title and description."""
-        github_web_url = self.github_repo.html_url
-        migrated_suffix = " (migrated to GitHub)"
-        current_name: str = str(self.gitlab_project.name)  # pyright: ignore[reportUnknownArgumentType]
-        if not current_name.endswith(migrated_suffix):
-            self.gitlab_project.name = current_name + migrated_suffix
-        current_description: str = str(self.gitlab_project.description or "")  # pyright: ignore[reportUnknownArgumentType]
-        migration_header = f"Migrated to {github_web_url}"
-        if not current_description.startswith(migration_header):
-            self.gitlab_project.description = f"{migration_header}\n\n{current_description}".rstrip()
-        self.gitlab_project.save()
-        logger.info(f"Marked GitLab project as migrated: {self.gitlab_project_path}")
+        glu.mark_project_as_migrated(self.gitlab_project, self.github_repo.html_url)
 
     def migrate(self, *, mark_as_migrated: bool = True) -> dict[str, Any]:
         """Execute the complete migration process."""
