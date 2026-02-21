@@ -328,6 +328,26 @@ class TestFullMigration:
             f"{github_commits_count} commits)"
         )
 
+    def test_default_branch(
+        self,
+        migration_result: MigrationResult,
+        gitlab_project: gitlab.v4.objects.Project,
+    ) -> None:
+        """Test that default branch matches between GitLab and GitHub."""
+        github_repo = migration_result.github_repo
+
+        # Refresh repo to get current default branch
+        github_repo = migration_result.migrator.github_client.get_repo(github_repo.full_name)
+
+        gitlab_default_branch = gitlab_project.default_branch
+        github_default_branch = github_repo.default_branch
+
+        assert github_default_branch == gitlab_default_branch, (
+            f"Default branch mismatch: GitHub '{github_default_branch}' != GitLab '{gitlab_default_branch}'"
+        )
+
+        print(f"Default branch verified: '{github_default_branch}'")
+
     def test_labels(
         self,
         migration_result: MigrationResult,

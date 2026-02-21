@@ -220,6 +220,24 @@ def create_issue_dependency(
     return False
 
 
+def set_default_branch(repo: Repository, branch_name: str) -> None:
+    """Set the default branch for a GitHub repository.
+
+    Args:
+        repo: GitHub repository object
+        branch_name: Name of the branch to set as default
+
+    Raises:
+        MigrationError: If setting the default branch fails
+    """
+    try:
+        repo.edit(default_branch=branch_name)
+        logger.debug(f"Set default branch to '{branch_name}' for repository {repo.full_name}")
+    except GithubException as e:
+        msg = f"Failed to set default branch to '{branch_name}': {e}"
+        raise MigrationError(msg) from e
+
+
 def create_repo(client: Github, repo_path: str, description: str | None) -> Repository:
     """Create GitHub repository with GitLab project metadata."""
     # Validate GitHub repo path format
