@@ -178,7 +178,7 @@ def main() -> None:
     logger = logging.getLogger(__name__)
 
     # Initialize migrator
-    label_translation: list[str] | None = getattr(args, "label_translation", None)
+    label_translation: list[str] | None = args.relabel
     gitlab_token_pass_path: str | None = getattr(args, "gitlab_token_pass_path", None)
     github_token_pass_path: str | None = getattr(args, "github_token_pass_path", None)
 
