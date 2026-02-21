@@ -645,7 +645,11 @@ Examples:
         help="GitLab project path (e.g., 'namespace/project' or 'group/subgroup/project')",
     )
     parser.add_argument(
-        "--verbose", "-v", action="count", default=0, help="Increase verbosity: -v shows INFO messages, -vv shows DEBUG messages"
+        "--verbose",
+        "-v",
+        action="count",
+        default=0,
+        help="Increase verbosity: -v shows INFO messages, -vv shows DEBUG messages",
     )
     parser.add_argument(
         "--gitlab-token-pass-path",

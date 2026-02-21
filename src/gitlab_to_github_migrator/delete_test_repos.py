@@ -148,7 +148,11 @@ def main() -> None:
         f"or fall back to default pass path {ghu.DEFAULT_GITHUB_TOKEN_PASS_PATH}.",
     )
     parser.add_argument(
-        "--verbose", "-v", action="count", default=0, help="Increase verbosity: -v shows INFO messages, -vv shows DEBUG messages"
+        "--verbose",
+        "-v",
+        action="count",
+        default=0,
+        help="Increase verbosity: -v shows INFO messages, -vv shows DEBUG messages",
     )
 
     args = parser.parse_args()
