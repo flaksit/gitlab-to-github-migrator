@@ -118,7 +118,7 @@ def delete_test_repositories(github_owner: str, github_token_pass_path: str | No
         if success_count > 0:
             logger.info(f"\n🎉 Cleanup completed! Deleted {success_count} test repositories.")
 
-    except (GithubException, ValueError):
+    except GithubException, ValueError:
         logger.exception("❌ Error during cleanup")
         sys.exit(1)
 

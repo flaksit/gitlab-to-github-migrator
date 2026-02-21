@@ -29,7 +29,7 @@ def format_timestamp(iso_timestamp: str) -> str:
         timestamp_dt = dt.datetime.fromisoformat(iso_timestamp)
         formatted = timestamp_dt.isoformat(sep=" ", timespec="seconds")
         return formatted.replace("+00:00", "Z")
-    except (ValueError, AttributeError):
+    except ValueError, AttributeError:
         return iso_timestamp
 
 
@@ -49,7 +49,7 @@ def should_show_last_edited(created_at: str, updated_at: str) -> bool:
     try:
         created_dt = dt.datetime.fromisoformat(created_at)
         updated_dt = dt.datetime.fromisoformat(updated_at)
-    except (ValueError, AttributeError):
+    except ValueError, AttributeError:
         return False
 
     diff = abs((updated_dt - created_dt).total_seconds())

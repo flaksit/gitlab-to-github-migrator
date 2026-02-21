@@ -272,7 +272,7 @@ def create_issues(project: Project, gql: GraphQL, project_path: str, ms1_id: int
         if dummy_issue.title == "DELETE-ME":
             dummy_issue.delete()
             logger.info("    Deleted placeholder issue #4 to create gap")
-    except (GitlabGetError, GitlabDeleteError):
+    except GitlabGetError, GitlabDeleteError:
         logger.info("    Placeholder issue #4 already deleted or doesn't exist")
 
     # Create Tasks #5 and #6 (children of issue #3) via GraphQL
@@ -478,7 +478,7 @@ def create_git_content(project_path: str) -> None:
                 # Empty repo - create initial commit with full README
                 run_git(["git", "checkout", "-b", "main"], cwd=repo_path)
                 readme_file = repo_path / "README.md"
-                project_name = project_path.split("/")[-1]
+                project_name = project_path.rsplit("/", maxsplit=1)[-1]
                 readme_content = f"""# {project_name}
 
 Test project for [gitlab-to-github-migrator](https://github.com/flaksit/gitlab-to-github-migrator).
