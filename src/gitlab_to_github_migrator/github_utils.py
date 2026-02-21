@@ -232,7 +232,7 @@ def set_default_branch(repo: Repository, branch_name: str) -> None:
     """
     try:
         repo.edit(default_branch=branch_name)
-        logger.debug(f"Set default branch to '{branch_name}' for repository {repo.full_name}")
+        logger.info(f"Set default branch to '{branch_name}' for repository {repo.full_name}")
     except GithubException as e:
         msg = f"Failed to set default branch to '{branch_name}': {e}"
         raise MigrationError(msg) from e

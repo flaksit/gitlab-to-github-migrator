@@ -128,7 +128,7 @@ class GitlabToGithubMigrator:
         try:
             # Test GitLab access
             _ = self.gitlab_project.name  # pyright: ignore[reportUnknownVariableType]
-            logger.debug("GitLab API access validated")
+            logger.info("GitLab API access validated")
         except (GitlabError, GitlabAuthenticationError) as e:
             msg = f"GitLab API access failed: {e}"
             raise MigrationError(msg) from e
@@ -136,7 +136,7 @@ class GitlabToGithubMigrator:
         try:
             # Test GitHub access
             self.github_client.get_user()
-            logger.debug("GitHub API access validated")
+            logger.info("GitHub API access validated")
         except GithubException as e:
             msg = f"GitHub API access failed: {e}"
             raise MigrationError(msg) from e
@@ -211,7 +211,7 @@ class GitlabToGithubMigrator:
                     raise NumberVerificationError(msg)
 
                 self.milestone_mapping[gitlab_milestone.id] = github_milestone.number
-                logger.debug(f"Created milestone #{milestone_number}: {gitlab_milestone.title}")
+                logger.info(f"Created milestone #{milestone_number}: {gitlab_milestone.title}")
             else:
                 # Create placeholder milestone
                 placeholder_milestone = self.github_repo.create_milestone(
@@ -351,7 +351,7 @@ class GitlabToGithubMigrator:
                 if migrated.blocked_issue_iids:
                     gitlab_blocks_links[gitlab_issue.iid] = migrated.blocked_issue_iids
 
-                logger.debug(f"Created issue #{issue_number}: {gitlab_issue.title}")
+                logger.info(f"Created issue #{issue_number}: {gitlab_issue.title}")
 
                 # Print per-issue output
                 details: list[str] = []
@@ -395,7 +395,7 @@ class GitlabToGithubMigrator:
                 child_github_issue = github_issue_map[child_gitlab_iid]
 
                 parent_github_issue.add_sub_issue(child_github_issue.id)
-                logger.debug(f"Linked issue #{child_gitlab_iid} as sub-issue of #{parent_gitlab_iid}")
+                logger.info(f"Linked issue #{child_gitlab_iid} as sub-issue of #{parent_gitlab_iid}")
 
     def _create_blocking_relations(
         self,
@@ -428,7 +428,7 @@ class GitlabToGithubMigrator:
                 )
 
                 if success:
-                    logger.debug(f"Created blocking relationship: #{source_gitlab_iid} blocks #{target_gitlab_iid}")
+                    logger.info(f"Created blocking relationship: #{source_gitlab_iid} blocks #{target_gitlab_iid}")
 
     def migrate_issues_with_number_preservation(self) -> None:
         """Migrate issues while preserving GitLab issue numbers."""
@@ -537,7 +537,7 @@ class GitlabToGithubMigrator:
         try:
             statistics.update(self._collect_statistics())
             self._validate_counts(statistics, errors, report)
-            logger.debug("Migration validation completed")
+            logger.info("Migration validation completed")
 
         except (GitlabError, GithubException) as e:
             report["success"] = False

@@ -644,7 +644,13 @@ Examples:
         "project_path",
         help="GitLab project path (e.g., 'namespace/project' or 'group/subgroup/project')",
     )
-    parser.add_argument("--verbose", "-v", action="store_true", help="Enable verbose logging")
+    parser.add_argument(
+        "--verbose",
+        "-v",
+        action="count",
+        default=0,
+        help="Increase verbosity: -v shows INFO messages, -vv shows DEBUG messages",
+    )
     parser.add_argument(
         "--gitlab-token-pass-path",
         help=f"Path for GitLab token in pass utility. If not set, will use {glu.GITLAB_TOKEN_ENV_VAR} env var, "
@@ -656,7 +662,7 @@ Examples:
 def main() -> None:
     """Main entry point - handles argument parsing and logging setup."""
     args = parse_args()
-    setup_logging(verbose=args.verbose)
+    setup_logging(verbosity=args.verbose)
     gitlab_token_pass_path: str | None = getattr(args, "gitlab_token_pass_path", None)
     create_test_project(args.project_path, gitlab_token_pass_path=gitlab_token_pass_path)
 

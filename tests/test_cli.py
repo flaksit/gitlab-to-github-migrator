@@ -2,9 +2,13 @@
 Tests for CLI module.
 """
 
+import logging
+from typing import Any
+
 import pytest
 
 from gitlab_to_github_migrator.cli import _print_validation_report
+from gitlab_to_github_migrator.utils import setup_logging
 
 
 @pytest.mark.unit
@@ -99,6 +103,62 @@ class TestPrintValidationReport:
         _print_validation_report(report)
         captured = capsys.readouterr()
         assert "test-org/test-project" in captured.out
+
+
+@pytest.mark.unit
+class TestSetupLogging:
+    """Test setup_logging verbosity levels."""
+
+    def _get_console_handler(self, root_logger: logging.Logger) -> logging.StreamHandler[Any]:
+        console_handlers = [
+            h
+            for h in root_logger.handlers
+            if isinstance(h, logging.StreamHandler) and not isinstance(h, logging.FileHandler)
+        ]
+        assert console_handlers, "Expected at least one console StreamHandler"
+        return console_handlers[0]
+
+    def test_default_shows_only_warnings_on_console(self) -> None:
+        """With verbosity=0 (default), the console handler level should be WARNING."""
+        root_logger = logging.getLogger()
+        original_handlers = root_logger.handlers[:]
+        root_logger.handlers.clear()
+
+        try:
+            setup_logging(verbosity=0)
+            assert self._get_console_handler(root_logger).level == logging.WARNING
+        finally:
+            for h in root_logger.handlers:
+                h.close()
+            root_logger.handlers = original_handlers
+
+    def test_verbose_shows_info_on_console(self) -> None:
+        """With verbosity=1 (-v), the console handler level should be INFO."""
+        root_logger = logging.getLogger()
+        original_handlers = root_logger.handlers[:]
+        root_logger.handlers.clear()
+
+        try:
+            setup_logging(verbosity=1)
+            assert self._get_console_handler(root_logger).level == logging.INFO
+        finally:
+            for h in root_logger.handlers:
+                h.close()
+            root_logger.handlers = original_handlers
+
+    def test_extra_verbose_shows_debug_on_console(self) -> None:
+        """With verbosity=2 (-vv), the console handler level should be DEBUG."""
+        root_logger = logging.getLogger()
+        original_handlers = root_logger.handlers[:]
+        root_logger.handlers.clear()
+
+        try:
+            setup_logging(verbosity=2)
+            assert self._get_console_handler(root_logger).level == logging.DEBUG
+        finally:
+            for h in root_logger.handlers:
+                h.close()
+            root_logger.handlers = original_handlers
 
 
 if __name__ == "__main__":
