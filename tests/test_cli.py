@@ -4,10 +4,11 @@ Tests for CLI module.
 
 import logging
 from typing import Any
+from unittest.mock import MagicMock, patch
 
 import pytest
 
-from gitlab_to_github_migrator.cli import _print_validation_report
+from gitlab_to_github_migrator.cli import _print_validation_report, main
 from gitlab_to_github_migrator.utils import setup_logging
 
 
@@ -159,6 +160,67 @@ class TestSetupLogging:
             for h in root_logger.handlers:
                 h.close()
             root_logger.handlers = original_handlers
+
+
+@pytest.mark.unit
+class TestLabelTranslationForwarding:
+    """Test that -l / --relabel patterns are forwarded to the migrator."""
+
+    def test_label_translations_passed_to_migrator(self) -> None:
+        """Label translation patterns supplied via -l are forwarded to the migrator."""
+        mock_report = {
+            "gitlab_project": "ns/proj",
+            "github_repo": "owner/repo",
+            "success": True,
+            "errors": [],
+            "statistics": {},
+        }
+
+        with (
+            patch("sys.argv", ["prog", "-l", "bug:new-bug", "-l", "p*:p-*", "ns/proj", "owner/repo"]),
+            patch("gitlab_to_github_migrator.cli.glu.get_readonly_token", return_value="gl-token"),
+            patch("gitlab_to_github_migrator.cli.ghu.get_token", return_value="gh-token"),
+            patch("gitlab_to_github_migrator.cli.GitlabToGithubMigrator") as mock_migrator,
+        ):
+            mock_instance = MagicMock()
+            mock_instance.migrate.return_value = mock_report
+            mock_migrator.return_value = mock_instance
+
+            with pytest.raises(SystemExit) as exc_info:
+                main()
+            assert exc_info.value.code == 0
+
+            mock_migrator.assert_called_once()
+            _, kwargs = mock_migrator.call_args
+            assert kwargs["label_translations"] == ["bug:new-bug", "p*:p-*"]
+
+    def test_no_label_translations_when_flag_omitted(self) -> None:
+        """When -l is not supplied, label_translations is None."""
+        mock_report = {
+            "gitlab_project": "ns/proj",
+            "github_repo": "owner/repo",
+            "success": True,
+            "errors": [],
+            "statistics": {},
+        }
+
+        with (
+            patch("sys.argv", ["prog", "ns/proj", "owner/repo"]),
+            patch("gitlab_to_github_migrator.cli.glu.get_readonly_token", return_value="gl-token"),
+            patch("gitlab_to_github_migrator.cli.ghu.get_token", return_value="gh-token"),
+            patch("gitlab_to_github_migrator.cli.GitlabToGithubMigrator") as mock_migrator,
+        ):
+            mock_instance = MagicMock()
+            mock_instance.migrate.return_value = mock_report
+            mock_migrator.return_value = mock_instance
+
+            with pytest.raises(SystemExit) as exc_info:
+                main()
+            assert exc_info.value.code == 0
+
+            mock_migrator.assert_called_once()
+            _, kwargs = mock_migrator.call_args
+            assert kwargs["label_translations"] is None
 
 
 if __name__ == "__main__":
