@@ -252,6 +252,7 @@ packages = ["src/gitlab_to_github_migrator"]
 [tool.pytest]
 markers = [
     "integration: mark test as integration test",
+    "local: mark test as local integration test (no network or API tokens required)",
     "unit: mark test as unit test",
 ]
 pythonpath = ["src"]

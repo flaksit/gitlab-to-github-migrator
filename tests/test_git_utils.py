@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import subprocess
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -188,3 +190,84 @@ class TestUpdateRemotesAfterMigration:
             update_remotes_after_migration("ns/repo", "owner/newrepo", cwd="/some/path")
 
         assert all(c == "/some/path" for c in cwd_used)
+
+
+def _git(args: list[str], cwd: Path) -> str:
+    """Run a git command in *cwd* and return stdout."""
+    return subprocess.run(["git", *args], cwd=cwd, check=True, capture_output=True, text=True).stdout.strip()
+
+
+def _make_git_repo(tmp_path: Path) -> Path:
+    """Initialise a bare-minimum git repo in *tmp_path*."""
+    _git(["init"], tmp_path)
+    _git(["config", "user.email", "test@example.com"], tmp_path)
+    _git(["config", "user.name", "Test"], tmp_path)
+    return tmp_path
+
+
+@pytest.mark.local
+class TestUpdateRemotesAfterMigrationLocal:
+    """Local integration tests for update_remotes_after_migration().
+
+    These tests use a real git repository on disk rather than mocking subprocess,
+    so they verify that the git commands are correct and that the repo state is
+    actually modified as expected.
+    """
+
+    def test_https_remote_is_rewritten(self, tmp_path: Path) -> None:
+        repo = _make_git_repo(tmp_path)
+        _git(["remote", "add", "origin", "https://gitlab.com/ns/repo.git"], repo)
+
+        result = update_remotes_after_migration("ns/repo", "owner/newrepo", cwd=str(repo))
+
+        assert len(result) == 1
+        assert result[0].remote_name == "origin"
+        assert result[0].new_url == "https://github.com/owner/newrepo.git"
+        assert result[0].backup_name == "gitlab"
+        assert result[0].old_url == "https://gitlab.com/ns/repo.git"
+
+        # Verify actual git state
+        assert _git(["remote", "get-url", "origin"], repo) == "https://github.com/owner/newrepo.git"
+        assert _git(["remote", "get-url", "gitlab"], repo) == "https://gitlab.com/ns/repo.git"
+
+    def test_ssh_remote_is_rewritten_as_ssh(self, tmp_path: Path) -> None:
+        repo = _make_git_repo(tmp_path)
+        _git(["remote", "add", "origin", "git@gitlab.com:ns/repo.git"], repo)
+
+        result = update_remotes_after_migration("ns/repo", "owner/newrepo", cwd=str(repo))
+
+        assert _git(["remote", "get-url", "origin"], repo) == "git@github.com:owner/newrepo.git"
+        assert _git(["remote", "get-url", "gitlab"], repo) == "git@gitlab.com:ns/repo.git"
+        assert result[0].new_url == "git@github.com:owner/newrepo.git"
+
+    def test_non_origin_remote_gets_gitlab_suffix(self, tmp_path: Path) -> None:
+        repo = _make_git_repo(tmp_path)
+        _git(["remote", "add", "upstream", "https://gitlab.com/ns/repo.git"], repo)
+
+        update_remotes_after_migration("ns/repo", "owner/newrepo", cwd=str(repo))
+
+        assert _git(["remote", "get-url", "upstream"], repo) == "https://github.com/owner/newrepo.git"
+        assert _git(["remote", "get-url", "upstream-gitlab"], repo) == "https://gitlab.com/ns/repo.git"
+
+    def test_unrelated_remote_is_not_touched(self, tmp_path: Path) -> None:
+        repo = _make_git_repo(tmp_path)
+        _git(["remote", "add", "origin", "https://gitlab.com/ns/repo.git"], repo)
+        _git(["remote", "add", "other", "https://github.com/someone/else.git"], repo)
+
+        update_remotes_after_migration("ns/repo", "owner/newrepo", cwd=str(repo))
+
+        assert _git(["remote", "get-url", "other"], repo) == "https://github.com/someone/else.git"
+
+    def test_not_a_git_repo_returns_empty(self, tmp_path: Path) -> None:
+        result = update_remotes_after_migration("ns/repo", "owner/newrepo", cwd=str(tmp_path))
+        assert result == []
+
+    def test_no_matching_remote_returns_empty(self, tmp_path: Path) -> None:
+        repo = _make_git_repo(tmp_path)
+        _git(["remote", "add", "origin", "https://github.com/someone/other.git"], repo)
+
+        result = update_remotes_after_migration("ns/repo", "owner/newrepo", cwd=str(repo))
+
+        assert result == []
+        # Original remote must be untouched
+        assert _git(["remote", "get-url", "origin"], repo) == "https://github.com/someone/other.git"
