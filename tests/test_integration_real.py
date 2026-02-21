@@ -231,7 +231,7 @@ def migration_result(
         github_token=github_token,
     )
 
-    report = migrator.migrate()
+    report = migrator.migrate(mark_as_migrated=False)
     print(f"\n Migration completed for: {repo_path}")
 
     yield MigrationResult(
