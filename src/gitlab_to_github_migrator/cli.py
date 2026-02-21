@@ -45,7 +45,13 @@ def parse_arguments() -> argparse.Namespace:
         help=f"Path for GitHub token in pass utility. If not set, will try {ghu.GITHUB_TOKEN_ENV_VAR} env var first, then fall back to default pass path {ghu.DEFAULT_GITHUB_TOKEN_PASS_PATH}.",
     )
 
-    _ = parser.add_argument("--verbose", "-v", action="store_true", help="Enable verbose logging")
+    _ = parser.add_argument(
+        "--verbose",
+        "-v",
+        action="count",
+        default=0,
+        help="Increase verbosity: -v shows INFO messages, -vv shows DEBUG messages",
+    )
 
     _ = parser.add_argument(
         "--no-update-remotes",
@@ -166,8 +172,8 @@ def main() -> None:
     args = parse_arguments()
 
     # Setup logging
-    verbose: bool = getattr(args, "verbose", False)
-    setup_logging(verbose=verbose)
+    verbosity: int = getattr(args, "verbose", 0)
+    setup_logging(verbosity=verbosity)
     global logger  # noqa: PLW0603
     logger = logging.getLogger(__name__)
 

@@ -23,33 +23,36 @@ class PassphraseRequiredError(PassError):
     """Raised when a GPG passphrase is required for the pass utility."""
 
 
-def setup_logging(*, verbose: bool = False) -> None:
+def setup_logging(*, verbosity: int = 0) -> None:
     """Configure logging for the migration process.
 
     Args:
-        verbose: If True, console shows INFO+ messages. If False (default),
-                 console shows only WARNING+ messages.
+        verbosity: Console log level. 0 = WARNING+ only (default), 1 = INFO+, 2+ = DEBUG+.
+                   The log file always receives DEBUG+ regardless of this setting.
     """
-    level = logging.DEBUG if verbose else logging.INFO
+    if verbosity >= 2:
+        console_level = logging.DEBUG
+    elif verbosity == 1:
+        console_level = logging.INFO
+    else:
+        console_level = logging.WARNING
 
     # Configure root logger to write to file with full formatting
     file_handler = logging.FileHandler("migration.log", mode="a")
     file_handler.setFormatter(logging.Formatter("%(asctime)s - %(levelname)s - %(name)s - %(message)s"))
 
-    # Configure console handler (stderr) based on verbose flag
-    # Default: WARNING+ only (clean output, errors visible)
-    # Verbose: INFO+ (diagnostic messages visible)
+    # Configure console handler (stderr) based on verbosity
     console_handler = logging.StreamHandler()
-    console_handler.setLevel(logging.INFO if verbose else logging.WARNING)
+    console_handler.setLevel(console_level)
     console_handler.setFormatter(logging.Formatter("%(levelname)s: %(message)s"))
 
     logging.basicConfig(
-        level=level,
+        level=logging.DEBUG,
         handlers=[console_handler, file_handler],
     )
 
     # Suppress verbose HTTP logging from httpx (used by GitLab library)
-    # Even in verbose mode, HTTP request logs are too noisy
+    # Even in warning mode, HTTP request logs are too noisy
     # Set to ERROR to completely suppress informational HTTP logs
     logging.getLogger("httpx").setLevel(logging.ERROR)
     logging.getLogger("httpcore").setLevel(logging.ERROR)

@@ -110,7 +110,7 @@ def migrate_labels(
             existing_label = initial_github_labels.get(translated_name.lower())
             if existing_label is not None:
                 label_mapping[gitlab_label.name] = existing_label
-                logger.debug(f"Using existing label: {gitlab_label.name} -> {existing_label}")
+                logger.info(f"Using existing label: {gitlab_label.name} -> {existing_label}")
                 continue
 
             # Create new label
@@ -121,7 +121,7 @@ def migrate_labels(
                     description=gitlab_label.description or "",
                 )
                 label_mapping[gitlab_label.name] = github_label.name
-                logger.debug(f"Created label: {gitlab_label.name} -> {translated_name}")
+                logger.info(f"Created label: {gitlab_label.name} -> {translated_name}")
             except GithubException as e:
                 if e.status == 422 and _is_already_exists_error(e):
                     # Label appeared between get_labels() and create_label() (race condition
