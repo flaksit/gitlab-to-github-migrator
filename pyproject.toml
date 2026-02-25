@@ -1,11 +1,11 @@
 #:schema https://json.schemastore.org/pyproject.json
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling", "uv-dynamic-versioning"]
 build-backend = "hatchling.build"
 
 [project]
 name = "gitlab-to-github-migrator"
-version = "0.1.0"
+dynamic = ["version"]
 description = "Python tool for migrating GitLab projects to GitHub with full metadata preservation"
 readme = "README.md"
 requires-python = ">=3.14"

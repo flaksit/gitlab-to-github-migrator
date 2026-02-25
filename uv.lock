@@ -272,7 +272,6 @@ wheels = [
 
 [[package]]
 name = "gitlab-to-github-migrator"
-version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "pygithub" },
