@@ -34,24 +34,24 @@ class TestMarkProjectAsMigrated:
     def test_appends_suffix_and_prepends_url(self) -> None:
         project = self._make_project("My Project", "Original description")
         mark_project_as_migrated(project, "https://github.com/org/repo")
-        assert project.name == "My Project (migrated to GitHub)"
+        assert project.name == "My Project -- migrated to GitHub"
         assert project.description == "Migrated to https://github.com/org/repo\n\nOriginal description"
         project.save.assert_called_once()
 
     def test_none_description_becomes_url_only(self) -> None:
         project = self._make_project("My Project", None)
         mark_project_as_migrated(project, "https://github.com/org/repo")
-        assert project.name == "My Project (migrated to GitHub)"
+        assert project.name == "My Project -- migrated to GitHub"
         assert project.description == "Migrated to https://github.com/org/repo"
         project.save.assert_called_once()
 
     def test_idempotent_name(self) -> None:
         project = self._make_project(
-            "My Project (migrated to GitHub)",
+            "My Project -- migrated to GitHub",
             "Migrated to https://github.com/org/repo\n\nSome description",
         )
         mark_project_as_migrated(project, "https://github.com/org/repo")
-        assert project.name == "My Project (migrated to GitHub)"
+        assert project.name == "My Project -- migrated to GitHub"
         assert project.description == "Migrated to https://github.com/org/repo\n\nSome description"
 
 

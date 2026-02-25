@@ -351,14 +351,14 @@ def get_normal_issue_cross_links(
 def mark_project_as_migrated(project: Project, github_web_url: str) -> None:
     """Mark a GitLab project as migrated by updating its title and description.
 
-    The title gets " (migrated to GitHub)" appended (idempotent).
+    The title gets " -- migrated to GitHub" appended (idempotent).
     The description gets "Migrated to <github_web_url>" prepended (idempotent).
 
     Args:
         project: GitLab project object (must be mutable / authenticated with write access)
         github_web_url: The web URL of the new GitHub repository (html_url, not clone URL)
     """
-    migrated_suffix = " (migrated to GitHub)"
+    migrated_suffix = " -- migrated to GitHub"
     current_name: str = str(project.name)  # pyright: ignore[reportUnknownArgumentType]
     if not current_name.endswith(migrated_suffix):
         project.name = current_name + migrated_suffix  # type: ignore[reportUnknownMemberType]
