@@ -2,7 +2,6 @@
     "recommendations": [
         "charliermarsh.ruff",
         "detachhead.basedpyright",
-        "github.copilot",
         "github.copilot-chat",
         "gruntfuggly.todo-tree",
         "mhutchie.git-graph",
