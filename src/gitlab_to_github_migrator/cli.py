@@ -65,6 +65,27 @@ def parse_arguments() -> argparse.Namespace:
         ),
     )
 
+    _ = parser.add_argument(
+        "--skip-labels",
+        action="store_true",
+        default=False,
+        help="Skip label migration.",
+    )
+
+    _ = parser.add_argument(
+        "--skip-milestones",
+        action="store_true",
+        default=False,
+        help="Skip milestone migration.",
+    )
+
+    _ = parser.add_argument(
+        "--skip-issues",
+        action="store_true",
+        default=False,
+        help="Skip issue migration.",
+    )
+
     return parser.parse_args()
 
 
@@ -195,6 +216,9 @@ def main() -> None:
         label_translations=label_translation,
         gitlab_token=gitlab_token,
         github_token=ghu.get_token(pass_path=github_token_pass_path),
+        skip_labels=getattr(args, "skip_labels", False),
+        skip_milestones=getattr(args, "skip_milestones", False),
+        skip_issues=getattr(args, "skip_issues", False),
     )
 
     # Execute migration

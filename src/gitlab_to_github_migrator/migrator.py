@@ -61,6 +61,9 @@ class GitlabToGithubMigrator:
         label_translations: list[str] | None = None,
         gitlab_token: str | None = None,
         github_token: str,
+        skip_labels: bool = False,
+        skip_milestones: bool = False,
+        skip_issues: bool = False,
     ) -> None:
         self.gitlab_project_path: str = gitlab_project_path
         self.github_repo_path: str = github_repo_path
@@ -68,6 +71,11 @@ class GitlabToGithubMigrator:
         # Store tokens for direct API access
         self.gitlab_token: str | None = gitlab_token
         self.github_token: str = github_token
+
+        # Skip flags
+        self.skip_labels: bool = skip_labels
+        self.skip_milestones: bool = skip_milestones
+        self.skip_issues: bool = skip_issues
 
         # Initialize API clients with authentication. This falls back to anonymous access if no token is provided.
         self.gitlab_client: gitlab.Gitlab = glu.get_client(token=gitlab_token)
@@ -720,9 +728,18 @@ class GitlabToGithubMigrator:
             self.set_default_branch()
 
             # Metadata migration
-            self.migrate_labels()
-            self.migrate_milestones_with_number_preservation()
-            self.migrate_issues_with_number_preservation()
+            if self.skip_labels:
+                print("Skipping label migration (--skip-labels)")
+            else:
+                self.migrate_labels()
+            if self.skip_milestones:
+                print("Skipping milestone migration (--skip-milestones)")
+            else:
+                self.migrate_milestones_with_number_preservation()
+            if self.skip_issues:
+                print("Skipping issue migration (--skip-issues)")
+            else:
+                self.migrate_issues_with_number_preservation()
 
             # Validation
             report = self.validate_migration()

@@ -3,7 +3,7 @@ Tests for CLI module.
 """
 
 import logging
-from typing import Any
+from typing import Any, ClassVar
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -223,5 +223,71 @@ class TestLabelTranslationForwarding:
             assert kwargs["label_translations"] is None
 
 
-if __name__ == "__main__":
-    pytest.main([__file__, "-v"])
+@pytest.mark.unit
+class TestSkipFlags:
+    """Test that --skip-labels, --skip-milestones, --skip-issues are forwarded to the migrator."""
+
+    _mock_report: ClassVar[dict[str, object]] = {
+        "gitlab_project": "ns/proj",
+        "github_repo": "owner/repo",
+        "success": True,
+        "errors": [],
+        "statistics": {},
+    }
+
+    def _run_main_with_args(self, extra_args: list[str]) -> tuple[MagicMock, MagicMock]:
+        with (
+            patch("sys.argv", ["prog", *extra_args, "ns/proj", "owner/repo"]),
+            patch("gitlab_to_github_migrator.cli.glu.get_readonly_token", return_value="gl-token"),
+            patch("gitlab_to_github_migrator.cli.ghu.get_token", return_value="gh-token"),
+            patch("gitlab_to_github_migrator.cli.GitlabToGithubMigrator") as mock_migrator,
+        ):
+            mock_instance = MagicMock()
+            mock_instance.migrate.return_value = self._mock_report
+            mock_migrator.return_value = mock_instance
+
+            with pytest.raises(SystemExit) as exc_info:
+                main()
+            assert exc_info.value.code == 0
+
+            return mock_migrator, mock_instance
+
+    def test_skip_flags_default_to_false(self) -> None:
+        """When skip flags are omitted, they default to False."""
+        mock_migrator, _ = self._run_main_with_args([])
+        _, kwargs = mock_migrator.call_args
+        assert kwargs["skip_labels"] is False
+        assert kwargs["skip_milestones"] is False
+        assert kwargs["skip_issues"] is False
+
+    def test_skip_labels_passed_to_migrator(self) -> None:
+        """--skip-labels is forwarded to the migrator as skip_labels=True."""
+        mock_migrator, _ = self._run_main_with_args(["--skip-labels"])
+        _, kwargs = mock_migrator.call_args
+        assert kwargs["skip_labels"] is True
+        assert kwargs["skip_milestones"] is False
+        assert kwargs["skip_issues"] is False
+
+    def test_skip_milestones_passed_to_migrator(self) -> None:
+        """--skip-milestones is forwarded to the migrator as skip_milestones=True."""
+        mock_migrator, _ = self._run_main_with_args(["--skip-milestones"])
+        _, kwargs = mock_migrator.call_args
+        assert kwargs["skip_labels"] is False
+        assert kwargs["skip_milestones"] is True
+        assert kwargs["skip_issues"] is False
+
+    def test_skip_issues_passed_to_migrator(self) -> None:
+        """--skip-issues is forwarded to the migrator as skip_issues=True."""
+        mock_migrator, _ = self._run_main_with_args(["--skip-issues"])
+        _, kwargs = mock_migrator.call_args
+        assert kwargs["skip_labels"] is False
+        assert kwargs["skip_milestones"] is False
+        assert kwargs["skip_issues"] is True
+
+    def test_all_skip_flags_combined(self) -> None:
+        """All three skip flags can be used together."""
+        mock_migrator, _ = self._run_main_with_args(["--skip-labels", "--skip-milestones", "--skip-issues"])
+        _, kwargs = mock_migrator.call_args
+        assert kwargs["skip_labels"] is True
+        assert kwargs["skip_milestones"] is True
+        assert kwargs["skip_issues"] is True
