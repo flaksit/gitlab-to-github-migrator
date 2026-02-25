@@ -702,7 +702,11 @@ class GitlabToGithubMigrator:
             self.gitlab_project.description,  # pyright: ignore[reportUnknownArgumentType]
         )
 
-    def migrate(self) -> dict[str, Any]:
+    def mark_gitlab_project_as_migrated(self) -> None:
+        """Mark the GitLab project as migrated by updating its title and description."""
+        glu.mark_project_as_migrated(self.gitlab_project, self.github_repo.html_url)
+
+    def migrate(self, *, mark_as_migrated: bool = True) -> dict[str, Any]:
         """Execute the complete migration process."""
         try:
             print(f"Starting migration: {self.gitlab_project_path} → {self.github_repo_path}")
@@ -722,6 +726,9 @@ class GitlabToGithubMigrator:
 
             # Validation
             report = self.validate_migration()
+
+            if mark_as_migrated:
+                self.mark_gitlab_project_as_migrated()
 
             print("Migration completed successfully")
 

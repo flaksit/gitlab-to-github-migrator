@@ -7,6 +7,7 @@ import pytest
 from gitlab_to_github_migrator.gitlab_utils import (
     IssueCrossLinks,
     get_normal_issue_cross_links,
+    mark_project_as_migrated,
 )
 
 
@@ -19,6 +20,39 @@ class TestIssueCrossLinks:
         )
         assert cross_links.cross_links_text == "**Related:** #123"
         assert cross_links.blocked_issue_iids == []
+
+
+@pytest.mark.unit
+class TestMarkProjectAsMigrated:
+    def _make_project(self, name: str, description: str | None) -> Mock:
+        project = Mock()
+        project.name = name
+        project.description = description
+        project.path_with_namespace = "org/project"
+        return project
+
+    def test_appends_suffix_and_prepends_url(self) -> None:
+        project = self._make_project("My Project", "Original description")
+        mark_project_as_migrated(project, "https://github.com/org/repo")
+        assert project.name == "My Project -- migrated to GitHub"
+        assert project.description == "Migrated to https://github.com/org/repo\n\nOriginal description"
+        project.save.assert_called_once()
+
+    def test_none_description_becomes_url_only(self) -> None:
+        project = self._make_project("My Project", None)
+        mark_project_as_migrated(project, "https://github.com/org/repo")
+        assert project.name == "My Project -- migrated to GitHub"
+        assert project.description == "Migrated to https://github.com/org/repo"
+        project.save.assert_called_once()
+
+    def test_idempotent_name(self) -> None:
+        project = self._make_project(
+            "My Project -- migrated to GitHub",
+            "Migrated to https://github.com/org/repo\n\nSome description",
+        )
+        mark_project_as_migrated(project, "https://github.com/org/repo")
+        assert project.name == "My Project -- migrated to GitHub"
+        assert project.description == "Migrated to https://github.com/org/repo\n\nSome description"
 
 
 @pytest.mark.unit
