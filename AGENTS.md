@@ -62,9 +62,8 @@ TARGET_GITHUB_TEST_OWNER="org-or-username"
 These are set in GitHub copilot environment secrets and in `.env` for local testing.
 
 Tokens stored in env vars SOURCE_GITLAB_TOKEN and TARGET_GITHUB_TOKEN, or retrieved via `pass`:
-- `gitlab/api/ro_token` (read-only for tests)
+- `gitlab/api/rw_token` (needs `api` scope for migration and test project creation)
 - `github/api/token` (needs repo creation)
-- `gitlab/api/rw_token` (for creating test project)
 
 ## Code Style
 

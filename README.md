@@ -45,7 +45,7 @@ Note: Only the main `gitlab-to-github-migrator` CLI is installed. Developer-only
 
 ### Token Requirements
 
-- **GitLab Token**: Read access to source project, issues, milestones, and labels. The token should have at least `read_api` and `read_repository` scope.
+- **GitLab Token**: Read access to source project, issues, milestones, and labels, plus **write access** to update the source project name and description after migration (marking it as migrated). The token needs `api` scope (which includes both read and write). A `read_api` token is **not sufficient** — the migration will fail at the final "mark as migrated" step.
 - **GitHub Token**: Repository access for target user/organization: Finegrained token with:
   - Owner: the target user/org
   - Repository permissions: Read and Write for `Administration`, `Contents`, `Issues`
@@ -55,13 +55,13 @@ Note: Only the main `gitlab-to-github-migrator` CLI is installed. Developer-only
 
 1. Path to token in `pass` provided as CLI options (`--gitlab-token-pass-path` / `--github-token-pass-path`)
 2. Environment variable (`SOURCE_GITLAB_TOKEN` / `TARGET_GITHUB_TOKEN`)
-3. Default `pass` path (`gitlab/api/ro_token` / `github/api/token`)
+3. Default `pass` path (`gitlab/api/rw_token` / `github/api/token`)
 
 ### Using `pass` Utility
 
 ```bash
-# Store GitLab token in the default location (read-only recommended)
-pass insert gitlab/api/ro_token
+# Store GitLab token (needs api scope for marking project as migrated)
+pass insert gitlab/api/rw_token
 
 # Store GitHub token in the default location (requires repo creation permissions)
 pass insert github/api/token
@@ -132,6 +132,7 @@ GitHub treats labels as **case-insensitive** ("Bug" and "bug" are the same label
 7. **Relationship Migration**: Creates GitHub sub-issues and issue dependencies
 8. **Cleanup**: Removes placeholder items
 9. **Validation**: Generates migration report
+10. **Mark as Migrated**: Updates the GitLab project name (appends " -- migrated to GitHub") and description (prepends the GitHub repository URL)
 
 ## Example Migration Report
 
@@ -441,7 +442,7 @@ Follow full **Test-Driven Development (TDD)** red-green approach:
 # Verify token access
 uv run python -c "
 import gitlab, subprocess
-token = subprocess.run(['pass', 'gitlab/api/ro_token'], capture_output=True, text=True).stdout.strip()
+token = subprocess.run(['pass', 'gitlab/api/rw_token'], capture_output=True, text=True).stdout.strip()
 gl = gitlab.Gitlab('https://gitlab.com', private_token=token)
 print('GitLab access:', gl.projects.get('your-namespace/your-project').name)
 "
