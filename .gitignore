@@ -15,5 +15,5 @@ _build/*
 /build
 /dist
 .task
-migration.log
+gitlab-to-github-migration.log
 .worktrees/

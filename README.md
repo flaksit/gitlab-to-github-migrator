@@ -465,7 +465,7 @@ print('GitLab access:', gl.projects.get('your-namespace/your-project').name)
 gitlab-to-github-migrator "source/project" "target/repo" --verbose
 
 # Check migration logs
-tail -f migration.log
+tail -f gitlab-to-github-migration.log
 ```
 
 ### API Documentation

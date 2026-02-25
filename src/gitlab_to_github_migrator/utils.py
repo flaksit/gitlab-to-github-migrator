@@ -38,7 +38,7 @@ def setup_logging(*, verbosity: int = 0) -> None:
         console_level = logging.WARNING
 
     # Configure root logger to write to file with full formatting
-    file_handler = logging.FileHandler("migration.log", mode="a")
+    file_handler = logging.FileHandler("gitlab-to-github-migration.log", mode="a")
     file_handler.setFormatter(logging.Formatter("%(asctime)s - %(levelname)s - %(name)s - %(message)s"))
 
     # Configure console handler (stderr) based on verbosity

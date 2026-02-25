@@ -1,0 +1,737 @@
+2026-01-29 09:43:54,842 - INFO - Request DELETE /repos/flaks-test/creation-test-mjvzgnrv failed with 403: Forbidden
+2026-01-29 09:43:56,070 - INFO - Request DELETE /repos/flaks-test/deletion-test-69tdrxkv failed with 403: Forbidden
+2026-01-29 09:43:57,283 - INFO - Request DELETE /repos/flaks-test/migration-test-cf805ymi failed with 403: Forbidden
+2026-01-29 09:43:58,524 - INFO - Request DELETE /repos/flaks-test/creation-test-vgz12f6t failed with 403: Forbidden
+2026-01-29 09:43:59,742 - INFO - Request DELETE /repos/flaks-test/deletion-test-lzjth08r failed with 403: Forbidden
+2026-02-21 13:31:30,335 - DEBUG - urllib3.connectionpool - Starting new HTTPS connection (1): gitlab.com:443
+2026-02-21 13:31:30,658 - DEBUG - urllib3.connectionpool - https://gitlab.com:443 "GET /api/v4/projects/flaks%2Fgl2gh-migration-test-project HTTP/1.1" 200 None
+2026-02-21 13:31:30,686 - DEBUG - gitlab_to_github_migrator.migrator - Initialized migrator for flaks/gl2gh-migration-test-project -> flaks-test/gl2ghmigr-full-migration-test-JF260220e
+2026-02-21 13:31:30,687 - DEBUG - gitlab_to_github_migrator.migrator - GitLab API access validated
+2026-02-21 13:31:30,687 - DEBUG - gitlab_to_github_migrator.migrator - GitHub API access validated
+2026-02-21 13:31:30,687 - DEBUG - urllib3.connectionpool - Starting new HTTPS connection (1): api.github.com:443
+2026-02-21 13:31:30,900 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "GET /repos/flaks-test/gl2ghmigr-full-migration-test-JF260220e HTTP/1.1" 404 None
+2026-02-21 13:31:31,375 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "GET /orgs/flaks-test HTTP/1.1" 200 None
+2026-02-21 13:31:32,400 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /orgs/flaks-test/repos HTTP/1.1" 201 7964
+2026-02-21 13:31:34,336 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "GET /repos/flaks-test/gl2ghmigr-full-migration-test-JF260220e/labels HTTP/1.1" 200 None
+2026-02-21 13:31:34,801 - DEBUG - urllib3.connectionpool - https://gitlab.com:443 "GET /api/v4/projects/78035105/labels HTTP/1.1" 200 None
+2026-02-21 13:31:35,176 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260220e/labels HTTP/1.1" 201 229
+2026-02-21 13:31:35,176 - DEBUG - gitlab_to_github_migrator.labels - Created label: bug -> new-bug
+2026-02-21 13:31:35,176 - DEBUG - gitlab_to_github_migrator.labels - Using existing label: documentation -> documentation
+2026-02-21 13:31:36,561 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260220e/labels HTTP/1.1" 201 233
+2026-02-21 13:31:36,561 - DEBUG - gitlab_to_github_migrator.labels - Created label: feature -> feature
+2026-02-21 13:31:37,889 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260220e/labels HTTP/1.1" 201 226
+2026-02-21 13:31:37,889 - DEBUG - gitlab_to_github_migrator.labels - Created label: p_high -> p-_high
+2026-02-21 13:31:39,210 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260220e/labels HTTP/1.1" 201 226
+2026-02-21 13:31:39,211 - DEBUG - gitlab_to_github_migrator.labels - Created label: p_idea -> p-_idea
+2026-02-21 13:31:40,545 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260220e/labels HTTP/1.1" 201 224
+2026-02-21 13:31:40,546 - DEBUG - gitlab_to_github_migrator.labels - Created label: p_low -> p-_low
+2026-02-21 13:31:41,900 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260220e/labels HTTP/1.1" 201 224
+2026-02-21 13:31:41,901 - DEBUG - gitlab_to_github_migrator.labels - Created label: p_mid -> p-_mid
+2026-02-21 13:31:43,219 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260220e/labels HTTP/1.1" 201 238
+2026-02-21 13:31:43,219 - DEBUG - gitlab_to_github_migrator.labels - Created label: p_opti -> p-_opti
+2026-02-21 13:31:44,544 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260220e/labels HTTP/1.1" 201 244
+2026-02-21 13:31:44,545 - DEBUG - gitlab_to_github_migrator.labels - Created label: status_abandoned -> status_abandoned
+2026-02-21 13:31:45,881 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260220e/labels HTTP/1.1" 201 236
+2026-02-21 13:31:45,882 - DEBUG - gitlab_to_github_migrator.labels - Created label: status_inbox -> status_inbox
+2026-02-21 13:31:47,222 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260220e/labels HTTP/1.1" 201 234
+2026-02-21 13:31:47,222 - DEBUG - gitlab_to_github_migrator.labels - Created label: status_test -> status_test
+2026-02-21 13:31:48,749 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260220e/labels HTTP/1.1" 201 234
+2026-02-21 13:31:48,749 - DEBUG - gitlab_to_github_migrator.labels - Created label: status_todo -> status_todo
+2026-02-21 13:31:50,067 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260220e/labels HTTP/1.1" 201 240
+2026-02-21 13:31:50,067 - DEBUG - gitlab_to_github_migrator.labels - Created label: status_waiting -> status_waiting
+2026-02-21 13:31:51,399 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260220e/labels HTTP/1.1" 201 240
+2026-02-21 13:31:51,400 - DEBUG - gitlab_to_github_migrator.labels - Created label: status_working -> status_working
+2026-02-21 13:31:52,721 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260220e/labels HTTP/1.1" 201 222
+2026-02-21 13:31:52,721 - DEBUG - gitlab_to_github_migrator.labels - Created label: t_bug -> t_bug
+2026-02-21 13:31:54,025 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260220e/labels HTTP/1.1" 201 245
+2026-02-21 13:31:54,025 - DEBUG - gitlab_to_github_migrator.labels - Created label: t_dev -> t_dev
+2026-02-21 13:31:55,371 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260220e/labels HTTP/1.1" 201 230
+2026-02-21 13:31:55,371 - DEBUG - gitlab_to_github_migrator.labels - Created label: t_feature -> t_feature
+2026-02-21 13:31:56,694 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260220e/labels HTTP/1.1" 201 240
+2026-02-21 13:31:56,694 - DEBUG - gitlab_to_github_migrator.labels - Created label: t_infra -> t_infra
+2026-02-21 13:31:58,036 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260220e/labels HTTP/1.1" 201 234
+2026-02-21 13:31:58,036 - DEBUG - gitlab_to_github_migrator.labels - Created label: t_internals -> t_internals
+2026-02-21 13:31:59,379 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260220e/labels HTTP/1.1" 201 238
+2026-02-21 13:31:59,380 - DEBUG - gitlab_to_github_migrator.labels - Created label: t_refactoring -> t_refactoring
+2026-02-21 13:31:59,592 - DEBUG - urllib3.connectionpool - https://gitlab.com:443 "GET /api/v4/projects/78035105/milestones?state=all HTTP/1.1" 200 None
+2026-02-21 13:32:00,722 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260220e/milestones HTTP/1.1" 201 1571
+2026-02-21 13:32:00,722 - DEBUG - gitlab_to_github_migrator.migrator - Created milestone #1: v1.0
+2026-02-21 13:32:02,067 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260220e/milestones HTTP/1.1" 201 1613
+2026-02-21 13:32:02,068 - DEBUG - gitlab_to_github_migrator.migrator - Created placeholder milestone #2
+2026-02-21 13:32:03,406 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260220e/milestones HTTP/1.1" 201 1551
+2026-02-21 13:32:03,407 - DEBUG - gitlab_to_github_migrator.migrator - Created milestone #3: v2.0
+2026-02-21 13:32:04,780 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "DELETE /repos/flaks-test/gl2ghmigr-full-migration-test-JF260220e/milestones/2 HTTP/1.1" 204 0
+2026-02-21 13:32:04,781 - DEBUG - gitlab_to_github_migrator.migrator - Deleted placeholder milestone #2
+2026-02-21 13:32:05,266 - DEBUG - urllib3.connectionpool - https://gitlab.com:443 "GET /api/v4/projects/78035105/issues?state=all HTTP/1.1" 200 None
+2026-02-21 13:32:05,556 - DEBUG - urllib3.connectionpool - https://gitlab.com:443 "GET /api/v4/projects/78035105/issues/1/links HTTP/1.1" 200 None
+2026-02-21 13:32:06,210 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260220e/issues HTTP/1.1" 201 3122
+2026-02-21 13:32:06,211 - DEBUG - gitlab_to_github_migrator.migrator - Added issue #1 to github_issue_dict
+2026-02-21 13:32:06,510 - DEBUG - urllib3.connectionpool - https://gitlab.com:443 "GET /api/v4/projects/78035105/issues/1/notes HTTP/1.1" 200 None
+2026-02-21 13:32:08,234 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260220e/issues/1/comments HTTP/1.1" 201 1838
+2026-02-21 13:32:08,234 - DEBUG - gitlab_to_github_migrator.migrator - Migrated 1 system note(s)
+2026-02-21 13:32:09,853 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260220e/issues/1/comments HTTP/1.1" 201 1873
+2026-02-21 13:32:09,853 - DEBUG - gitlab_to_github_migrator.migrator - Migrated comment by janfrederik
+2026-02-21 13:32:11,617 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "PATCH /repos/flaks-test/gl2ghmigr-full-migration-test-JF260220e/issues/1 HTTP/1.1" 200 None
+2026-02-21 13:32:11,617 - DEBUG - gitlab_to_github_migrator.migrator - Created issue #1: Basic issue
+2026-02-21 13:32:11,960 - DEBUG - urllib3.connectionpool - https://gitlab.com:443 "GET /api/v4/projects/78035105/uploads/c6b3a7aa54667703cd34315fc3a37822/Screenshot_from_2026-01-26_20-19-47.png HTTP/1.1" 200 66904
+2026-02-21 13:32:11,965 - DEBUG - gitlab_to_github_migrator.gitlab_utils - Downloaded Screenshot_from_2026-01-26_20-19-47.png: 66904 bytes, Content-Type: application/octet-stream
+2026-02-21 13:32:12,309 - DEBUG - urllib3.connectionpool - https://gitlab.com:443 "GET /api/v4/projects/78035105/uploads/c9c38322c2614f22b295d59c4809dca9/Fagnes_de_Wallonie-T1.pdf HTTP/1.1" 200 69865
+2026-02-21 13:32:12,315 - DEBUG - gitlab_to_github_migrator.gitlab_utils - Downloaded Fagnes_de_Wallonie-T1.pdf: 69865 bytes, Content-Type: application/octet-stream
+2026-02-21 13:32:12,617 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "GET /repos/flaks-test/gl2ghmigr-full-migration-test-JF260220e/releases HTTP/1.1" 200 2
+2026-02-21 13:32:13,257 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260220e/releases HTTP/1.1" 201 1874
+2026-02-21 13:32:14,258 - DEBUG - urllib3.connectionpool - Starting new HTTPS connection (1): uploads.github.com:443
+2026-02-21 13:32:14,899 - DEBUG - urllib3.connectionpool - https://uploads.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260220e/releases/288986528/assets?label=&name=c6b3a7aa_Screenshot_from_2026-01-26_20-19-47.png HTTP/1.1" 201 None
+2026-02-21 13:32:14,900 - DEBUG - gitlab_to_github_migrator.attachments - Uploaded Screenshot_from_2026-01-26_20-19-47.png: https://github.com/flaks-test/gl2ghmigr-full-migration-test-JF260220e/releases/download/untagged-ca6062198791e981ca3b/c6b3a7aa_Screenshot_from_2026-01-26_20-19-47.png
+2026-02-21 13:32:15,900 - DEBUG - urllib3.connectionpool - Starting new HTTPS connection (1): uploads.github.com:443
+2026-02-21 13:32:16,533 - DEBUG - urllib3.connectionpool - https://uploads.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260220e/releases/288986528/assets?label=&name=c9c38322_Fagnes_de_Wallonie-T1.pdf HTTP/1.1" 201 None
+2026-02-21 13:32:16,533 - DEBUG - gitlab_to_github_migrator.attachments - Uploaded Fagnes_de_Wallonie-T1.pdf: https://github.com/flaks-test/gl2ghmigr-full-migration-test-JF260220e/releases/download/untagged-ca6062198791e981ca3b/c9c38322_Fagnes_de_Wallonie-T1.pdf
+2026-02-21 13:32:16,933 - DEBUG - urllib3.connectionpool - https://gitlab.com:443 "GET /api/v4/projects/78035105/issues/2/links HTTP/1.1" 200 None
+2026-02-21 13:32:17,990 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260220e/issues HTTP/1.1" 201 3584
+2026-02-21 13:32:17,991 - DEBUG - gitlab_to_github_migrator.migrator - Added issue #2 to github_issue_dict
+2026-02-21 13:32:18,329 - DEBUG - urllib3.connectionpool - https://gitlab.com:443 "GET /api/v4/projects/78035105/issues/2/notes HTTP/1.1" 200 None
+2026-02-21 13:32:19,562 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260220e/issues/2/comments HTTP/1.1" 201 1903
+2026-02-21 13:32:19,562 - DEBUG - gitlab_to_github_migrator.migrator - Migrated 2 system note(s)
+2026-02-21 13:32:19,562 - DEBUG - gitlab_to_github_migrator.migrator - Created issue #2: Issue with attachments
+2026-02-21 13:32:19,828 - DEBUG - urllib3.connectionpool - https://gitlab.com:443 "GET /api/v4/projects/78035105/issues/3/links HTTP/1.1" 200 2
+2026-02-21 13:32:20,058 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "GET /repos/flaks-test/gl2ghmigr-full-migration-test-JF260220e/milestones/3 HTTP/1.1" 200 None
+2026-02-21 13:32:21,173 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260220e/issues HTTP/1.1" 201 4592
+2026-02-21 13:32:21,174 - DEBUG - gitlab_to_github_migrator.migrator - Added issue #3 to github_issue_dict
+2026-02-21 13:32:21,525 - DEBUG - urllib3.connectionpool - https://gitlab.com:443 "GET /api/v4/projects/78035105/issues/3/notes HTTP/1.1" 200 None
+2026-02-21 13:32:22,862 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260220e/issues/3/comments HTTP/1.1" 201 1951
+2026-02-21 13:32:22,863 - DEBUG - gitlab_to_github_migrator.migrator - Migrated 3 system note(s)
+2026-02-21 13:32:22,863 - DEBUG - gitlab_to_github_migrator.migrator - Created issue #3: Parent issue
+2026-02-21 13:32:24,279 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260220e/issues HTTP/1.1" 201 2606
+2026-02-21 13:32:26,001 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "PATCH /repos/flaks-test/gl2ghmigr-full-migration-test-JF260220e/issues/4 HTTP/1.1" 200 None
+2026-02-21 13:32:26,001 - DEBUG - gitlab_to_github_migrator.migrator - Created placeholder issue #4
+2026-02-21 13:32:26,303 - DEBUG - urllib3.connectionpool - https://gitlab.com:443 "GET /api/v4/projects/78035105/uploads/1cd8db7a2d15ab850ce48cafa48fbf61/Screenshot_from_2026-01-23_17-00-12.png HTTP/1.1" 200 79926
+2026-02-21 13:32:26,310 - DEBUG - gitlab_to_github_migrator.gitlab_utils - Downloaded Screenshot_from_2026-01-23_17-00-12.png: 79926 bytes, Content-Type: application/octet-stream
+2026-02-21 13:32:27,002 - DEBUG - urllib3.connectionpool - Starting new HTTPS connection (1): uploads.github.com:443
+2026-02-21 13:32:27,625 - DEBUG - urllib3.connectionpool - https://uploads.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260220e/releases/288986528/assets?label=&name=1cd8db7a_Screenshot_from_2026-01-23_17-00-12.png HTTP/1.1" 201 None
+2026-02-21 13:32:27,625 - DEBUG - gitlab_to_github_migrator.attachments - Uploaded Screenshot_from_2026-01-23_17-00-12.png: https://github.com/flaks-test/gl2ghmigr-full-migration-test-JF260220e/releases/download/untagged-ca6062198791e981ca3b/1cd8db7a_Screenshot_from_2026-01-23_17-00-12.png
+2026-02-21 13:32:27,905 - DEBUG - urllib3.connectionpool - https://gitlab.com:443 "GET /api/v4/projects/78035105/issues/5/links HTTP/1.1" 200 2
+2026-02-21 13:32:29,032 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260220e/issues HTTP/1.1" 201 3033
+2026-02-21 13:32:29,032 - DEBUG - gitlab_to_github_migrator.migrator - Added issue #5 to github_issue_dict
+2026-02-21 13:32:29,362 - DEBUG - urllib3.connectionpool - https://gitlab.com:443 "GET /api/v4/projects/78035105/issues/5/notes HTTP/1.1" 200 None
+2026-02-21 13:32:30,737 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260220e/issues/5/comments HTTP/1.1" 201 1893
+2026-02-21 13:32:30,738 - DEBUG - gitlab_to_github_migrator.migrator - Migrated 2 system note(s)
+2026-02-21 13:32:30,738 - DEBUG - gitlab_to_github_migrator.migrator - Created issue #5: Child task 1 (open)
+2026-02-21 13:32:30,966 - DEBUG - urllib3.connectionpool - https://gitlab.com:443 "GET /api/v4/projects/78035105/issues/6/links HTTP/1.1" 200 2
+2026-02-21 13:32:32,241 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260220e/issues HTTP/1.1" 201 2803
+2026-02-21 13:32:32,241 - DEBUG - gitlab_to_github_migrator.migrator - Added issue #6 to github_issue_dict
+2026-02-21 13:32:32,541 - DEBUG - urllib3.connectionpool - https://gitlab.com:443 "GET /api/v4/projects/78035105/issues/6/notes HTTP/1.1" 200 None
+2026-02-21 13:32:33,923 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260220e/issues/6/comments HTTP/1.1" 201 1828
+2026-02-21 13:32:33,923 - DEBUG - gitlab_to_github_migrator.migrator - Migrated 1 system note(s)
+2026-02-21 13:32:35,947 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "PATCH /repos/flaks-test/gl2ghmigr-full-migration-test-JF260220e/issues/6 HTTP/1.1" 200 None
+2026-02-21 13:32:35,948 - DEBUG - gitlab_to_github_migrator.migrator - Created issue #6: Child task 2 (closed)
+2026-02-21 13:32:36,225 - DEBUG - urllib3.connectionpool - https://gitlab.com:443 "GET /api/v4/projects/78035105/issues/7/links HTTP/1.1" 200 None
+2026-02-21 13:32:37,385 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260220e/issues HTTP/1.1" 201 3090
+2026-02-21 13:32:37,386 - DEBUG - gitlab_to_github_migrator.migrator - Added issue #7 to github_issue_dict
+2026-02-21 13:32:37,882 - DEBUG - urllib3.connectionpool - https://gitlab.com:443 "GET /api/v4/projects/78035105/issues/7/notes HTTP/1.1" 200 None
+2026-02-21 13:32:38,950 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260220e/issues/7/comments HTTP/1.1" 201 1901
+2026-02-21 13:32:38,950 - DEBUG - gitlab_to_github_migrator.migrator - Migrated 2 system note(s)
+2026-02-21 13:32:38,950 - DEBUG - gitlab_to_github_migrator.migrator - Created issue #7: Blocking issue
+2026-02-21 13:32:39,240 - DEBUG - urllib3.connectionpool - https://gitlab.com:443 "GET /api/v4/projects/78035105/issues/8/links HTTP/1.1" 200 None
+2026-02-21 13:32:40,385 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260220e/issues HTTP/1.1" 201 3106
+2026-02-21 13:32:40,385 - DEBUG - gitlab_to_github_migrator.migrator - Added issue #8 to github_issue_dict
+2026-02-21 13:32:40,749 - DEBUG - urllib3.connectionpool - https://gitlab.com:443 "GET /api/v4/projects/78035105/issues/8/notes HTTP/1.1" 200 None
+2026-02-21 13:32:40,749 - DEBUG - gitlab_to_github_migrator.attachments - Reusing cached attachment Screenshot_from_2026-01-26_20-19-47.png: https://github.com/flaks-test/gl2ghmigr-full-migration-test-JF260220e/releases/download/untagged-ca6062198791e981ca3b/c6b3a7aa_Screenshot_from_2026-01-26_20-19-47.png
+2026-02-21 13:32:42,031 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260220e/issues/8/comments HTTP/1.1" 201 2082
+2026-02-21 13:32:42,031 - DEBUG - gitlab_to_github_migrator.migrator - Migrated comment by janfrederik
+2026-02-21 13:32:43,661 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260220e/issues/8/comments HTTP/1.1" 201 1838
+2026-02-21 13:32:43,661 - DEBUG - gitlab_to_github_migrator.migrator - Migrated 1 system note(s)
+2026-02-21 13:32:43,661 - DEBUG - gitlab_to_github_migrator.migrator - Created issue #8: Blocked issue
+2026-02-21 13:32:43,662 - DEBUG - urllib3.connectionpool - Starting new HTTPS connection (1): api.github.com:443
+2026-02-21 13:32:44,377 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /graphql HTTP/1.1" 200 None
+2026-02-21 13:32:44,377 - DEBUG - gitlab_to_github_migrator.github_utils - Deleted issue with node ID I_kwDORVarv87svywC
+2026-02-21 13:32:44,378 - DEBUG - gitlab_to_github_migrator.migrator - Deleted placeholder issue #4
+2026-02-21 13:32:44,378 - DEBUG - gql.transport.httpx - >>> {"query": "query GetWorkItemWithChildren($fullPath: ID!, $iid: String!) {\n  namespace(fullPath: $fullPath) {\n    workItem(iid: $iid) {\n      iid\n      widgets {\n        type\n        ... on WorkItemWidgetHierarchy {\n          children {\n            nodes {\n              iid\n              title\n              state\n              workItemType {\n                name\n              }\n              webUrl\n            }\n          }\n        }\n      }\n    }\n  }\n}", "variables": {"fullPath": "flaks/gl2gh-migration-test-project", "iid": "1"}}
+2026-02-21 13:32:44,745 - DEBUG - gql.transport.httpx - <<< {"data":{"namespace":{"workItem":{"iid":"1","widgets":[{"type":"LINKED_ITEMS"},{"type":"ASSIGNEES"},{"type":"LABELS"},{"type":"DESCRIPTION"},{"type":"HIERARCHY","children":{"nodes":[]}},{"type":"START_AND_DUE_DATE"},{"type":"MILESTONE"},{"type":"NOTES"},{"type":"NOTIFICATIONS"},{"type":"CURRENT_USER_TODOS"},{"type":"AWARD_EMOJI"},{"type":"LINKED_RESOURCES"},{"type":"ERROR_TRACKING"},{"type":"PARTICIPANTS"},{"type":"EMAIL_PARTICIPANTS"},{"type":"DESIGNS"},{"type":"DEVELOPMENT"},{"type":"TIME_TRACKING"},{"type":"CRM_CONTACTS"}]}}}}
+2026-02-21 13:32:44,745 - DEBUG - gitlab_to_github_migrator.gitlab_utils - Found 0 child work items for issue #1
+2026-02-21 13:32:44,746 - DEBUG - gql.transport.httpx - >>> {"query": "query GetWorkItemWithChildren($fullPath: ID!, $iid: String!) {\n  namespace(fullPath: $fullPath) {\n    workItem(iid: $iid) {\n      iid\n      widgets {\n        type\n        ... on WorkItemWidgetHierarchy {\n          children {\n            nodes {\n              iid\n              title\n              state\n              workItemType {\n                name\n              }\n              webUrl\n            }\n          }\n        }\n      }\n    }\n  }\n}", "variables": {"fullPath": "flaks/gl2gh-migration-test-project", "iid": "2"}}
+2026-02-21 13:32:45,081 - DEBUG - gql.transport.httpx - <<< {"data":{"namespace":{"workItem":{"iid":"2","widgets":[{"type":"LINKED_ITEMS"},{"type":"ASSIGNEES"},{"type":"LABELS"},{"type":"DESCRIPTION"},{"type":"HIERARCHY","children":{"nodes":[]}},{"type":"START_AND_DUE_DATE"},{"type":"MILESTONE"},{"type":"NOTES"},{"type":"NOTIFICATIONS"},{"type":"CURRENT_USER_TODOS"},{"type":"AWARD_EMOJI"},{"type":"LINKED_RESOURCES"},{"type":"ERROR_TRACKING"},{"type":"PARTICIPANTS"},{"type":"EMAIL_PARTICIPANTS"},{"type":"DESIGNS"},{"type":"DEVELOPMENT"},{"type":"TIME_TRACKING"},{"type":"CRM_CONTACTS"}]}}}}
+2026-02-21 13:32:45,081 - DEBUG - gitlab_to_github_migrator.gitlab_utils - Found 0 child work items for issue #2
+2026-02-21 13:32:45,082 - DEBUG - gql.transport.httpx - >>> {"query": "query GetWorkItemWithChildren($fullPath: ID!, $iid: String!) {\n  namespace(fullPath: $fullPath) {\n    workItem(iid: $iid) {\n      iid\n      widgets {\n        type\n        ... on WorkItemWidgetHierarchy {\n          children {\n            nodes {\n              iid\n              title\n              state\n              workItemType {\n                name\n              }\n              webUrl\n            }\n          }\n        }\n      }\n    }\n  }\n}", "variables": {"fullPath": "flaks/gl2gh-migration-test-project", "iid": "3"}}
+2026-02-21 13:32:45,437 - DEBUG - gql.transport.httpx - <<< {"data":{"namespace":{"workItem":{"iid":"3","widgets":[{"type":"LINKED_ITEMS"},{"type":"ASSIGNEES"},{"type":"LABELS"},{"type":"DESCRIPTION"},{"type":"HIERARCHY","children":{"nodes":[{"iid":"5","title":"Child task 1 (open)","state":"OPEN","workItemType":{"name":"Task"},"webUrl":"https://gitlab.com/flaks/gl2gh-migration-test-project/-/work_items/5"},{"iid":"6","title":"Child task 2 (closed)","state":"CLOSED","workItemType":{"name":"Task"},"webUrl":"https://gitlab.com/flaks/gl2gh-migration-test-project/-/work_items/6"}]}},{"type":"START_AND_DUE_DATE"},{"type":"MILESTONE"},{"type":"NOTES"},{"type":"NOTIFICATIONS"},{"type":"CURRENT_USER_TODOS"},{"type":"AWARD_EMOJI"},{"type":"LINKED_RESOURCES"},{"type":"ERROR_TRACKING"},{"type":"PARTICIPANTS"},{"type":"EMAIL_PARTICIPANTS"},{"type":"DESIGNS"},{"type":"DEVELOPMENT"},{"type":"TIME_TRACKING"},{"type":"CRM_CONTACTS"}]}}}}
+2026-02-21 13:32:45,437 - DEBUG - gitlab_to_github_migrator.gitlab_utils - Found 2 child work items for issue #3
+2026-02-21 13:32:45,437 - DEBUG - gitlab_to_github_migrator.migrator - Looking for child issue #5
+2026-02-21 13:32:45,995 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260220e/issues/3/sub_issues HTTP/1.1" 201 11146
+2026-02-21 13:32:45,996 - DEBUG - gitlab_to_github_migrator.migrator - Linked issue #5 as sub-issue of #3
+2026-02-21 13:32:45,996 - DEBUG - gitlab_to_github_migrator.migrator - Looking for child issue #6
+2026-02-21 13:32:47,530 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260220e/issues/3/sub_issues HTTP/1.1" 201 11147
+2026-02-21 13:32:47,531 - DEBUG - gitlab_to_github_migrator.migrator - Linked issue #6 as sub-issue of #3
+2026-02-21 13:32:47,531 - DEBUG - gql.transport.httpx - >>> {"query": "query GetWorkItemWithChildren($fullPath: ID!, $iid: String!) {\n  namespace(fullPath: $fullPath) {\n    workItem(iid: $iid) {\n      iid\n      widgets {\n        type\n        ... on WorkItemWidgetHierarchy {\n          children {\n            nodes {\n              iid\n              title\n              state\n              workItemType {\n                name\n              }\n              webUrl\n            }\n          }\n        }\n      }\n    }\n  }\n}", "variables": {"fullPath": "flaks/gl2gh-migration-test-project", "iid": "5"}}
+2026-02-21 13:32:47,864 - DEBUG - gql.transport.httpx - <<< {"data":{"namespace":{"workItem":{"iid":"5","widgets":[{"type":"LINKED_ITEMS"},{"type":"LINKED_RESOURCES"},{"type":"PARTICIPANTS"},{"type":"DEVELOPMENT"},{"type":"TIME_TRACKING"},{"type":"ASSIGNEES"},{"type":"LABELS"},{"type":"DESCRIPTION"},{"type":"HIERARCHY","children":{"nodes":[]}},{"type":"START_AND_DUE_DATE"},{"type":"MILESTONE"},{"type":"NOTES"},{"type":"NOTIFICATIONS"},{"type":"CURRENT_USER_TODOS"},{"type":"AWARD_EMOJI"}]}}}}
+2026-02-21 13:32:47,864 - DEBUG - gitlab_to_github_migrator.gitlab_utils - Found 0 child work items for issue #5
+2026-02-21 13:32:47,865 - DEBUG - gql.transport.httpx - >>> {"query": "query GetWorkItemWithChildren($fullPath: ID!, $iid: String!) {\n  namespace(fullPath: $fullPath) {\n    workItem(iid: $iid) {\n      iid\n      widgets {\n        type\n        ... on WorkItemWidgetHierarchy {\n          children {\n            nodes {\n              iid\n              title\n              state\n              workItemType {\n                name\n              }\n              webUrl\n            }\n          }\n        }\n      }\n    }\n  }\n}", "variables": {"fullPath": "flaks/gl2gh-migration-test-project", "iid": "6"}}
+2026-02-21 13:32:50,315 - DEBUG - gql.transport.httpx - <<< {"data":{"namespace":{"workItem":{"iid":"6","widgets":[{"type":"LINKED_ITEMS"},{"type":"LINKED_RESOURCES"},{"type":"PARTICIPANTS"},{"type":"DEVELOPMENT"},{"type":"TIME_TRACKING"},{"type":"ASSIGNEES"},{"type":"LABELS"},{"type":"DESCRIPTION"},{"type":"HIERARCHY","children":{"nodes":[]}},{"type":"START_AND_DUE_DATE"},{"type":"MILESTONE"},{"type":"NOTES"},{"type":"NOTIFICATIONS"},{"type":"CURRENT_USER_TODOS"},{"type":"AWARD_EMOJI"}]}}}}
+2026-02-21 13:32:50,315 - DEBUG - gitlab_to_github_migrator.gitlab_utils - Found 0 child work items for issue #6
+2026-02-21 13:32:50,316 - DEBUG - gql.transport.httpx - >>> {"query": "query GetWorkItemWithChildren($fullPath: ID!, $iid: String!) {\n  namespace(fullPath: $fullPath) {\n    workItem(iid: $iid) {\n      iid\n      widgets {\n        type\n        ... on WorkItemWidgetHierarchy {\n          children {\n            nodes {\n              iid\n              title\n              state\n              workItemType {\n                name\n              }\n              webUrl\n            }\n          }\n        }\n      }\n    }\n  }\n}", "variables": {"fullPath": "flaks/gl2gh-migration-test-project", "iid": "7"}}
+2026-02-21 13:32:50,647 - DEBUG - gql.transport.httpx - <<< {"data":{"namespace":{"workItem":{"iid":"7","widgets":[{"type":"LINKED_ITEMS"},{"type":"ASSIGNEES"},{"type":"LABELS"},{"type":"DESCRIPTION"},{"type":"HIERARCHY","children":{"nodes":[]}},{"type":"START_AND_DUE_DATE"},{"type":"MILESTONE"},{"type":"NOTES"},{"type":"NOTIFICATIONS"},{"type":"CURRENT_USER_TODOS"},{"type":"AWARD_EMOJI"},{"type":"LINKED_RESOURCES"},{"type":"ERROR_TRACKING"},{"type":"PARTICIPANTS"},{"type":"EMAIL_PARTICIPANTS"},{"type":"DESIGNS"},{"type":"DEVELOPMENT"},{"type":"TIME_TRACKING"},{"type":"CRM_CONTACTS"}]}}}}
+2026-02-21 13:32:50,648 - DEBUG - gitlab_to_github_migrator.gitlab_utils - Found 0 child work items for issue #7
+2026-02-21 13:32:50,648 - DEBUG - gql.transport.httpx - >>> {"query": "query GetWorkItemWithChildren($fullPath: ID!, $iid: String!) {\n  namespace(fullPath: $fullPath) {\n    workItem(iid: $iid) {\n      iid\n      widgets {\n        type\n        ... on WorkItemWidgetHierarchy {\n          children {\n            nodes {\n              iid\n              title\n              state\n              workItemType {\n                name\n              }\n              webUrl\n            }\n          }\n        }\n      }\n    }\n  }\n}", "variables": {"fullPath": "flaks/gl2gh-migration-test-project", "iid": "8"}}
+2026-02-21 13:32:51,106 - DEBUG - gql.transport.httpx - <<< {"data":{"namespace":{"workItem":{"iid":"8","widgets":[{"type":"LINKED_ITEMS"},{"type":"ASSIGNEES"},{"type":"LABELS"},{"type":"DESCRIPTION"},{"type":"HIERARCHY","children":{"nodes":[]}},{"type":"START_AND_DUE_DATE"},{"type":"MILESTONE"},{"type":"NOTES"},{"type":"NOTIFICATIONS"},{"type":"CURRENT_USER_TODOS"},{"type":"AWARD_EMOJI"},{"type":"LINKED_RESOURCES"},{"type":"ERROR_TRACKING"},{"type":"PARTICIPANTS"},{"type":"EMAIL_PARTICIPANTS"},{"type":"DESIGNS"},{"type":"DEVELOPMENT"},{"type":"TIME_TRACKING"},{"type":"CRM_CONTACTS"}]}}}}
+2026-02-21 13:32:51,106 - DEBUG - gitlab_to_github_migrator.gitlab_utils - Found 0 child work items for issue #8
+2026-02-21 13:32:51,543 - DEBUG - urllib3.connectionpool - https://gitlab.com:443 "GET /api/v4/projects/78035105/issues?state=all HTTP/1.1" 200 None
+2026-02-21 13:32:51,911 - DEBUG - urllib3.connectionpool - https://gitlab.com:443 "GET /api/v4/projects/78035105/milestones?state=all HTTP/1.1" 200 None
+2026-02-21 13:32:52,326 - DEBUG - urllib3.connectionpool - https://gitlab.com:443 "GET /api/v4/projects/78035105/labels HTTP/1.1" 200 None
+2026-02-21 13:32:52,857 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "GET /repos/flaks-test/gl2ghmigr-full-migration-test-JF260220e/issues?state=all HTTP/1.1" 200 None
+2026-02-21 13:32:53,350 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "GET /repos/flaks-test/gl2ghmigr-full-migration-test-JF260220e/milestones?state=all HTTP/1.1" 200 None
+2026-02-21 13:32:53,849 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "GET /repos/flaks-test/gl2ghmigr-full-migration-test-JF260220e/labels HTTP/1.1" 200 None
+2026-02-21 13:32:53,853 - DEBUG - gitlab_to_github_migrator.migrator - Migration validation completed
+2026-02-21 13:32:53,854 - DEBUG - gitlab_to_github_migrator.git_utils - Cleaned up git clone at /tmp/gitlab_migration_z9sxhh7r
+2026-02-21 15:47:52,561 - DEBUG - urllib3.connectionpool - Starting new HTTPS connection (1): gitlab.com:443
+2026-02-21 15:47:53,217 - DEBUG - urllib3.connectionpool - https://gitlab.com:443 "GET /api/v4/projects/flaks%2Fgl2gh-migration-test-project HTTP/1.1" 200 None
+2026-02-21 15:47:53,233 - DEBUG - gitlab_to_github_migrator.migrator - Initialized migrator for flaks/gl2gh-migration-test-project -> flaks-test/gl2ghmigr-full-migration-test-JF260221a
+2026-02-21 15:47:53,233 - INFO - gitlab_to_github_migrator.migrator - GitLab API access validated
+2026-02-21 15:47:53,233 - INFO - gitlab_to_github_migrator.migrator - GitHub API access validated
+2026-02-21 15:47:53,234 - DEBUG - urllib3.connectionpool - Starting new HTTPS connection (1): api.github.com:443
+2026-02-21 15:47:53,449 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "GET /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221a HTTP/1.1" 404 None
+2026-02-21 15:47:53,930 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "GET /orgs/flaks-test HTTP/1.1" 200 None
+2026-02-21 15:47:54,948 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /orgs/flaks-test/repos HTTP/1.1" 201 7964
+2026-02-21 15:47:56,775 - DEBUG - gitlab_to_github_migrator.migrator - GitLab default branch: main
+2026-02-21 15:47:57,083 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "GET /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221a HTTP/1.1" 200 None
+2026-02-21 15:47:57,084 - DEBUG - gitlab_to_github_migrator.migrator - Refreshed repository object, current default branch: main
+2026-02-21 15:47:57,660 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "PATCH /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221a HTTP/1.1" 200 None
+2026-02-21 15:47:57,660 - INFO - gitlab_to_github_migrator.github_utils - Set default branch to 'main' for repository flaks-test/gl2ghmigr-full-migration-test-JF260221a
+2026-02-21 15:47:58,183 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "GET /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221a/labels HTTP/1.1" 200 None
+2026-02-21 15:47:58,509 - DEBUG - urllib3.connectionpool - https://gitlab.com:443 "GET /api/v4/projects/78035105/labels HTTP/1.1" 200 None
+2026-02-21 15:47:58,510 - INFO - gitlab_to_github_migrator.labels - Using existing label: bug -> bug
+2026-02-21 15:47:58,510 - INFO - gitlab_to_github_migrator.labels - Using existing label: documentation -> documentation
+2026-02-21 15:47:59,014 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221a/labels HTTP/1.1" 201 233
+2026-02-21 15:47:59,015 - INFO - gitlab_to_github_migrator.labels - Created label: feature -> feature
+2026-02-21 15:48:00,348 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221a/labels HTTP/1.1" 201 224
+2026-02-21 15:48:00,348 - INFO - gitlab_to_github_migrator.labels - Created label: p_high -> p_high
+2026-02-21 15:48:01,676 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221a/labels HTTP/1.1" 201 224
+2026-02-21 15:48:01,676 - INFO - gitlab_to_github_migrator.labels - Created label: p_idea -> p_idea
+2026-02-21 15:48:02,981 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221a/labels HTTP/1.1" 201 222
+2026-02-21 15:48:02,981 - INFO - gitlab_to_github_migrator.labels - Created label: p_low -> p_low
+2026-02-21 15:48:04,330 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221a/labels HTTP/1.1" 201 222
+2026-02-21 15:48:04,330 - INFO - gitlab_to_github_migrator.labels - Created label: p_mid -> p_mid
+2026-02-21 15:48:05,654 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221a/labels HTTP/1.1" 201 236
+2026-02-21 15:48:05,654 - INFO - gitlab_to_github_migrator.labels - Created label: p_opti -> p_opti
+2026-02-21 15:48:06,977 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221a/labels HTTP/1.1" 201 244
+2026-02-21 15:48:06,977 - INFO - gitlab_to_github_migrator.labels - Created label: status_abandoned -> status_abandoned
+2026-02-21 15:48:08,326 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221a/labels HTTP/1.1" 201 236
+2026-02-21 15:48:08,326 - INFO - gitlab_to_github_migrator.labels - Created label: status_inbox -> status_inbox
+2026-02-21 15:48:09,643 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221a/labels HTTP/1.1" 201 234
+2026-02-21 15:48:09,644 - INFO - gitlab_to_github_migrator.labels - Created label: status_test -> status_test
+2026-02-21 15:48:10,950 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221a/labels HTTP/1.1" 201 234
+2026-02-21 15:48:10,951 - INFO - gitlab_to_github_migrator.labels - Created label: status_todo -> status_todo
+2026-02-21 15:48:12,343 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221a/labels HTTP/1.1" 201 240
+2026-02-21 15:48:12,344 - INFO - gitlab_to_github_migrator.labels - Created label: status_waiting -> status_waiting
+2026-02-21 15:48:13,697 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221a/labels HTTP/1.1" 201 240
+2026-02-21 15:48:13,697 - INFO - gitlab_to_github_migrator.labels - Created label: status_working -> status_working
+2026-02-21 15:48:15,003 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221a/labels HTTP/1.1" 201 222
+2026-02-21 15:48:15,003 - INFO - gitlab_to_github_migrator.labels - Created label: t_bug -> t_bug
+2026-02-21 15:48:16,357 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221a/labels HTTP/1.1" 201 245
+2026-02-21 15:48:16,358 - INFO - gitlab_to_github_migrator.labels - Created label: t_dev -> t_dev
+2026-02-21 15:48:17,723 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221a/labels HTTP/1.1" 201 230
+2026-02-21 15:48:17,723 - INFO - gitlab_to_github_migrator.labels - Created label: t_feature -> t_feature
+2026-02-21 15:48:19,062 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221a/labels HTTP/1.1" 201 240
+2026-02-21 15:48:19,063 - INFO - gitlab_to_github_migrator.labels - Created label: t_infra -> t_infra
+2026-02-21 15:48:20,412 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221a/labels HTTP/1.1" 201 234
+2026-02-21 15:48:20,412 - INFO - gitlab_to_github_migrator.labels - Created label: t_internals -> t_internals
+2026-02-21 15:48:21,764 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221a/labels HTTP/1.1" 201 238
+2026-02-21 15:48:21,764 - INFO - gitlab_to_github_migrator.labels - Created label: t_refactoring -> t_refactoring
+2026-02-21 15:48:22,015 - DEBUG - urllib3.connectionpool - https://gitlab.com:443 "GET /api/v4/projects/78035105/milestones?state=all HTTP/1.1" 200 None
+2026-02-21 15:48:23,137 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221a/milestones HTTP/1.1" 201 1571
+2026-02-21 15:48:23,137 - INFO - gitlab_to_github_migrator.migrator - Created milestone #1: v1.0
+2026-02-21 15:48:24,429 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221a/milestones HTTP/1.1" 201 1613
+2026-02-21 15:48:24,429 - DEBUG - gitlab_to_github_migrator.migrator - Created placeholder milestone #2
+2026-02-21 15:48:25,958 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221a/milestones HTTP/1.1" 201 1551
+2026-02-21 15:48:25,958 - INFO - gitlab_to_github_migrator.migrator - Created milestone #3: v2.0
+2026-02-21 15:48:27,338 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "DELETE /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221a/milestones/2 HTTP/1.1" 204 0
+2026-02-21 15:48:27,338 - DEBUG - gitlab_to_github_migrator.migrator - Deleted placeholder milestone #2
+2026-02-21 15:48:27,825 - DEBUG - urllib3.connectionpool - https://gitlab.com:443 "GET /api/v4/projects/78035105/issues?state=all HTTP/1.1" 200 None
+2026-02-21 15:48:28,139 - DEBUG - urllib3.connectionpool - https://gitlab.com:443 "GET /api/v4/projects/78035105/issues/1/links HTTP/1.1" 200 None
+2026-02-21 15:48:28,822 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221a/issues HTTP/1.1" 201 3133
+2026-02-21 15:48:28,823 - DEBUG - gitlab_to_github_migrator.migrator - Added issue #1 to github_issue_dict
+2026-02-21 15:48:29,075 - DEBUG - urllib3.connectionpool - https://gitlab.com:443 "GET /api/v4/projects/78035105/issues/1/notes HTTP/1.1" 200 None
+2026-02-21 15:48:30,423 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221a/issues/1/comments HTTP/1.1" 201 1838
+2026-02-21 15:48:30,423 - DEBUG - gitlab_to_github_migrator.migrator - Migrated 1 system note(s)
+2026-02-21 15:48:31,999 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221a/issues/1/comments HTTP/1.1" 201 1873
+2026-02-21 15:48:31,999 - DEBUG - gitlab_to_github_migrator.migrator - Migrated comment by janfrederik
+2026-02-21 15:48:33,756 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "PATCH /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221a/issues/1 HTTP/1.1" 200 None
+2026-02-21 15:48:33,757 - INFO - gitlab_to_github_migrator.migrator - Created issue #1: Basic issue
+2026-02-21 15:48:34,025 - DEBUG - urllib3.connectionpool - https://gitlab.com:443 "GET /api/v4/projects/78035105/uploads/c6b3a7aa54667703cd34315fc3a37822/Screenshot_from_2026-01-26_20-19-47.png HTTP/1.1" 200 66904
+2026-02-21 15:48:34,031 - DEBUG - gitlab_to_github_migrator.gitlab_utils - Downloaded Screenshot_from_2026-01-26_20-19-47.png: 66904 bytes, Content-Type: application/octet-stream
+2026-02-21 15:48:34,299 - DEBUG - urllib3.connectionpool - https://gitlab.com:443 "GET /api/v4/projects/78035105/uploads/c9c38322c2614f22b295d59c4809dca9/Fagnes_de_Wallonie-T1.pdf HTTP/1.1" 200 69865
+2026-02-21 15:48:34,305 - DEBUG - gitlab_to_github_migrator.gitlab_utils - Downloaded Fagnes_de_Wallonie-T1.pdf: 69865 bytes, Content-Type: application/octet-stream
+2026-02-21 15:48:34,583 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "GET /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221a/releases HTTP/1.1" 200 2
+2026-02-21 15:48:35,246 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221a/releases HTTP/1.1" 201 1874
+2026-02-21 15:48:36,247 - DEBUG - urllib3.connectionpool - Starting new HTTPS connection (1): uploads.github.com:443
+2026-02-21 15:48:36,965 - DEBUG - urllib3.connectionpool - https://uploads.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221a/releases/289001007/assets?label=&name=c6b3a7aa_Screenshot_from_2026-01-26_20-19-47.png HTTP/1.1" 201 None
+2026-02-21 15:48:36,965 - INFO - gitlab_to_github_migrator.attachments - Uploaded Screenshot_from_2026-01-26_20-19-47.png: https://github.com/flaks-test/gl2ghmigr-full-migration-test-JF260221a/releases/download/untagged-3f0833487f8776ed5ca1/c6b3a7aa_Screenshot_from_2026-01-26_20-19-47.png
+2026-02-21 15:48:37,966 - DEBUG - urllib3.connectionpool - Starting new HTTPS connection (1): uploads.github.com:443
+2026-02-21 15:48:38,557 - DEBUG - urllib3.connectionpool - https://uploads.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221a/releases/289001007/assets?label=&name=c9c38322_Fagnes_de_Wallonie-T1.pdf HTTP/1.1" 201 None
+2026-02-21 15:48:38,557 - INFO - gitlab_to_github_migrator.attachments - Uploaded Fagnes_de_Wallonie-T1.pdf: https://github.com/flaks-test/gl2ghmigr-full-migration-test-JF260221a/releases/download/untagged-3f0833487f8776ed5ca1/c9c38322_Fagnes_de_Wallonie-T1.pdf
+2026-02-21 15:48:38,893 - DEBUG - urllib3.connectionpool - https://gitlab.com:443 "GET /api/v4/projects/78035105/issues/2/links HTTP/1.1" 200 None
+2026-02-21 15:48:40,018 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221a/issues HTTP/1.1" 201 3584
+2026-02-21 15:48:40,018 - DEBUG - gitlab_to_github_migrator.migrator - Added issue #2 to github_issue_dict
+2026-02-21 15:48:40,384 - DEBUG - urllib3.connectionpool - https://gitlab.com:443 "GET /api/v4/projects/78035105/issues/2/notes HTTP/1.1" 200 None
+2026-02-21 15:48:41,669 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221a/issues/2/comments HTTP/1.1" 201 1903
+2026-02-21 15:48:41,670 - DEBUG - gitlab_to_github_migrator.migrator - Migrated 2 system note(s)
+2026-02-21 15:48:41,670 - INFO - gitlab_to_github_migrator.migrator - Created issue #2: Issue with attachments
+2026-02-21 15:48:41,926 - DEBUG - urllib3.connectionpool - https://gitlab.com:443 "GET /api/v4/projects/78035105/issues/3/links HTTP/1.1" 200 2
+2026-02-21 15:48:42,170 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "GET /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221a/milestones/3 HTTP/1.1" 200 None
+2026-02-21 15:48:43,256 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221a/issues HTTP/1.1" 201 4592
+2026-02-21 15:48:43,256 - DEBUG - gitlab_to_github_migrator.migrator - Added issue #3 to github_issue_dict
+2026-02-21 15:48:43,637 - DEBUG - urllib3.connectionpool - https://gitlab.com:443 "GET /api/v4/projects/78035105/issues/3/notes HTTP/1.1" 200 None
+2026-02-21 15:48:44,952 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221a/issues/3/comments HTTP/1.1" 201 1951
+2026-02-21 15:48:44,953 - DEBUG - gitlab_to_github_migrator.migrator - Migrated 3 system note(s)
+2026-02-21 15:48:44,953 - INFO - gitlab_to_github_migrator.migrator - Created issue #3: Parent issue
+2026-02-21 15:48:46,345 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221a/issues HTTP/1.1" 201 2606
+2026-02-21 15:48:48,060 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "PATCH /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221a/issues/4 HTTP/1.1" 200 None
+2026-02-21 15:48:48,060 - DEBUG - gitlab_to_github_migrator.migrator - Created placeholder issue #4
+2026-02-21 15:48:48,299 - DEBUG - urllib3.connectionpool - https://gitlab.com:443 "GET /api/v4/projects/78035105/uploads/1cd8db7a2d15ab850ce48cafa48fbf61/Screenshot_from_2026-01-23_17-00-12.png HTTP/1.1" 200 79926
+2026-02-21 15:48:48,306 - DEBUG - gitlab_to_github_migrator.gitlab_utils - Downloaded Screenshot_from_2026-01-23_17-00-12.png: 79926 bytes, Content-Type: application/octet-stream
+2026-02-21 15:48:49,060 - DEBUG - urllib3.connectionpool - Starting new HTTPS connection (1): uploads.github.com:443
+2026-02-21 15:48:49,626 - DEBUG - urllib3.connectionpool - https://uploads.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221a/releases/289001007/assets?label=&name=1cd8db7a_Screenshot_from_2026-01-23_17-00-12.png HTTP/1.1" 201 None
+2026-02-21 15:48:49,626 - INFO - gitlab_to_github_migrator.attachments - Uploaded Screenshot_from_2026-01-23_17-00-12.png: https://github.com/flaks-test/gl2ghmigr-full-migration-test-JF260221a/releases/download/untagged-3f0833487f8776ed5ca1/1cd8db7a_Screenshot_from_2026-01-23_17-00-12.png
+2026-02-21 15:48:49,891 - DEBUG - urllib3.connectionpool - https://gitlab.com:443 "GET /api/v4/projects/78035105/issues/5/links HTTP/1.1" 200 2
+2026-02-21 15:48:51,054 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221a/issues HTTP/1.1" 201 3033
+2026-02-21 15:48:51,054 - DEBUG - gitlab_to_github_migrator.migrator - Added issue #5 to github_issue_dict
+2026-02-21 15:48:51,328 - DEBUG - urllib3.connectionpool - https://gitlab.com:443 "GET /api/v4/projects/78035105/issues/5/notes HTTP/1.1" 200 None
+2026-02-21 15:48:52,682 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221a/issues/5/comments HTTP/1.1" 201 1893
+2026-02-21 15:48:52,682 - DEBUG - gitlab_to_github_migrator.migrator - Migrated 2 system note(s)
+2026-02-21 15:48:52,682 - INFO - gitlab_to_github_migrator.migrator - Created issue #5: Child task 1 (open)
+2026-02-21 15:48:52,964 - DEBUG - urllib3.connectionpool - https://gitlab.com:443 "GET /api/v4/projects/78035105/issues/6/links HTTP/1.1" 200 2
+2026-02-21 15:48:54,164 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221a/issues HTTP/1.1" 201 2803
+2026-02-21 15:48:54,164 - DEBUG - gitlab_to_github_migrator.migrator - Added issue #6 to github_issue_dict
+2026-02-21 15:48:54,466 - DEBUG - urllib3.connectionpool - https://gitlab.com:443 "GET /api/v4/projects/78035105/issues/6/notes HTTP/1.1" 200 None
+2026-02-21 15:48:55,818 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221a/issues/6/comments HTTP/1.1" 201 1828
+2026-02-21 15:48:55,819 - DEBUG - gitlab_to_github_migrator.migrator - Migrated 1 system note(s)
+2026-02-21 15:48:57,509 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "PATCH /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221a/issues/6 HTTP/1.1" 200 None
+2026-02-21 15:48:57,510 - INFO - gitlab_to_github_migrator.migrator - Created issue #6: Child task 2 (closed)
+2026-02-21 15:48:57,821 - DEBUG - urllib3.connectionpool - https://gitlab.com:443 "GET /api/v4/projects/78035105/issues/7/links HTTP/1.1" 200 None
+2026-02-21 15:48:59,026 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221a/issues HTTP/1.1" 201 3088
+2026-02-21 15:48:59,026 - DEBUG - gitlab_to_github_migrator.migrator - Added issue #7 to github_issue_dict
+2026-02-21 15:48:59,346 - DEBUG - urllib3.connectionpool - https://gitlab.com:443 "GET /api/v4/projects/78035105/issues/7/notes HTTP/1.1" 200 None
+2026-02-21 15:49:00,754 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221a/issues/7/comments HTTP/1.1" 201 1901
+2026-02-21 15:49:00,755 - DEBUG - gitlab_to_github_migrator.migrator - Migrated 2 system note(s)
+2026-02-21 15:49:00,755 - INFO - gitlab_to_github_migrator.migrator - Created issue #7: Blocking issue
+2026-02-21 15:49:01,062 - DEBUG - urllib3.connectionpool - https://gitlab.com:443 "GET /api/v4/projects/78035105/issues/8/links HTTP/1.1" 200 None
+2026-02-21 15:49:02,233 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221a/issues HTTP/1.1" 201 3106
+2026-02-21 15:49:02,233 - DEBUG - gitlab_to_github_migrator.migrator - Added issue #8 to github_issue_dict
+2026-02-21 15:49:02,558 - DEBUG - urllib3.connectionpool - https://gitlab.com:443 "GET /api/v4/projects/78035105/issues/8/notes HTTP/1.1" 200 None
+2026-02-21 15:49:02,559 - DEBUG - gitlab_to_github_migrator.attachments - Reusing cached attachment Screenshot_from_2026-01-26_20-19-47.png: https://github.com/flaks-test/gl2ghmigr-full-migration-test-JF260221a/releases/download/untagged-3f0833487f8776ed5ca1/c6b3a7aa_Screenshot_from_2026-01-26_20-19-47.png
+2026-02-21 15:49:03,906 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221a/issues/8/comments HTTP/1.1" 201 2082
+2026-02-21 15:49:03,907 - DEBUG - gitlab_to_github_migrator.migrator - Migrated comment by janfrederik
+2026-02-21 15:49:05,731 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221a/issues/8/comments HTTP/1.1" 201 1838
+2026-02-21 15:49:05,731 - DEBUG - gitlab_to_github_migrator.migrator - Migrated 1 system note(s)
+2026-02-21 15:49:05,731 - INFO - gitlab_to_github_migrator.migrator - Created issue #8: Blocked issue
+2026-02-21 15:49:05,732 - DEBUG - urllib3.connectionpool - Starting new HTTPS connection (1): api.github.com:443
+2026-02-21 15:49:06,371 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /graphql HTTP/1.1" 200 None
+2026-02-21 15:49:06,371 - DEBUG - gitlab_to_github_migrator.github_utils - Deleted issue with node ID I_kwDORVfKbM7swkYJ
+2026-02-21 15:49:06,371 - DEBUG - gitlab_to_github_migrator.migrator - Deleted placeholder issue #4
+2026-02-21 15:49:06,372 - DEBUG - gql.transport.httpx - >>> {"query": "query GetWorkItemWithChildren($fullPath: ID!, $iid: String!) {\n  namespace(fullPath: $fullPath) {\n    workItem(iid: $iid) {\n      iid\n      widgets {\n        type\n        ... on WorkItemWidgetHierarchy {\n          children {\n            nodes {\n              iid\n              title\n              state\n              workItemType {\n                name\n              }\n              webUrl\n            }\n          }\n        }\n      }\n    }\n  }\n}", "variables": {"fullPath": "flaks/gl2gh-migration-test-project", "iid": "1"}}
+2026-02-21 15:49:06,800 - DEBUG - gql.transport.httpx - <<< {"data":{"namespace":{"workItem":{"iid":"1","widgets":[{"type":"LINKED_ITEMS"},{"type":"ASSIGNEES"},{"type":"LABELS"},{"type":"DESCRIPTION"},{"type":"HIERARCHY","children":{"nodes":[]}},{"type":"START_AND_DUE_DATE"},{"type":"MILESTONE"},{"type":"NOTES"},{"type":"NOTIFICATIONS"},{"type":"CURRENT_USER_TODOS"},{"type":"AWARD_EMOJI"},{"type":"LINKED_RESOURCES"},{"type":"ERROR_TRACKING"},{"type":"PARTICIPANTS"},{"type":"EMAIL_PARTICIPANTS"},{"type":"DESIGNS"},{"type":"DEVELOPMENT"},{"type":"TIME_TRACKING"},{"type":"CRM_CONTACTS"}]}}}}
+2026-02-21 15:49:06,801 - DEBUG - gitlab_to_github_migrator.gitlab_utils - Found 0 child work items for issue #1
+2026-02-21 15:49:06,801 - DEBUG - gql.transport.httpx - >>> {"query": "query GetWorkItemWithChildren($fullPath: ID!, $iid: String!) {\n  namespace(fullPath: $fullPath) {\n    workItem(iid: $iid) {\n      iid\n      widgets {\n        type\n        ... on WorkItemWidgetHierarchy {\n          children {\n            nodes {\n              iid\n              title\n              state\n              workItemType {\n                name\n              }\n              webUrl\n            }\n          }\n        }\n      }\n    }\n  }\n}", "variables": {"fullPath": "flaks/gl2gh-migration-test-project", "iid": "2"}}
+2026-02-21 15:49:07,197 - DEBUG - gql.transport.httpx - <<< {"data":{"namespace":{"workItem":{"iid":"2","widgets":[{"type":"LINKED_ITEMS"},{"type":"ASSIGNEES"},{"type":"LABELS"},{"type":"DESCRIPTION"},{"type":"HIERARCHY","children":{"nodes":[]}},{"type":"START_AND_DUE_DATE"},{"type":"MILESTONE"},{"type":"NOTES"},{"type":"NOTIFICATIONS"},{"type":"CURRENT_USER_TODOS"},{"type":"AWARD_EMOJI"},{"type":"LINKED_RESOURCES"},{"type":"ERROR_TRACKING"},{"type":"PARTICIPANTS"},{"type":"EMAIL_PARTICIPANTS"},{"type":"DESIGNS"},{"type":"DEVELOPMENT"},{"type":"TIME_TRACKING"},{"type":"CRM_CONTACTS"}]}}}}
+2026-02-21 15:49:07,197 - DEBUG - gitlab_to_github_migrator.gitlab_utils - Found 0 child work items for issue #2
+2026-02-21 15:49:07,198 - DEBUG - gql.transport.httpx - >>> {"query": "query GetWorkItemWithChildren($fullPath: ID!, $iid: String!) {\n  namespace(fullPath: $fullPath) {\n    workItem(iid: $iid) {\n      iid\n      widgets {\n        type\n        ... on WorkItemWidgetHierarchy {\n          children {\n            nodes {\n              iid\n              title\n              state\n              workItemType {\n                name\n              }\n              webUrl\n            }\n          }\n        }\n      }\n    }\n  }\n}", "variables": {"fullPath": "flaks/gl2gh-migration-test-project", "iid": "3"}}
+2026-02-21 15:49:07,524 - DEBUG - gql.transport.httpx - <<< {"data":{"namespace":{"workItem":{"iid":"3","widgets":[{"type":"LINKED_ITEMS"},{"type":"ASSIGNEES"},{"type":"LABELS"},{"type":"DESCRIPTION"},{"type":"HIERARCHY","children":{"nodes":[{"iid":"5","title":"Child task 1 (open)","state":"OPEN","workItemType":{"name":"Task"},"webUrl":"https://gitlab.com/flaks/gl2gh-migration-test-project/-/work_items/5"},{"iid":"6","title":"Child task 2 (closed)","state":"CLOSED","workItemType":{"name":"Task"},"webUrl":"https://gitlab.com/flaks/gl2gh-migration-test-project/-/work_items/6"}]}},{"type":"START_AND_DUE_DATE"},{"type":"MILESTONE"},{"type":"NOTES"},{"type":"NOTIFICATIONS"},{"type":"CURRENT_USER_TODOS"},{"type":"AWARD_EMOJI"},{"type":"LINKED_RESOURCES"},{"type":"ERROR_TRACKING"},{"type":"PARTICIPANTS"},{"type":"EMAIL_PARTICIPANTS"},{"type":"DESIGNS"},{"type":"DEVELOPMENT"},{"type":"TIME_TRACKING"},{"type":"CRM_CONTACTS"}]}}}}
+2026-02-21 15:49:07,524 - DEBUG - gitlab_to_github_migrator.gitlab_utils - Found 2 child work items for issue #3
+2026-02-21 15:49:07,524 - DEBUG - gitlab_to_github_migrator.migrator - Looking for child issue #5
+2026-02-21 15:49:08,117 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221a/issues/3/sub_issues HTTP/1.1" 201 11146
+2026-02-21 15:49:08,118 - INFO - gitlab_to_github_migrator.migrator - Linked issue #5 as sub-issue of #3
+2026-02-21 15:49:08,119 - DEBUG - gitlab_to_github_migrator.migrator - Looking for child issue #6
+2026-02-21 15:49:09,596 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221a/issues/3/sub_issues HTTP/1.1" 201 11147
+2026-02-21 15:49:09,596 - INFO - gitlab_to_github_migrator.migrator - Linked issue #6 as sub-issue of #3
+2026-02-21 15:49:09,597 - DEBUG - gql.transport.httpx - >>> {"query": "query GetWorkItemWithChildren($fullPath: ID!, $iid: String!) {\n  namespace(fullPath: $fullPath) {\n    workItem(iid: $iid) {\n      iid\n      widgets {\n        type\n        ... on WorkItemWidgetHierarchy {\n          children {\n            nodes {\n              iid\n              title\n              state\n              workItemType {\n                name\n              }\n              webUrl\n            }\n          }\n        }\n      }\n    }\n  }\n}", "variables": {"fullPath": "flaks/gl2gh-migration-test-project", "iid": "5"}}
+2026-02-21 15:49:09,946 - DEBUG - gql.transport.httpx - <<< {"data":{"namespace":{"workItem":{"iid":"5","widgets":[{"type":"LINKED_ITEMS"},{"type":"LINKED_RESOURCES"},{"type":"PARTICIPANTS"},{"type":"DEVELOPMENT"},{"type":"TIME_TRACKING"},{"type":"ASSIGNEES"},{"type":"LABELS"},{"type":"DESCRIPTION"},{"type":"HIERARCHY","children":{"nodes":[]}},{"type":"START_AND_DUE_DATE"},{"type":"MILESTONE"},{"type":"NOTES"},{"type":"NOTIFICATIONS"},{"type":"CURRENT_USER_TODOS"},{"type":"AWARD_EMOJI"}]}}}}
+2026-02-21 15:49:09,947 - DEBUG - gitlab_to_github_migrator.gitlab_utils - Found 0 child work items for issue #5
+2026-02-21 15:49:09,947 - DEBUG - gql.transport.httpx - >>> {"query": "query GetWorkItemWithChildren($fullPath: ID!, $iid: String!) {\n  namespace(fullPath: $fullPath) {\n    workItem(iid: $iid) {\n      iid\n      widgets {\n        type\n        ... on WorkItemWidgetHierarchy {\n          children {\n            nodes {\n              iid\n              title\n              state\n              workItemType {\n                name\n              }\n              webUrl\n            }\n          }\n        }\n      }\n    }\n  }\n}", "variables": {"fullPath": "flaks/gl2gh-migration-test-project", "iid": "6"}}
+2026-02-21 15:49:10,277 - DEBUG - gql.transport.httpx - <<< {"data":{"namespace":{"workItem":{"iid":"6","widgets":[{"type":"LINKED_ITEMS"},{"type":"LINKED_RESOURCES"},{"type":"PARTICIPANTS"},{"type":"DEVELOPMENT"},{"type":"TIME_TRACKING"},{"type":"ASSIGNEES"},{"type":"LABELS"},{"type":"DESCRIPTION"},{"type":"HIERARCHY","children":{"nodes":[]}},{"type":"START_AND_DUE_DATE"},{"type":"MILESTONE"},{"type":"NOTES"},{"type":"NOTIFICATIONS"},{"type":"CURRENT_USER_TODOS"},{"type":"AWARD_EMOJI"}]}}}}
+2026-02-21 15:49:10,278 - DEBUG - gitlab_to_github_migrator.gitlab_utils - Found 0 child work items for issue #6
+2026-02-21 15:49:10,278 - DEBUG - gql.transport.httpx - >>> {"query": "query GetWorkItemWithChildren($fullPath: ID!, $iid: String!) {\n  namespace(fullPath: $fullPath) {\n    workItem(iid: $iid) {\n      iid\n      widgets {\n        type\n        ... on WorkItemWidgetHierarchy {\n          children {\n            nodes {\n              iid\n              title\n              state\n              workItemType {\n                name\n              }\n              webUrl\n            }\n          }\n        }\n      }\n    }\n  }\n}", "variables": {"fullPath": "flaks/gl2gh-migration-test-project", "iid": "7"}}
+2026-02-21 15:49:10,626 - DEBUG - gql.transport.httpx - <<< {"data":{"namespace":{"workItem":{"iid":"7","widgets":[{"type":"LINKED_ITEMS"},{"type":"ASSIGNEES"},{"type":"LABELS"},{"type":"DESCRIPTION"},{"type":"HIERARCHY","children":{"nodes":[]}},{"type":"START_AND_DUE_DATE"},{"type":"MILESTONE"},{"type":"NOTES"},{"type":"NOTIFICATIONS"},{"type":"CURRENT_USER_TODOS"},{"type":"AWARD_EMOJI"},{"type":"LINKED_RESOURCES"},{"type":"ERROR_TRACKING"},{"type":"PARTICIPANTS"},{"type":"EMAIL_PARTICIPANTS"},{"type":"DESIGNS"},{"type":"DEVELOPMENT"},{"type":"TIME_TRACKING"},{"type":"CRM_CONTACTS"}]}}}}
+2026-02-21 15:49:10,626 - DEBUG - gitlab_to_github_migrator.gitlab_utils - Found 0 child work items for issue #7
+2026-02-21 15:49:10,627 - DEBUG - gql.transport.httpx - >>> {"query": "query GetWorkItemWithChildren($fullPath: ID!, $iid: String!) {\n  namespace(fullPath: $fullPath) {\n    workItem(iid: $iid) {\n      iid\n      widgets {\n        type\n        ... on WorkItemWidgetHierarchy {\n          children {\n            nodes {\n              iid\n              title\n              state\n              workItemType {\n                name\n              }\n              webUrl\n            }\n          }\n        }\n      }\n    }\n  }\n}", "variables": {"fullPath": "flaks/gl2gh-migration-test-project", "iid": "8"}}
+2026-02-21 15:49:11,012 - DEBUG - gql.transport.httpx - <<< {"data":{"namespace":{"workItem":{"iid":"8","widgets":[{"type":"LINKED_ITEMS"},{"type":"ASSIGNEES"},{"type":"LABELS"},{"type":"DESCRIPTION"},{"type":"HIERARCHY","children":{"nodes":[]}},{"type":"START_AND_DUE_DATE"},{"type":"MILESTONE"},{"type":"NOTES"},{"type":"NOTIFICATIONS"},{"type":"CURRENT_USER_TODOS"},{"type":"AWARD_EMOJI"},{"type":"LINKED_RESOURCES"},{"type":"ERROR_TRACKING"},{"type":"PARTICIPANTS"},{"type":"EMAIL_PARTICIPANTS"},{"type":"DESIGNS"},{"type":"DEVELOPMENT"},{"type":"TIME_TRACKING"},{"type":"CRM_CONTACTS"}]}}}}
+2026-02-21 15:49:11,012 - DEBUG - gitlab_to_github_migrator.gitlab_utils - Found 0 child work items for issue #8
+2026-02-21 15:49:11,308 - DEBUG - urllib3.connectionpool - https://gitlab.com:443 "GET /api/v4/projects/78035105/issues?state=all HTTP/1.1" 200 None
+2026-02-21 15:49:11,521 - DEBUG - urllib3.connectionpool - https://gitlab.com:443 "GET /api/v4/projects/78035105/milestones?state=all HTTP/1.1" 200 None
+2026-02-21 15:49:11,875 - DEBUG - urllib3.connectionpool - https://gitlab.com:443 "GET /api/v4/projects/78035105/labels HTTP/1.1" 200 None
+2026-02-21 15:49:12,215 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "GET /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221a/issues?state=all HTTP/1.1" 200 None
+2026-02-21 15:49:12,688 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "GET /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221a/milestones?state=all HTTP/1.1" 200 None
+2026-02-21 15:49:13,186 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "GET /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221a/labels HTTP/1.1" 200 None
+2026-02-21 15:49:13,190 - INFO - gitlab_to_github_migrator.migrator - Migration validation completed
+2026-02-21 15:49:13,191 - DEBUG - gitlab_to_github_migrator.git_utils - Cleaned up git clone at /tmp/gitlab_migration_ocjulyxn
+2026-02-21 15:52:18,049 - DEBUG - urllib3.connectionpool - Starting new HTTPS connection (1): gitlab.com:443
+2026-02-21 15:52:20,128 - DEBUG - urllib3.connectionpool - https://gitlab.com:443 "GET /api/v4/projects/flaks%2Fgl2gh-migration-test-project HTTP/1.1" 200 None
+2026-02-21 15:52:20,142 - DEBUG - gitlab_to_github_migrator.migrator - Initialized migrator for flaks/gl2gh-migration-test-project -> flaks-test/gl2ghmigr-full-migration-test-JF260221b
+2026-02-21 15:52:20,142 - INFO - gitlab_to_github_migrator.migrator - GitLab API access validated
+2026-02-21 15:52:20,142 - INFO - gitlab_to_github_migrator.migrator - GitHub API access validated
+2026-02-21 15:52:20,142 - DEBUG - urllib3.connectionpool - Starting new HTTPS connection (1): api.github.com:443
+2026-02-21 15:52:20,363 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "GET /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221b HTTP/1.1" 404 None
+2026-02-21 15:52:20,809 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "GET /orgs/flaks-test HTTP/1.1" 200 None
+2026-02-21 15:52:21,838 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /orgs/flaks-test/repos HTTP/1.1" 201 7964
+2026-02-21 15:52:23,554 - DEBUG - gitlab_to_github_migrator.migrator - GitLab default branch: main
+2026-02-21 15:52:23,864 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "GET /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221b HTTP/1.1" 200 None
+2026-02-21 15:52:23,864 - DEBUG - gitlab_to_github_migrator.migrator - Refreshed repository object, current default branch: main
+2026-02-21 15:52:24,493 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "PATCH /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221b HTTP/1.1" 200 None
+2026-02-21 15:52:24,494 - INFO - gitlab_to_github_migrator.github_utils - Set default branch to 'main' for repository flaks-test/gl2ghmigr-full-migration-test-JF260221b
+2026-02-21 15:52:24,998 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "GET /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221b/labels HTTP/1.1" 200 None
+2026-02-21 15:52:25,326 - DEBUG - urllib3.connectionpool - https://gitlab.com:443 "GET /api/v4/projects/78035105/labels HTTP/1.1" 200 None
+2026-02-21 15:52:25,326 - INFO - gitlab_to_github_migrator.labels - Using existing label: bug -> bug
+2026-02-21 15:52:25,326 - INFO - gitlab_to_github_migrator.labels - Using existing label: documentation -> documentation
+2026-02-21 15:52:25,822 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221b/labels HTTP/1.1" 201 233
+2026-02-21 15:52:25,822 - INFO - gitlab_to_github_migrator.labels - Created label: feature -> feature
+2026-02-21 15:52:27,169 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221b/labels HTTP/1.1" 201 224
+2026-02-21 15:52:27,169 - INFO - gitlab_to_github_migrator.labels - Created label: p_high -> p_high
+2026-02-21 15:52:28,498 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221b/labels HTTP/1.1" 201 224
+2026-02-21 15:52:28,498 - INFO - gitlab_to_github_migrator.labels - Created label: p_idea -> p_idea
+2026-02-21 15:52:29,820 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221b/labels HTTP/1.1" 201 222
+2026-02-21 15:52:29,820 - INFO - gitlab_to_github_migrator.labels - Created label: p_low -> p_low
+2026-02-21 15:52:31,160 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221b/labels HTTP/1.1" 201 222
+2026-02-21 15:52:31,160 - INFO - gitlab_to_github_migrator.labels - Created label: p_mid -> p_mid
+2026-02-21 15:52:32,512 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221b/labels HTTP/1.1" 201 236
+2026-02-21 15:52:32,513 - INFO - gitlab_to_github_migrator.labels - Created label: p_opti -> p_opti
+2026-02-21 15:52:33,856 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221b/labels HTTP/1.1" 201 244
+2026-02-21 15:52:33,856 - INFO - gitlab_to_github_migrator.labels - Created label: status_abandoned -> status_abandoned
+2026-02-21 15:52:35,276 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221b/labels HTTP/1.1" 201 236
+2026-02-21 15:52:35,276 - INFO - gitlab_to_github_migrator.labels - Created label: status_inbox -> status_inbox
+2026-02-21 15:52:36,627 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221b/labels HTTP/1.1" 201 234
+2026-02-21 15:52:36,628 - INFO - gitlab_to_github_migrator.labels - Created label: status_test -> status_test
+2026-02-21 15:52:37,972 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221b/labels HTTP/1.1" 201 234
+2026-02-21 15:52:37,972 - INFO - gitlab_to_github_migrator.labels - Created label: status_todo -> status_todo
+2026-02-21 15:52:39,315 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221b/labels HTTP/1.1" 201 240
+2026-02-21 15:52:39,315 - INFO - gitlab_to_github_migrator.labels - Created label: status_waiting -> status_waiting
+2026-02-21 15:52:40,830 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221b/labels HTTP/1.1" 201 240
+2026-02-21 15:52:40,831 - INFO - gitlab_to_github_migrator.labels - Created label: status_working -> status_working
+2026-02-21 15:52:42,201 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221b/labels HTTP/1.1" 201 222
+2026-02-21 15:52:42,201 - INFO - gitlab_to_github_migrator.labels - Created label: t_bug -> t_bug
+2026-02-21 15:52:43,599 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221b/labels HTTP/1.1" 201 245
+2026-02-21 15:52:43,599 - INFO - gitlab_to_github_migrator.labels - Created label: t_dev -> t_dev
+2026-02-21 15:52:44,893 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221b/labels HTTP/1.1" 201 230
+2026-02-21 15:52:44,893 - INFO - gitlab_to_github_migrator.labels - Created label: t_feature -> t_feature
+2026-02-21 15:52:46,573 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221b/labels HTTP/1.1" 201 240
+2026-02-21 15:52:46,573 - INFO - gitlab_to_github_migrator.labels - Created label: t_infra -> t_infra
+2026-02-21 15:52:47,905 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221b/labels HTTP/1.1" 201 234
+2026-02-21 15:52:47,905 - INFO - gitlab_to_github_migrator.labels - Created label: t_internals -> t_internals
+2026-02-21 15:52:49,245 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221b/labels HTTP/1.1" 201 238
+2026-02-21 15:52:49,245 - INFO - gitlab_to_github_migrator.labels - Created label: t_refactoring -> t_refactoring
+2026-02-21 15:52:49,481 - DEBUG - urllib3.connectionpool - https://gitlab.com:443 "GET /api/v4/projects/78035105/milestones?state=all HTTP/1.1" 200 None
+2026-02-21 15:52:50,570 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221b/milestones HTTP/1.1" 201 1571
+2026-02-21 15:52:50,571 - INFO - gitlab_to_github_migrator.migrator - Created milestone #1: v1.0
+2026-02-21 15:52:52,073 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221b/milestones HTTP/1.1" 201 1613
+2026-02-21 15:52:52,074 - DEBUG - gitlab_to_github_migrator.migrator - Created placeholder milestone #2
+2026-02-21 15:52:53,419 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221b/milestones HTTP/1.1" 201 1551
+2026-02-21 15:52:53,420 - INFO - gitlab_to_github_migrator.migrator - Created milestone #3: v2.0
+2026-02-21 15:52:54,732 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "DELETE /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221b/milestones/2 HTTP/1.1" 204 0
+2026-02-21 15:52:54,732 - DEBUG - gitlab_to_github_migrator.migrator - Deleted placeholder milestone #2
+2026-02-21 15:52:55,053 - DEBUG - urllib3.connectionpool - https://gitlab.com:443 "GET /api/v4/projects/78035105/issues?state=all HTTP/1.1" 200 None
+2026-02-21 15:52:55,305 - DEBUG - urllib3.connectionpool - https://gitlab.com:443 "GET /api/v4/projects/78035105/issues/1/links HTTP/1.1" 200 None
+2026-02-21 15:52:56,136 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221b/issues HTTP/1.1" 201 3133
+2026-02-21 15:52:56,137 - DEBUG - gitlab_to_github_migrator.migrator - Added issue #1 to github_issue_dict
+2026-02-21 15:52:56,478 - DEBUG - urllib3.connectionpool - https://gitlab.com:443 "GET /api/v4/projects/78035105/issues/1/notes HTTP/1.1" 200 None
+2026-02-21 15:52:57,723 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221b/issues/1/comments HTTP/1.1" 201 1838
+2026-02-21 15:52:57,723 - DEBUG - gitlab_to_github_migrator.migrator - Migrated 1 system note(s)
+2026-02-21 15:52:59,434 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221b/issues/1/comments HTTP/1.1" 201 1873
+2026-02-21 15:52:59,434 - DEBUG - gitlab_to_github_migrator.migrator - Migrated comment by janfrederik
+2026-02-21 15:53:01,253 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "PATCH /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221b/issues/1 HTTP/1.1" 200 None
+2026-02-21 15:53:01,253 - INFO - gitlab_to_github_migrator.migrator - Created issue #1: Basic issue
+2026-02-21 15:53:01,528 - DEBUG - urllib3.connectionpool - https://gitlab.com:443 "GET /api/v4/projects/78035105/uploads/c6b3a7aa54667703cd34315fc3a37822/Screenshot_from_2026-01-26_20-19-47.png HTTP/1.1" 200 66904
+2026-02-21 15:53:01,534 - DEBUG - gitlab_to_github_migrator.gitlab_utils - Downloaded Screenshot_from_2026-01-26_20-19-47.png: 66904 bytes, Content-Type: application/octet-stream
+2026-02-21 15:53:01,853 - DEBUG - urllib3.connectionpool - https://gitlab.com:443 "GET /api/v4/projects/78035105/uploads/c9c38322c2614f22b295d59c4809dca9/Fagnes_de_Wallonie-T1.pdf HTTP/1.1" 200 69865
+2026-02-21 15:53:01,859 - DEBUG - gitlab_to_github_migrator.gitlab_utils - Downloaded Fagnes_de_Wallonie-T1.pdf: 69865 bytes, Content-Type: application/octet-stream
+2026-02-21 15:53:02,168 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "GET /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221b/releases HTTP/1.1" 200 2
+2026-02-21 15:53:02,827 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221b/releases HTTP/1.1" 201 1874
+2026-02-21 15:53:03,828 - DEBUG - urllib3.connectionpool - Starting new HTTPS connection (1): uploads.github.com:443
+2026-02-21 15:53:04,501 - DEBUG - urllib3.connectionpool - https://uploads.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221b/releases/289001570/assets?label=&name=c6b3a7aa_Screenshot_from_2026-01-26_20-19-47.png HTTP/1.1" 201 None
+2026-02-21 15:53:04,501 - INFO - gitlab_to_github_migrator.attachments - Uploaded Screenshot_from_2026-01-26_20-19-47.png: https://github.com/flaks-test/gl2ghmigr-full-migration-test-JF260221b/releases/download/untagged-479274604edf59f26c1e/c6b3a7aa_Screenshot_from_2026-01-26_20-19-47.png
+2026-02-21 15:53:05,502 - DEBUG - urllib3.connectionpool - Starting new HTTPS connection (1): uploads.github.com:443
+2026-02-21 15:53:06,135 - DEBUG - urllib3.connectionpool - https://uploads.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221b/releases/289001570/assets?label=&name=c9c38322_Fagnes_de_Wallonie-T1.pdf HTTP/1.1" 201 None
+2026-02-21 15:53:06,135 - INFO - gitlab_to_github_migrator.attachments - Uploaded Fagnes_de_Wallonie-T1.pdf: https://github.com/flaks-test/gl2ghmigr-full-migration-test-JF260221b/releases/download/untagged-479274604edf59f26c1e/c9c38322_Fagnes_de_Wallonie-T1.pdf
+2026-02-21 15:53:06,414 - DEBUG - urllib3.connectionpool - https://gitlab.com:443 "GET /api/v4/projects/78035105/issues/2/links HTTP/1.1" 200 None
+2026-02-21 15:53:07,635 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221b/issues HTTP/1.1" 201 3584
+2026-02-21 15:53:07,635 - DEBUG - gitlab_to_github_migrator.migrator - Added issue #2 to github_issue_dict
+2026-02-21 15:53:07,942 - DEBUG - urllib3.connectionpool - https://gitlab.com:443 "GET /api/v4/projects/78035105/issues/2/notes HTTP/1.1" 200 None
+2026-02-21 15:53:09,303 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221b/issues/2/comments HTTP/1.1" 201 1903
+2026-02-21 15:53:09,303 - DEBUG - gitlab_to_github_migrator.migrator - Migrated 2 system note(s)
+2026-02-21 15:53:09,303 - INFO - gitlab_to_github_migrator.migrator - Created issue #2: Issue with attachments
+2026-02-21 15:53:09,523 - DEBUG - urllib3.connectionpool - https://gitlab.com:443 "GET /api/v4/projects/78035105/issues/3/links HTTP/1.1" 200 2
+2026-02-21 15:53:09,953 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "GET /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221b/milestones/3 HTTP/1.1" 200 None
+2026-02-21 15:53:10,864 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221b/issues HTTP/1.1" 201 4592
+2026-02-21 15:53:10,864 - DEBUG - gitlab_to_github_migrator.migrator - Added issue #3 to github_issue_dict
+2026-02-21 15:53:11,193 - DEBUG - urllib3.connectionpool - https://gitlab.com:443 "GET /api/v4/projects/78035105/issues/3/notes HTTP/1.1" 200 None
+2026-02-21 15:53:12,650 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221b/issues/3/comments HTTP/1.1" 201 1951
+2026-02-21 15:53:12,650 - DEBUG - gitlab_to_github_migrator.migrator - Migrated 3 system note(s)
+2026-02-21 15:53:12,650 - INFO - gitlab_to_github_migrator.migrator - Created issue #3: Parent issue
+2026-02-21 15:53:14,106 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221b/issues HTTP/1.1" 201 2606
+2026-02-21 15:53:15,834 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "PATCH /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221b/issues/4 HTTP/1.1" 200 None
+2026-02-21 15:53:15,834 - DEBUG - gitlab_to_github_migrator.migrator - Created placeholder issue #4
+2026-02-21 15:53:16,106 - DEBUG - urllib3.connectionpool - https://gitlab.com:443 "GET /api/v4/projects/78035105/uploads/1cd8db7a2d15ab850ce48cafa48fbf61/Screenshot_from_2026-01-23_17-00-12.png HTTP/1.1" 200 79926
+2026-02-21 15:53:16,113 - DEBUG - gitlab_to_github_migrator.gitlab_utils - Downloaded Screenshot_from_2026-01-23_17-00-12.png: 79926 bytes, Content-Type: application/octet-stream
+2026-02-21 15:53:16,834 - DEBUG - urllib3.connectionpool - Starting new HTTPS connection (1): uploads.github.com:443
+2026-02-21 15:53:17,662 - DEBUG - urllib3.connectionpool - https://uploads.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221b/releases/289001570/assets?label=&name=1cd8db7a_Screenshot_from_2026-01-23_17-00-12.png HTTP/1.1" 201 None
+2026-02-21 15:53:17,663 - INFO - gitlab_to_github_migrator.attachments - Uploaded Screenshot_from_2026-01-23_17-00-12.png: https://github.com/flaks-test/gl2ghmigr-full-migration-test-JF260221b/releases/download/untagged-479274604edf59f26c1e/1cd8db7a_Screenshot_from_2026-01-23_17-00-12.png
+2026-02-21 15:53:17,978 - DEBUG - urllib3.connectionpool - https://gitlab.com:443 "GET /api/v4/projects/78035105/issues/5/links HTTP/1.1" 200 2
+2026-02-21 15:53:19,099 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221b/issues HTTP/1.1" 201 3033
+2026-02-21 15:53:19,099 - DEBUG - gitlab_to_github_migrator.migrator - Added issue #5 to github_issue_dict
+2026-02-21 15:53:19,427 - DEBUG - urllib3.connectionpool - https://gitlab.com:443 "GET /api/v4/projects/78035105/issues/5/notes HTTP/1.1" 200 None
+2026-02-21 15:53:20,853 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221b/issues/5/comments HTTP/1.1" 201 1893
+2026-02-21 15:53:20,854 - DEBUG - gitlab_to_github_migrator.migrator - Migrated 2 system note(s)
+2026-02-21 15:53:20,854 - INFO - gitlab_to_github_migrator.migrator - Created issue #5: Child task 1 (open)
+2026-02-21 15:53:21,177 - DEBUG - urllib3.connectionpool - https://gitlab.com:443 "GET /api/v4/projects/78035105/issues/6/links HTTP/1.1" 200 2
+2026-02-21 15:53:22,562 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221b/issues HTTP/1.1" 201 2803
+2026-02-21 15:53:22,562 - DEBUG - gitlab_to_github_migrator.migrator - Added issue #6 to github_issue_dict
+2026-02-21 15:53:22,882 - DEBUG - urllib3.connectionpool - https://gitlab.com:443 "GET /api/v4/projects/78035105/issues/6/notes HTTP/1.1" 200 None
+2026-02-21 15:53:24,297 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221b/issues/6/comments HTTP/1.1" 201 1828
+2026-02-21 15:53:24,297 - DEBUG - gitlab_to_github_migrator.migrator - Migrated 1 system note(s)
+2026-02-21 15:53:25,992 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "PATCH /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221b/issues/6 HTTP/1.1" 200 None
+2026-02-21 15:53:25,992 - INFO - gitlab_to_github_migrator.migrator - Created issue #6: Child task 2 (closed)
+2026-02-21 15:53:26,360 - DEBUG - urllib3.connectionpool - https://gitlab.com:443 "GET /api/v4/projects/78035105/issues/7/links HTTP/1.1" 200 None
+2026-02-21 15:53:27,626 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221b/issues HTTP/1.1" 201 3088
+2026-02-21 15:53:27,627 - DEBUG - gitlab_to_github_migrator.migrator - Added issue #7 to github_issue_dict
+2026-02-21 15:53:27,924 - DEBUG - urllib3.connectionpool - https://gitlab.com:443 "GET /api/v4/projects/78035105/issues/7/notes HTTP/1.1" 200 None
+2026-02-21 15:53:29,207 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221b/issues/7/comments HTTP/1.1" 201 1901
+2026-02-21 15:53:29,208 - DEBUG - gitlab_to_github_migrator.migrator - Migrated 2 system note(s)
+2026-02-21 15:53:29,208 - INFO - gitlab_to_github_migrator.migrator - Created issue #7: Blocking issue
+2026-02-21 15:53:29,547 - DEBUG - urllib3.connectionpool - https://gitlab.com:443 "GET /api/v4/projects/78035105/issues/8/links HTTP/1.1" 200 None
+2026-02-21 15:53:30,638 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221b/issues HTTP/1.1" 201 3106
+2026-02-21 15:53:30,638 - DEBUG - gitlab_to_github_migrator.migrator - Added issue #8 to github_issue_dict
+2026-02-21 15:53:30,938 - DEBUG - urllib3.connectionpool - https://gitlab.com:443 "GET /api/v4/projects/78035105/issues/8/notes HTTP/1.1" 200 None
+2026-02-21 15:53:30,938 - DEBUG - gitlab_to_github_migrator.attachments - Reusing cached attachment Screenshot_from_2026-01-26_20-19-47.png: https://github.com/flaks-test/gl2ghmigr-full-migration-test-JF260221b/releases/download/untagged-479274604edf59f26c1e/c6b3a7aa_Screenshot_from_2026-01-26_20-19-47.png
+2026-02-21 15:53:32,194 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221b/issues/8/comments HTTP/1.1" 201 2082
+2026-02-21 15:53:32,195 - DEBUG - gitlab_to_github_migrator.migrator - Migrated comment by janfrederik
+2026-02-21 15:53:33,857 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221b/issues/8/comments HTTP/1.1" 201 1838
+2026-02-21 15:53:33,858 - DEBUG - gitlab_to_github_migrator.migrator - Migrated 1 system note(s)
+2026-02-21 15:53:33,858 - INFO - gitlab_to_github_migrator.migrator - Created issue #8: Blocked issue
+2026-02-21 15:53:33,859 - DEBUG - urllib3.connectionpool - Starting new HTTPS connection (1): api.github.com:443
+2026-02-21 15:53:34,516 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /graphql HTTP/1.1" 200 None
+2026-02-21 15:53:34,516 - DEBUG - gitlab_to_github_migrator.github_utils - Deleted issue with node ID I_kwDORVfUF87swmg2
+2026-02-21 15:53:34,516 - DEBUG - gitlab_to_github_migrator.migrator - Deleted placeholder issue #4
+2026-02-21 15:53:34,517 - DEBUG - gql.transport.httpx - >>> {"query": "query GetWorkItemWithChildren($fullPath: ID!, $iid: String!) {\n  namespace(fullPath: $fullPath) {\n    workItem(iid: $iid) {\n      iid\n      widgets {\n        type\n        ... on WorkItemWidgetHierarchy {\n          children {\n            nodes {\n              iid\n              title\n              state\n              workItemType {\n                name\n              }\n              webUrl\n            }\n          }\n        }\n      }\n    }\n  }\n}", "variables": {"fullPath": "flaks/gl2gh-migration-test-project", "iid": "1"}}
+2026-02-21 15:53:34,867 - DEBUG - gql.transport.httpx - <<< {"data":{"namespace":{"workItem":{"iid":"1","widgets":[{"type":"LINKED_ITEMS"},{"type":"ASSIGNEES"},{"type":"LABELS"},{"type":"DESCRIPTION"},{"type":"HIERARCHY","children":{"nodes":[]}},{"type":"START_AND_DUE_DATE"},{"type":"MILESTONE"},{"type":"NOTES"},{"type":"NOTIFICATIONS"},{"type":"CURRENT_USER_TODOS"},{"type":"AWARD_EMOJI"},{"type":"LINKED_RESOURCES"},{"type":"ERROR_TRACKING"},{"type":"PARTICIPANTS"},{"type":"EMAIL_PARTICIPANTS"},{"type":"DESIGNS"},{"type":"DEVELOPMENT"},{"type":"TIME_TRACKING"},{"type":"CRM_CONTACTS"}]}}}}
+2026-02-21 15:53:34,867 - DEBUG - gitlab_to_github_migrator.gitlab_utils - Found 0 child work items for issue #1
+2026-02-21 15:53:34,868 - DEBUG - gql.transport.httpx - >>> {"query": "query GetWorkItemWithChildren($fullPath: ID!, $iid: String!) {\n  namespace(fullPath: $fullPath) {\n    workItem(iid: $iid) {\n      iid\n      widgets {\n        type\n        ... on WorkItemWidgetHierarchy {\n          children {\n            nodes {\n              iid\n              title\n              state\n              workItemType {\n                name\n              }\n              webUrl\n            }\n          }\n        }\n      }\n    }\n  }\n}", "variables": {"fullPath": "flaks/gl2gh-migration-test-project", "iid": "2"}}
+2026-02-21 15:53:35,327 - DEBUG - gql.transport.httpx - <<< {"data":{"namespace":{"workItem":{"iid":"2","widgets":[{"type":"LINKED_ITEMS"},{"type":"ASSIGNEES"},{"type":"LABELS"},{"type":"DESCRIPTION"},{"type":"HIERARCHY","children":{"nodes":[]}},{"type":"START_AND_DUE_DATE"},{"type":"MILESTONE"},{"type":"NOTES"},{"type":"NOTIFICATIONS"},{"type":"CURRENT_USER_TODOS"},{"type":"AWARD_EMOJI"},{"type":"LINKED_RESOURCES"},{"type":"ERROR_TRACKING"},{"type":"PARTICIPANTS"},{"type":"EMAIL_PARTICIPANTS"},{"type":"DESIGNS"},{"type":"DEVELOPMENT"},{"type":"TIME_TRACKING"},{"type":"CRM_CONTACTS"}]}}}}
+2026-02-21 15:53:35,327 - DEBUG - gitlab_to_github_migrator.gitlab_utils - Found 0 child work items for issue #2
+2026-02-21 15:53:35,327 - DEBUG - gql.transport.httpx - >>> {"query": "query GetWorkItemWithChildren($fullPath: ID!, $iid: String!) {\n  namespace(fullPath: $fullPath) {\n    workItem(iid: $iid) {\n      iid\n      widgets {\n        type\n        ... on WorkItemWidgetHierarchy {\n          children {\n            nodes {\n              iid\n              title\n              state\n              workItemType {\n                name\n              }\n              webUrl\n            }\n          }\n        }\n      }\n    }\n  }\n}", "variables": {"fullPath": "flaks/gl2gh-migration-test-project", "iid": "3"}}
+2026-02-21 15:53:35,832 - DEBUG - gql.transport.httpx - <<< {"data":{"namespace":{"workItem":{"iid":"3","widgets":[{"type":"LINKED_ITEMS"},{"type":"ASSIGNEES"},{"type":"LABELS"},{"type":"DESCRIPTION"},{"type":"HIERARCHY","children":{"nodes":[{"iid":"5","title":"Child task 1 (open)","state":"OPEN","workItemType":{"name":"Task"},"webUrl":"https://gitlab.com/flaks/gl2gh-migration-test-project/-/work_items/5"},{"iid":"6","title":"Child task 2 (closed)","state":"CLOSED","workItemType":{"name":"Task"},"webUrl":"https://gitlab.com/flaks/gl2gh-migration-test-project/-/work_items/6"}]}},{"type":"START_AND_DUE_DATE"},{"type":"MILESTONE"},{"type":"NOTES"},{"type":"NOTIFICATIONS"},{"type":"CURRENT_USER_TODOS"},{"type":"AWARD_EMOJI"},{"type":"LINKED_RESOURCES"},{"type":"ERROR_TRACKING"},{"type":"PARTICIPANTS"},{"type":"EMAIL_PARTICIPANTS"},{"type":"DESIGNS"},{"type":"DEVELOPMENT"},{"type":"TIME_TRACKING"},{"type":"CRM_CONTACTS"}]}}}}
+2026-02-21 15:53:35,832 - DEBUG - gitlab_to_github_migrator.gitlab_utils - Found 2 child work items for issue #3
+2026-02-21 15:53:35,832 - DEBUG - gitlab_to_github_migrator.migrator - Looking for child issue #5
+2026-02-21 15:53:36,429 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221b/issues/3/sub_issues HTTP/1.1" 201 11146
+2026-02-21 15:53:36,430 - INFO - gitlab_to_github_migrator.migrator - Linked issue #5 as sub-issue of #3
+2026-02-21 15:53:36,430 - DEBUG - gitlab_to_github_migrator.migrator - Looking for child issue #6
+2026-02-21 15:53:37,994 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221b/issues/3/sub_issues HTTP/1.1" 201 11147
+2026-02-21 15:53:37,995 - INFO - gitlab_to_github_migrator.migrator - Linked issue #6 as sub-issue of #3
+2026-02-21 15:53:37,996 - DEBUG - gql.transport.httpx - >>> {"query": "query GetWorkItemWithChildren($fullPath: ID!, $iid: String!) {\n  namespace(fullPath: $fullPath) {\n    workItem(iid: $iid) {\n      iid\n      widgets {\n        type\n        ... on WorkItemWidgetHierarchy {\n          children {\n            nodes {\n              iid\n              title\n              state\n              workItemType {\n                name\n              }\n              webUrl\n            }\n          }\n        }\n      }\n    }\n  }\n}", "variables": {"fullPath": "flaks/gl2gh-migration-test-project", "iid": "5"}}
+2026-02-21 15:53:38,392 - DEBUG - gql.transport.httpx - <<< {"data":{"namespace":{"workItem":{"iid":"5","widgets":[{"type":"LINKED_ITEMS"},{"type":"LINKED_RESOURCES"},{"type":"PARTICIPANTS"},{"type":"DEVELOPMENT"},{"type":"TIME_TRACKING"},{"type":"ASSIGNEES"},{"type":"LABELS"},{"type":"DESCRIPTION"},{"type":"HIERARCHY","children":{"nodes":[]}},{"type":"START_AND_DUE_DATE"},{"type":"MILESTONE"},{"type":"NOTES"},{"type":"NOTIFICATIONS"},{"type":"CURRENT_USER_TODOS"},{"type":"AWARD_EMOJI"}]}}}}
+2026-02-21 15:53:38,393 - DEBUG - gitlab_to_github_migrator.gitlab_utils - Found 0 child work items for issue #5
+2026-02-21 15:53:38,393 - DEBUG - gql.transport.httpx - >>> {"query": "query GetWorkItemWithChildren($fullPath: ID!, $iid: String!) {\n  namespace(fullPath: $fullPath) {\n    workItem(iid: $iid) {\n      iid\n      widgets {\n        type\n        ... on WorkItemWidgetHierarchy {\n          children {\n            nodes {\n              iid\n              title\n              state\n              workItemType {\n                name\n              }\n              webUrl\n            }\n          }\n        }\n      }\n    }\n  }\n}", "variables": {"fullPath": "flaks/gl2gh-migration-test-project", "iid": "6"}}
+2026-02-21 15:53:38,725 - DEBUG - gql.transport.httpx - <<< {"data":{"namespace":{"workItem":{"iid":"6","widgets":[{"type":"LINKED_ITEMS"},{"type":"LINKED_RESOURCES"},{"type":"PARTICIPANTS"},{"type":"DEVELOPMENT"},{"type":"TIME_TRACKING"},{"type":"ASSIGNEES"},{"type":"LABELS"},{"type":"DESCRIPTION"},{"type":"HIERARCHY","children":{"nodes":[]}},{"type":"START_AND_DUE_DATE"},{"type":"MILESTONE"},{"type":"NOTES"},{"type":"NOTIFICATIONS"},{"type":"CURRENT_USER_TODOS"},{"type":"AWARD_EMOJI"}]}}}}
+2026-02-21 15:53:38,726 - DEBUG - gitlab_to_github_migrator.gitlab_utils - Found 0 child work items for issue #6
+2026-02-21 15:53:38,726 - DEBUG - gql.transport.httpx - >>> {"query": "query GetWorkItemWithChildren($fullPath: ID!, $iid: String!) {\n  namespace(fullPath: $fullPath) {\n    workItem(iid: $iid) {\n      iid\n      widgets {\n        type\n        ... on WorkItemWidgetHierarchy {\n          children {\n            nodes {\n              iid\n              title\n              state\n              workItemType {\n                name\n              }\n              webUrl\n            }\n          }\n        }\n      }\n    }\n  }\n}", "variables": {"fullPath": "flaks/gl2gh-migration-test-project", "iid": "7"}}
+2026-02-21 15:53:39,096 - DEBUG - gql.transport.httpx - <<< {"data":{"namespace":{"workItem":{"iid":"7","widgets":[{"type":"LINKED_ITEMS"},{"type":"ASSIGNEES"},{"type":"LABELS"},{"type":"DESCRIPTION"},{"type":"HIERARCHY","children":{"nodes":[]}},{"type":"START_AND_DUE_DATE"},{"type":"MILESTONE"},{"type":"NOTES"},{"type":"NOTIFICATIONS"},{"type":"CURRENT_USER_TODOS"},{"type":"AWARD_EMOJI"},{"type":"LINKED_RESOURCES"},{"type":"ERROR_TRACKING"},{"type":"PARTICIPANTS"},{"type":"EMAIL_PARTICIPANTS"},{"type":"DESIGNS"},{"type":"DEVELOPMENT"},{"type":"TIME_TRACKING"},{"type":"CRM_CONTACTS"}]}}}}
+2026-02-21 15:53:39,096 - DEBUG - gitlab_to_github_migrator.gitlab_utils - Found 0 child work items for issue #7
+2026-02-21 15:53:39,097 - DEBUG - gql.transport.httpx - >>> {"query": "query GetWorkItemWithChildren($fullPath: ID!, $iid: String!) {\n  namespace(fullPath: $fullPath) {\n    workItem(iid: $iid) {\n      iid\n      widgets {\n        type\n        ... on WorkItemWidgetHierarchy {\n          children {\n            nodes {\n              iid\n              title\n              state\n              workItemType {\n                name\n              }\n              webUrl\n            }\n          }\n        }\n      }\n    }\n  }\n}", "variables": {"fullPath": "flaks/gl2gh-migration-test-project", "iid": "8"}}
+2026-02-21 15:53:39,494 - DEBUG - gql.transport.httpx - <<< {"data":{"namespace":{"workItem":{"iid":"8","widgets":[{"type":"LINKED_ITEMS"},{"type":"ASSIGNEES"},{"type":"LABELS"},{"type":"DESCRIPTION"},{"type":"HIERARCHY","children":{"nodes":[]}},{"type":"START_AND_DUE_DATE"},{"type":"MILESTONE"},{"type":"NOTES"},{"type":"NOTIFICATIONS"},{"type":"CURRENT_USER_TODOS"},{"type":"AWARD_EMOJI"},{"type":"LINKED_RESOURCES"},{"type":"ERROR_TRACKING"},{"type":"PARTICIPANTS"},{"type":"EMAIL_PARTICIPANTS"},{"type":"DESIGNS"},{"type":"DEVELOPMENT"},{"type":"TIME_TRACKING"},{"type":"CRM_CONTACTS"}]}}}}
+2026-02-21 15:53:39,494 - DEBUG - gitlab_to_github_migrator.gitlab_utils - Found 0 child work items for issue #8
+2026-02-21 15:53:39,895 - DEBUG - urllib3.connectionpool - https://gitlab.com:443 "GET /api/v4/projects/78035105/issues?state=all HTTP/1.1" 200 None
+2026-02-21 15:53:40,127 - DEBUG - urllib3.connectionpool - https://gitlab.com:443 "GET /api/v4/projects/78035105/milestones?state=all HTTP/1.1" 200 None
+2026-02-21 15:53:40,402 - DEBUG - urllib3.connectionpool - https://gitlab.com:443 "GET /api/v4/projects/78035105/labels HTTP/1.1" 200 None
+2026-02-21 15:53:40,772 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "GET /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221b/issues?state=all HTTP/1.1" 200 None
+2026-02-21 15:53:41,262 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "GET /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221b/milestones?state=all HTTP/1.1" 200 None
+2026-02-21 15:53:41,769 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "GET /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221b/labels HTTP/1.1" 200 None
+2026-02-21 15:53:41,773 - INFO - gitlab_to_github_migrator.migrator - Migration validation completed
+2026-02-21 15:53:41,774 - DEBUG - gitlab_to_github_migrator.git_utils - Cleaned up git clone at /tmp/gitlab_migration_iapfanrc
+2026-02-21 22:04:47,653 - DEBUG - urllib3.connectionpool - Starting new HTTPS connection (1): gitlab.com:443
+2026-02-21 22:04:48,003 - DEBUG - urllib3.connectionpool - https://gitlab.com:443 "GET /api/v4/projects/flaks%2Fgl2gh-migration-test-project HTTP/1.1" 200 None
+2026-02-21 22:04:48,033 - DEBUG - gitlab_to_github_migrator.migrator - Initialized migrator for flaks/gl2gh-migration-test-project -> flaks-test/gl2ghmigr-full-migration-test-JF260221c
+2026-02-21 22:04:48,033 - INFO - gitlab_to_github_migrator.migrator - GitLab API access validated
+2026-02-21 22:04:48,033 - INFO - gitlab_to_github_migrator.migrator - GitHub API access validated
+2026-02-21 22:04:48,034 - DEBUG - urllib3.connectionpool - Starting new HTTPS connection (1): api.github.com:443
+2026-02-21 22:04:48,236 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "GET /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221c HTTP/1.1" 404 None
+2026-02-21 22:04:48,706 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "GET /orgs/flaks-test HTTP/1.1" 200 None
+2026-02-21 22:04:49,762 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /orgs/flaks-test/repos HTTP/1.1" 201 7964
+2026-02-21 22:04:51,516 - DEBUG - gitlab_to_github_migrator.migrator - GitLab default branch: main
+2026-02-21 22:04:51,807 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "GET /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221c HTTP/1.1" 200 None
+2026-02-21 22:04:51,808 - DEBUG - gitlab_to_github_migrator.migrator - Refreshed repository object, current default branch: main
+2026-02-21 22:04:52,576 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "PATCH /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221c HTTP/1.1" 200 None
+2026-02-21 22:04:52,577 - INFO - gitlab_to_github_migrator.github_utils - Set default branch to 'main' for repository flaks-test/gl2ghmigr-full-migration-test-JF260221c
+2026-02-21 22:04:52,643 - DEBUG - gitlab_to_github_migrator.git_utils - Cleaned up git clone at /tmp/gitlab_migration_hssdaxx_
+2026-02-21 22:05:01,598 - DEBUG - urllib3.connectionpool - Starting new HTTPS connection (1): gitlab.com:443
+2026-02-21 22:05:02,137 - DEBUG - urllib3.connectionpool - https://gitlab.com:443 "GET /api/v4/projects/flaks%2Fgl2gh-migration-test-project HTTP/1.1" 200 None
+2026-02-21 22:05:02,156 - DEBUG - gitlab_to_github_migrator.migrator - Initialized migrator for flaks/gl2gh-migration-test-project -> flaks-test/gl2ghmigr-full-migration-test-JF260221d
+2026-02-21 22:05:02,156 - INFO - gitlab_to_github_migrator.migrator - GitLab API access validated
+2026-02-21 22:05:02,156 - INFO - gitlab_to_github_migrator.migrator - GitHub API access validated
+2026-02-21 22:05:02,157 - DEBUG - urllib3.connectionpool - Starting new HTTPS connection (1): api.github.com:443
+2026-02-21 22:05:02,357 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "GET /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221d HTTP/1.1" 404 None
+2026-02-21 22:05:02,826 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "GET /orgs/flaks-test HTTP/1.1" 200 None
+2026-02-21 22:05:03,951 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /orgs/flaks-test/repos HTTP/1.1" 201 7964
+2026-02-21 22:05:05,689 - DEBUG - gitlab_to_github_migrator.migrator - GitLab default branch: main
+2026-02-21 22:05:05,951 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "GET /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221d HTTP/1.1" 200 None
+2026-02-21 22:05:05,951 - DEBUG - gitlab_to_github_migrator.migrator - Refreshed repository object, current default branch: main
+2026-02-21 22:05:06,576 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "PATCH /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221d HTTP/1.1" 200 None
+2026-02-21 22:05:06,577 - INFO - gitlab_to_github_migrator.github_utils - Set default branch to 'main' for repository flaks-test/gl2ghmigr-full-migration-test-JF260221d
+2026-02-21 22:05:07,068 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "GET /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221d/labels HTTP/1.1" 200 None
+2026-02-21 22:05:07,420 - DEBUG - urllib3.connectionpool - https://gitlab.com:443 "GET /api/v4/projects/78035105/labels HTTP/1.1" 200 None
+2026-02-21 22:05:07,959 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221d/labels HTTP/1.1" 201 229
+2026-02-21 22:05:07,959 - INFO - gitlab_to_github_migrator.labels - Created label: bug -> new-bug
+2026-02-21 22:05:07,959 - INFO - gitlab_to_github_migrator.labels - Using existing label: documentation -> documentation
+2026-02-21 22:05:09,297 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221d/labels HTTP/1.1" 201 233
+2026-02-21 22:05:09,297 - INFO - gitlab_to_github_migrator.labels - Created label: feature -> feature
+2026-02-21 22:05:10,629 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221d/labels HTTP/1.1" 201 226
+2026-02-21 22:05:10,629 - INFO - gitlab_to_github_migrator.labels - Created label: p_high -> p-_high
+2026-02-21 22:05:11,969 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221d/labels HTTP/1.1" 201 226
+2026-02-21 22:05:11,969 - INFO - gitlab_to_github_migrator.labels - Created label: p_idea -> p-_idea
+2026-02-21 22:05:13,288 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221d/labels HTTP/1.1" 201 224
+2026-02-21 22:05:13,288 - INFO - gitlab_to_github_migrator.labels - Created label: p_low -> p-_low
+2026-02-21 22:05:14,609 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221d/labels HTTP/1.1" 201 224
+2026-02-21 22:05:14,610 - INFO - gitlab_to_github_migrator.labels - Created label: p_mid -> p-_mid
+2026-02-21 22:05:15,921 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221d/labels HTTP/1.1" 201 238
+2026-02-21 22:05:15,922 - INFO - gitlab_to_github_migrator.labels - Created label: p_opti -> p-_opti
+2026-02-21 22:05:17,229 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221d/labels HTTP/1.1" 201 244
+2026-02-21 22:05:17,229 - INFO - gitlab_to_github_migrator.labels - Created label: status_abandoned -> status_abandoned
+2026-02-21 22:05:18,546 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221d/labels HTTP/1.1" 201 236
+2026-02-21 22:05:18,547 - INFO - gitlab_to_github_migrator.labels - Created label: status_inbox -> status_inbox
+2026-02-21 22:05:19,898 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221d/labels HTTP/1.1" 201 234
+2026-02-21 22:05:19,898 - INFO - gitlab_to_github_migrator.labels - Created label: status_test -> status_test
+2026-02-21 22:05:21,237 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221d/labels HTTP/1.1" 201 234
+2026-02-21 22:05:21,238 - INFO - gitlab_to_github_migrator.labels - Created label: status_todo -> status_todo
+2026-02-21 22:05:22,562 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221d/labels HTTP/1.1" 201 240
+2026-02-21 22:05:22,562 - INFO - gitlab_to_github_migrator.labels - Created label: status_waiting -> status_waiting
+2026-02-21 22:05:23,950 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221d/labels HTTP/1.1" 201 240
+2026-02-21 22:05:23,950 - INFO - gitlab_to_github_migrator.labels - Created label: status_working -> status_working
+2026-02-21 22:05:25,365 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221d/labels HTTP/1.1" 201 222
+2026-02-21 22:05:25,366 - INFO - gitlab_to_github_migrator.labels - Created label: t_bug -> t_bug
+2026-02-21 22:05:26,707 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221d/labels HTTP/1.1" 201 245
+2026-02-21 22:05:26,707 - INFO - gitlab_to_github_migrator.labels - Created label: t_dev -> t_dev
+2026-02-21 22:05:28,020 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221d/labels HTTP/1.1" 201 230
+2026-02-21 22:05:28,020 - INFO - gitlab_to_github_migrator.labels - Created label: t_feature -> t_feature
+2026-02-21 22:05:29,356 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221d/labels HTTP/1.1" 201 240
+2026-02-21 22:05:29,357 - INFO - gitlab_to_github_migrator.labels - Created label: t_infra -> t_infra
+2026-02-21 22:05:30,690 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221d/labels HTTP/1.1" 201 234
+2026-02-21 22:05:30,690 - INFO - gitlab_to_github_migrator.labels - Created label: t_internals -> t_internals
+2026-02-21 22:05:31,995 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221d/labels HTTP/1.1" 201 238
+2026-02-21 22:05:31,995 - INFO - gitlab_to_github_migrator.labels - Created label: t_refactoring -> t_refactoring
+2026-02-21 22:05:32,235 - DEBUG - urllib3.connectionpool - https://gitlab.com:443 "GET /api/v4/projects/78035105/milestones?state=all HTTP/1.1" 200 None
+2026-02-21 22:05:33,412 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221d/milestones HTTP/1.1" 201 1571
+2026-02-21 22:05:33,412 - INFO - gitlab_to_github_migrator.migrator - Created milestone #1: v1.0
+2026-02-21 22:05:34,798 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221d/milestones HTTP/1.1" 201 1613
+2026-02-21 22:05:34,798 - DEBUG - gitlab_to_github_migrator.migrator - Created placeholder milestone #2
+2026-02-21 22:05:36,113 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221d/milestones HTTP/1.1" 201 1551
+2026-02-21 22:05:36,114 - INFO - gitlab_to_github_migrator.migrator - Created milestone #3: v2.0
+2026-02-21 22:05:37,448 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "DELETE /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221d/milestones/2 HTTP/1.1" 204 0
+2026-02-21 22:05:37,448 - DEBUG - gitlab_to_github_migrator.migrator - Deleted placeholder milestone #2
+2026-02-21 22:05:37,760 - DEBUG - urllib3.connectionpool - https://gitlab.com:443 "GET /api/v4/projects/78035105/issues?state=all HTTP/1.1" 200 None
+2026-02-21 22:05:38,031 - DEBUG - urllib3.connectionpool - https://gitlab.com:443 "GET /api/v4/projects/78035105/issues/1/links HTTP/1.1" 200 None
+2026-02-21 22:05:38,848 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221d/issues HTTP/1.1" 201 3122
+2026-02-21 22:05:38,848 - DEBUG - gitlab_to_github_migrator.migrator - Added issue #1 to github_issue_dict
+2026-02-21 22:05:39,456 - DEBUG - urllib3.connectionpool - https://gitlab.com:443 "GET /api/v4/projects/78035105/issues/1/notes HTTP/1.1" 200 None
+2026-02-21 22:05:40,400 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221d/issues/1/comments HTTP/1.1" 201 1838
+2026-02-21 22:05:40,401 - DEBUG - gitlab_to_github_migrator.migrator - Migrated 1 system note(s)
+2026-02-21 22:05:42,007 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221d/issues/1/comments HTTP/1.1" 201 1873
+2026-02-21 22:05:42,007 - DEBUG - gitlab_to_github_migrator.migrator - Migrated comment by janfrederik
+2026-02-21 22:05:43,647 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "PATCH /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221d/issues/1 HTTP/1.1" 200 None
+2026-02-21 22:05:43,647 - INFO - gitlab_to_github_migrator.migrator - Created issue #1: Basic issue
+2026-02-21 22:05:43,966 - DEBUG - urllib3.connectionpool - https://gitlab.com:443 "GET /api/v4/projects/78035105/uploads/c6b3a7aa54667703cd34315fc3a37822/Screenshot_from_2026-01-26_20-19-47.png HTTP/1.1" 200 66904
+2026-02-21 22:05:43,972 - DEBUG - gitlab_to_github_migrator.gitlab_utils - Downloaded Screenshot_from_2026-01-26_20-19-47.png: 66904 bytes, Content-Type: application/octet-stream
+2026-02-21 22:05:44,279 - DEBUG - urllib3.connectionpool - https://gitlab.com:443 "GET /api/v4/projects/78035105/uploads/c9c38322c2614f22b295d59c4809dca9/Fagnes_de_Wallonie-T1.pdf HTTP/1.1" 200 69865
+2026-02-21 22:05:44,285 - DEBUG - gitlab_to_github_migrator.gitlab_utils - Downloaded Fagnes_de_Wallonie-T1.pdf: 69865 bytes, Content-Type: application/octet-stream
+2026-02-21 22:05:44,553 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "GET /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221d/releases HTTP/1.1" 200 2
+2026-02-21 22:05:45,157 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221d/releases HTTP/1.1" 201 1874
+2026-02-21 22:05:46,158 - DEBUG - urllib3.connectionpool - Starting new HTTPS connection (1): uploads.github.com:443
+2026-02-21 22:05:46,774 - DEBUG - urllib3.connectionpool - https://uploads.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221d/releases/289044531/assets?label=&name=c6b3a7aa_Screenshot_from_2026-01-26_20-19-47.png HTTP/1.1" 201 None
+2026-02-21 22:05:46,774 - INFO - gitlab_to_github_migrator.attachments - Uploaded Screenshot_from_2026-01-26_20-19-47.png: https://github.com/flaks-test/gl2ghmigr-full-migration-test-JF260221d/releases/download/untagged-1487533b9999390531ba/c6b3a7aa_Screenshot_from_2026-01-26_20-19-47.png
+2026-02-21 22:05:47,775 - DEBUG - urllib3.connectionpool - Starting new HTTPS connection (1): uploads.github.com:443
+2026-02-21 22:05:48,366 - DEBUG - urllib3.connectionpool - https://uploads.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221d/releases/289044531/assets?label=&name=c9c38322_Fagnes_de_Wallonie-T1.pdf HTTP/1.1" 201 None
+2026-02-21 22:05:48,366 - INFO - gitlab_to_github_migrator.attachments - Uploaded Fagnes_de_Wallonie-T1.pdf: https://github.com/flaks-test/gl2ghmigr-full-migration-test-JF260221d/releases/download/untagged-1487533b9999390531ba/c9c38322_Fagnes_de_Wallonie-T1.pdf
+2026-02-21 22:05:48,714 - DEBUG - urllib3.connectionpool - https://gitlab.com:443 "GET /api/v4/projects/78035105/issues/2/links HTTP/1.1" 200 None
+2026-02-21 22:05:49,805 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221d/issues HTTP/1.1" 201 3584
+2026-02-21 22:05:49,805 - DEBUG - gitlab_to_github_migrator.migrator - Added issue #2 to github_issue_dict
+2026-02-21 22:05:50,168 - DEBUG - urllib3.connectionpool - https://gitlab.com:443 "GET /api/v4/projects/78035105/issues/2/notes HTTP/1.1" 200 None
+2026-02-21 22:05:51,495 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221d/issues/2/comments HTTP/1.1" 201 1903
+2026-02-21 22:05:51,495 - DEBUG - gitlab_to_github_migrator.migrator - Migrated 2 system note(s)
+2026-02-21 22:05:51,495 - INFO - gitlab_to_github_migrator.migrator - Created issue #2: Issue with attachments
+2026-02-21 22:05:51,753 - DEBUG - urllib3.connectionpool - https://gitlab.com:443 "GET /api/v4/projects/78035105/issues/3/links HTTP/1.1" 200 2
+2026-02-21 22:05:51,978 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "GET /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221d/milestones/3 HTTP/1.1" 200 None
+2026-02-21 22:05:53,142 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221d/issues HTTP/1.1" 201 4592
+2026-02-21 22:05:53,143 - DEBUG - gitlab_to_github_migrator.migrator - Added issue #3 to github_issue_dict
+2026-02-21 22:05:53,496 - DEBUG - urllib3.connectionpool - https://gitlab.com:443 "GET /api/v4/projects/78035105/issues/3/notes HTTP/1.1" 200 None
+2026-02-21 22:05:54,736 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221d/issues/3/comments HTTP/1.1" 201 1951
+2026-02-21 22:05:54,737 - DEBUG - gitlab_to_github_migrator.migrator - Migrated 3 system note(s)
+2026-02-21 22:05:54,737 - INFO - gitlab_to_github_migrator.migrator - Created issue #3: Parent issue
+2026-02-21 22:05:56,103 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221d/issues HTTP/1.1" 201 2606
+2026-02-21 22:05:57,950 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "PATCH /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221d/issues/4 HTTP/1.1" 200 None
+2026-02-21 22:05:57,951 - DEBUG - gitlab_to_github_migrator.migrator - Created placeholder issue #4
+2026-02-21 22:05:58,253 - DEBUG - urllib3.connectionpool - https://gitlab.com:443 "GET /api/v4/projects/78035105/uploads/1cd8db7a2d15ab850ce48cafa48fbf61/Screenshot_from_2026-01-23_17-00-12.png HTTP/1.1" 200 79926
+2026-02-21 22:05:58,260 - DEBUG - gitlab_to_github_migrator.gitlab_utils - Downloaded Screenshot_from_2026-01-23_17-00-12.png: 79926 bytes, Content-Type: application/octet-stream
+2026-02-21 22:05:58,951 - DEBUG - urllib3.connectionpool - Starting new HTTPS connection (1): uploads.github.com:443
+2026-02-21 22:05:59,731 - DEBUG - urllib3.connectionpool - https://uploads.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221d/releases/289044531/assets?label=&name=1cd8db7a_Screenshot_from_2026-01-23_17-00-12.png HTTP/1.1" 201 None
+2026-02-21 22:05:59,731 - INFO - gitlab_to_github_migrator.attachments - Uploaded Screenshot_from_2026-01-23_17-00-12.png: https://github.com/flaks-test/gl2ghmigr-full-migration-test-JF260221d/releases/download/untagged-1487533b9999390531ba/1cd8db7a_Screenshot_from_2026-01-23_17-00-12.png
+2026-02-21 22:05:59,958 - DEBUG - urllib3.connectionpool - https://gitlab.com:443 "GET /api/v4/projects/78035105/issues/5/links HTTP/1.1" 200 2
+2026-02-21 22:06:01,112 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221d/issues HTTP/1.1" 201 3033
+2026-02-21 22:06:01,112 - DEBUG - gitlab_to_github_migrator.migrator - Added issue #5 to github_issue_dict
+2026-02-21 22:06:01,590 - DEBUG - urllib3.connectionpool - https://gitlab.com:443 "GET /api/v4/projects/78035105/issues/5/notes HTTP/1.1" 200 None
+2026-02-21 22:06:02,766 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221d/issues/5/comments HTTP/1.1" 201 1893
+2026-02-21 22:06:02,767 - DEBUG - gitlab_to_github_migrator.migrator - Migrated 2 system note(s)
+2026-02-21 22:06:02,767 - INFO - gitlab_to_github_migrator.migrator - Created issue #5: Child task 1 (open)
+2026-02-21 22:06:03,001 - DEBUG - urllib3.connectionpool - https://gitlab.com:443 "GET /api/v4/projects/78035105/issues/6/links HTTP/1.1" 200 2
+2026-02-21 22:06:04,208 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221d/issues HTTP/1.1" 201 2803
+2026-02-21 22:06:04,208 - DEBUG - gitlab_to_github_migrator.migrator - Added issue #6 to github_issue_dict
+2026-02-21 22:06:04,488 - DEBUG - urllib3.connectionpool - https://gitlab.com:443 "GET /api/v4/projects/78035105/issues/6/notes HTTP/1.1" 200 None
+2026-02-21 22:06:06,000 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221d/issues/6/comments HTTP/1.1" 201 1828
+2026-02-21 22:06:06,000 - DEBUG - gitlab_to_github_migrator.migrator - Migrated 1 system note(s)
+2026-02-21 22:06:07,638 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "PATCH /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221d/issues/6 HTTP/1.1" 200 None
+2026-02-21 22:06:07,638 - INFO - gitlab_to_github_migrator.migrator - Created issue #6: Child task 2 (closed)
+2026-02-21 22:06:07,913 - DEBUG - urllib3.connectionpool - https://gitlab.com:443 "GET /api/v4/projects/78035105/issues/7/links HTTP/1.1" 200 None
+2026-02-21 22:06:09,086 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221d/issues HTTP/1.1" 201 3090
+2026-02-21 22:06:09,086 - DEBUG - gitlab_to_github_migrator.migrator - Added issue #7 to github_issue_dict
+2026-02-21 22:06:09,419 - DEBUG - urllib3.connectionpool - https://gitlab.com:443 "GET /api/v4/projects/78035105/issues/7/notes HTTP/1.1" 200 None
+2026-02-21 22:06:10,760 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221d/issues/7/comments HTTP/1.1" 201 1901
+2026-02-21 22:06:10,760 - DEBUG - gitlab_to_github_migrator.migrator - Migrated 2 system note(s)
+2026-02-21 22:06:10,760 - INFO - gitlab_to_github_migrator.migrator - Created issue #7: Blocking issue
+2026-02-21 22:06:11,049 - DEBUG - urllib3.connectionpool - https://gitlab.com:443 "GET /api/v4/projects/78035105/issues/8/links HTTP/1.1" 200 None
+2026-02-21 22:06:12,257 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221d/issues HTTP/1.1" 201 3106
+2026-02-21 22:06:12,258 - DEBUG - gitlab_to_github_migrator.migrator - Added issue #8 to github_issue_dict
+2026-02-21 22:06:12,566 - DEBUG - urllib3.connectionpool - https://gitlab.com:443 "GET /api/v4/projects/78035105/issues/8/notes HTTP/1.1" 200 None
+2026-02-21 22:06:12,567 - DEBUG - gitlab_to_github_migrator.attachments - Reusing cached attachment Screenshot_from_2026-01-26_20-19-47.png: https://github.com/flaks-test/gl2ghmigr-full-migration-test-JF260221d/releases/download/untagged-1487533b9999390531ba/c6b3a7aa_Screenshot_from_2026-01-26_20-19-47.png
+2026-02-21 22:06:13,940 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221d/issues/8/comments HTTP/1.1" 201 2082
+2026-02-21 22:06:13,941 - DEBUG - gitlab_to_github_migrator.migrator - Migrated comment by janfrederik
+2026-02-21 22:06:15,554 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221d/issues/8/comments HTTP/1.1" 201 1838
+2026-02-21 22:06:15,554 - DEBUG - gitlab_to_github_migrator.migrator - Migrated 1 system note(s)
+2026-02-21 22:06:15,554 - INFO - gitlab_to_github_migrator.migrator - Created issue #8: Blocked issue
+2026-02-21 22:06:15,564 - DEBUG - urllib3.connectionpool - Starting new HTTPS connection (1): api.github.com:443
+2026-02-21 22:06:16,292 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /graphql HTTP/1.1" 200 None
+2026-02-21 22:06:16,292 - DEBUG - gitlab_to_github_migrator.github_utils - Deleted issue with node ID I_kwDORVrffM7szFtF
+2026-02-21 22:06:16,293 - DEBUG - gitlab_to_github_migrator.migrator - Deleted placeholder issue #4
+2026-02-21 22:06:16,294 - DEBUG - gql.transport.httpx - >>> {"query": "query GetWorkItemWithChildren($fullPath: ID!, $iid: String!) {\n  namespace(fullPath: $fullPath) {\n    workItem(iid: $iid) {\n      iid\n      widgets {\n        type\n        ... on WorkItemWidgetHierarchy {\n          children {\n            nodes {\n              iid\n              title\n              state\n              workItemType {\n                name\n              }\n              webUrl\n            }\n          }\n        }\n      }\n    }\n  }\n}", "variables": {"fullPath": "flaks/gl2gh-migration-test-project", "iid": "1"}}
+2026-02-21 22:06:16,802 - DEBUG - gql.transport.httpx - <<< {"data":{"namespace":{"workItem":{"iid":"1","widgets":[{"type":"LINKED_ITEMS"},{"type":"ASSIGNEES"},{"type":"LABELS"},{"type":"DESCRIPTION"},{"type":"HIERARCHY","children":{"nodes":[]}},{"type":"START_AND_DUE_DATE"},{"type":"MILESTONE"},{"type":"NOTES"},{"type":"NOTIFICATIONS"},{"type":"CURRENT_USER_TODOS"},{"type":"AWARD_EMOJI"},{"type":"LINKED_RESOURCES"},{"type":"ERROR_TRACKING"},{"type":"PARTICIPANTS"},{"type":"EMAIL_PARTICIPANTS"},{"type":"DESIGNS"},{"type":"DEVELOPMENT"},{"type":"TIME_TRACKING"},{"type":"CRM_CONTACTS"}]}}}}
+2026-02-21 22:06:16,802 - DEBUG - gitlab_to_github_migrator.gitlab_utils - Found 0 child work items for issue #1
+2026-02-21 22:06:16,803 - DEBUG - gql.transport.httpx - >>> {"query": "query GetWorkItemWithChildren($fullPath: ID!, $iid: String!) {\n  namespace(fullPath: $fullPath) {\n    workItem(iid: $iid) {\n      iid\n      widgets {\n        type\n        ... on WorkItemWidgetHierarchy {\n          children {\n            nodes {\n              iid\n              title\n              state\n              workItemType {\n                name\n              }\n              webUrl\n            }\n          }\n        }\n      }\n    }\n  }\n}", "variables": {"fullPath": "flaks/gl2gh-migration-test-project", "iid": "2"}}
+2026-02-21 22:06:17,192 - DEBUG - gql.transport.httpx - <<< {"data":{"namespace":{"workItem":{"iid":"2","widgets":[{"type":"LINKED_ITEMS"},{"type":"ASSIGNEES"},{"type":"LABELS"},{"type":"DESCRIPTION"},{"type":"HIERARCHY","children":{"nodes":[]}},{"type":"START_AND_DUE_DATE"},{"type":"MILESTONE"},{"type":"NOTES"},{"type":"NOTIFICATIONS"},{"type":"CURRENT_USER_TODOS"},{"type":"AWARD_EMOJI"},{"type":"LINKED_RESOURCES"},{"type":"ERROR_TRACKING"},{"type":"PARTICIPANTS"},{"type":"EMAIL_PARTICIPANTS"},{"type":"DESIGNS"},{"type":"DEVELOPMENT"},{"type":"TIME_TRACKING"},{"type":"CRM_CONTACTS"}]}}}}
+2026-02-21 22:06:17,192 - DEBUG - gitlab_to_github_migrator.gitlab_utils - Found 0 child work items for issue #2
+2026-02-21 22:06:17,193 - DEBUG - gql.transport.httpx - >>> {"query": "query GetWorkItemWithChildren($fullPath: ID!, $iid: String!) {\n  namespace(fullPath: $fullPath) {\n    workItem(iid: $iid) {\n      iid\n      widgets {\n        type\n        ... on WorkItemWidgetHierarchy {\n          children {\n            nodes {\n              iid\n              title\n              state\n              workItemType {\n                name\n              }\n              webUrl\n            }\n          }\n        }\n      }\n    }\n  }\n}", "variables": {"fullPath": "flaks/gl2gh-migration-test-project", "iid": "3"}}
+2026-02-21 22:06:17,580 - DEBUG - gql.transport.httpx - <<< {"data":{"namespace":{"workItem":{"iid":"3","widgets":[{"type":"LINKED_ITEMS"},{"type":"ASSIGNEES"},{"type":"LABELS"},{"type":"DESCRIPTION"},{"type":"HIERARCHY","children":{"nodes":[{"iid":"5","title":"Child task 1 (open)","state":"OPEN","workItemType":{"name":"Task"},"webUrl":"https://gitlab.com/flaks/gl2gh-migration-test-project/-/work_items/5"},{"iid":"6","title":"Child task 2 (closed)","state":"CLOSED","workItemType":{"name":"Task"},"webUrl":"https://gitlab.com/flaks/gl2gh-migration-test-project/-/work_items/6"}]}},{"type":"START_AND_DUE_DATE"},{"type":"MILESTONE"},{"type":"NOTES"},{"type":"NOTIFICATIONS"},{"type":"CURRENT_USER_TODOS"},{"type":"AWARD_EMOJI"},{"type":"LINKED_RESOURCES"},{"type":"ERROR_TRACKING"},{"type":"PARTICIPANTS"},{"type":"EMAIL_PARTICIPANTS"},{"type":"DESIGNS"},{"type":"DEVELOPMENT"},{"type":"TIME_TRACKING"},{"type":"CRM_CONTACTS"}]}}}}
+2026-02-21 22:06:17,580 - DEBUG - gitlab_to_github_migrator.gitlab_utils - Found 2 child work items for issue #3
+2026-02-21 22:06:17,580 - DEBUG - gitlab_to_github_migrator.migrator - Looking for child issue #5
+2026-02-21 22:06:18,189 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221d/issues/3/sub_issues HTTP/1.1" 201 11146
+2026-02-21 22:06:18,190 - INFO - gitlab_to_github_migrator.migrator - Linked issue #5 as sub-issue of #3
+2026-02-21 22:06:18,190 - DEBUG - gitlab_to_github_migrator.migrator - Looking for child issue #6
+2026-02-21 22:06:19,716 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "POST /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221d/issues/3/sub_issues HTTP/1.1" 201 11147
+2026-02-21 22:06:19,717 - INFO - gitlab_to_github_migrator.migrator - Linked issue #6 as sub-issue of #3
+2026-02-21 22:06:19,718 - DEBUG - gql.transport.httpx - >>> {"query": "query GetWorkItemWithChildren($fullPath: ID!, $iid: String!) {\n  namespace(fullPath: $fullPath) {\n    workItem(iid: $iid) {\n      iid\n      widgets {\n        type\n        ... on WorkItemWidgetHierarchy {\n          children {\n            nodes {\n              iid\n              title\n              state\n              workItemType {\n                name\n              }\n              webUrl\n            }\n          }\n        }\n      }\n    }\n  }\n}", "variables": {"fullPath": "flaks/gl2gh-migration-test-project", "iid": "5"}}
+2026-02-21 22:06:20,202 - DEBUG - gql.transport.httpx - <<< {"data":{"namespace":{"workItem":{"iid":"5","widgets":[{"type":"LINKED_ITEMS"},{"type":"LINKED_RESOURCES"},{"type":"PARTICIPANTS"},{"type":"DEVELOPMENT"},{"type":"TIME_TRACKING"},{"type":"ASSIGNEES"},{"type":"LABELS"},{"type":"DESCRIPTION"},{"type":"HIERARCHY","children":{"nodes":[]}},{"type":"START_AND_DUE_DATE"},{"type":"MILESTONE"},{"type":"NOTES"},{"type":"NOTIFICATIONS"},{"type":"CURRENT_USER_TODOS"},{"type":"AWARD_EMOJI"}]}}}}
+2026-02-21 22:06:20,202 - DEBUG - gitlab_to_github_migrator.gitlab_utils - Found 0 child work items for issue #5
+2026-02-21 22:06:20,202 - DEBUG - gql.transport.httpx - >>> {"query": "query GetWorkItemWithChildren($fullPath: ID!, $iid: String!) {\n  namespace(fullPath: $fullPath) {\n    workItem(iid: $iid) {\n      iid\n      widgets {\n        type\n        ... on WorkItemWidgetHierarchy {\n          children {\n            nodes {\n              iid\n              title\n              state\n              workItemType {\n                name\n              }\n              webUrl\n            }\n          }\n        }\n      }\n    }\n  }\n}", "variables": {"fullPath": "flaks/gl2gh-migration-test-project", "iid": "6"}}
+2026-02-21 22:06:20,513 - DEBUG - gql.transport.httpx - <<< {"data":{"namespace":{"workItem":{"iid":"6","widgets":[{"type":"LINKED_ITEMS"},{"type":"LINKED_RESOURCES"},{"type":"PARTICIPANTS"},{"type":"DEVELOPMENT"},{"type":"TIME_TRACKING"},{"type":"ASSIGNEES"},{"type":"LABELS"},{"type":"DESCRIPTION"},{"type":"HIERARCHY","children":{"nodes":[]}},{"type":"START_AND_DUE_DATE"},{"type":"MILESTONE"},{"type":"NOTES"},{"type":"NOTIFICATIONS"},{"type":"CURRENT_USER_TODOS"},{"type":"AWARD_EMOJI"}]}}}}
+2026-02-21 22:06:20,513 - DEBUG - gitlab_to_github_migrator.gitlab_utils - Found 0 child work items for issue #6
+2026-02-21 22:06:20,513 - DEBUG - gql.transport.httpx - >>> {"query": "query GetWorkItemWithChildren($fullPath: ID!, $iid: String!) {\n  namespace(fullPath: $fullPath) {\n    workItem(iid: $iid) {\n      iid\n      widgets {\n        type\n        ... on WorkItemWidgetHierarchy {\n          children {\n            nodes {\n              iid\n              title\n              state\n              workItemType {\n                name\n              }\n              webUrl\n            }\n          }\n        }\n      }\n    }\n  }\n}", "variables": {"fullPath": "flaks/gl2gh-migration-test-project", "iid": "7"}}
+2026-02-21 22:06:20,845 - DEBUG - gql.transport.httpx - <<< {"data":{"namespace":{"workItem":{"iid":"7","widgets":[{"type":"LINKED_ITEMS"},{"type":"ASSIGNEES"},{"type":"LABELS"},{"type":"DESCRIPTION"},{"type":"HIERARCHY","children":{"nodes":[]}},{"type":"START_AND_DUE_DATE"},{"type":"MILESTONE"},{"type":"NOTES"},{"type":"NOTIFICATIONS"},{"type":"CURRENT_USER_TODOS"},{"type":"AWARD_EMOJI"},{"type":"LINKED_RESOURCES"},{"type":"ERROR_TRACKING"},{"type":"PARTICIPANTS"},{"type":"EMAIL_PARTICIPANTS"},{"type":"DESIGNS"},{"type":"DEVELOPMENT"},{"type":"TIME_TRACKING"},{"type":"CRM_CONTACTS"}]}}}}
+2026-02-21 22:06:20,845 - DEBUG - gitlab_to_github_migrator.gitlab_utils - Found 0 child work items for issue #7
+2026-02-21 22:06:20,846 - DEBUG - gql.transport.httpx - >>> {"query": "query GetWorkItemWithChildren($fullPath: ID!, $iid: String!) {\n  namespace(fullPath: $fullPath) {\n    workItem(iid: $iid) {\n      iid\n      widgets {\n        type\n        ... on WorkItemWidgetHierarchy {\n          children {\n            nodes {\n              iid\n              title\n              state\n              workItemType {\n                name\n              }\n              webUrl\n            }\n          }\n        }\n      }\n    }\n  }\n}", "variables": {"fullPath": "flaks/gl2gh-migration-test-project", "iid": "8"}}
+2026-02-21 22:06:21,175 - DEBUG - gql.transport.httpx - <<< {"data":{"namespace":{"workItem":{"iid":"8","widgets":[{"type":"LINKED_ITEMS"},{"type":"ASSIGNEES"},{"type":"LABELS"},{"type":"DESCRIPTION"},{"type":"HIERARCHY","children":{"nodes":[]}},{"type":"START_AND_DUE_DATE"},{"type":"MILESTONE"},{"type":"NOTES"},{"type":"NOTIFICATIONS"},{"type":"CURRENT_USER_TODOS"},{"type":"AWARD_EMOJI"},{"type":"LINKED_RESOURCES"},{"type":"ERROR_TRACKING"},{"type":"PARTICIPANTS"},{"type":"EMAIL_PARTICIPANTS"},{"type":"DESIGNS"},{"type":"DEVELOPMENT"},{"type":"TIME_TRACKING"},{"type":"CRM_CONTACTS"}]}}}}
+2026-02-21 22:06:21,175 - DEBUG - gitlab_to_github_migrator.gitlab_utils - Found 0 child work items for issue #8
+2026-02-21 22:06:21,520 - DEBUG - urllib3.connectionpool - https://gitlab.com:443 "GET /api/v4/projects/78035105/issues?state=all HTTP/1.1" 200 None
+2026-02-21 22:06:21,772 - DEBUG - urllib3.connectionpool - https://gitlab.com:443 "GET /api/v4/projects/78035105/milestones?state=all HTTP/1.1" 200 None
+2026-02-21 22:06:22,052 - DEBUG - urllib3.connectionpool - https://gitlab.com:443 "GET /api/v4/projects/78035105/labels HTTP/1.1" 200 None
+2026-02-21 22:06:22,811 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "GET /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221d/issues?state=all HTTP/1.1" 200 None
+2026-02-21 22:06:23,305 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "GET /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221d/milestones?state=all HTTP/1.1" 200 None
+2026-02-21 22:06:23,811 - DEBUG - urllib3.connectionpool - https://api.github.com:443 "GET /repos/flaks-test/gl2ghmigr-full-migration-test-JF260221d/labels HTTP/1.1" 200 None
+2026-02-21 22:06:23,815 - INFO - gitlab_to_github_migrator.migrator - Migration validation completed
+2026-02-21 22:06:23,816 - DEBUG - gitlab_to_github_migrator.git_utils - Cleaned up git clone at /tmp/gitlab_migration_cc0i265i
